@@ -15,19 +15,18 @@ export function parentIdSet(inds: Indicator[]): Set<string> {
  * есть хотя бы один потомок, не скрытый жёстким правилом «Скрыть справочные».
  */
 export function chevronParents(all: Indicator[], f: TreeFilter): Set<string> {
-  return parentIdSet(all.filter((i) => !(f.hideRef && isReference(i))));
+  return parentIdSet(all);
 }
 
 export interface TreeFilter {
   query: string;   // поиск по наименованию
   cioId: string;   // 'all' или id ответственного ЦИО
-  hideRef: boolean; // скрыть справочные
 }
 
-export const EMPTY_TREE_FILTER: TreeFilter = { query: '', cioId: 'all', hideRef: false };
+export const EMPTY_TREE_FILTER: TreeFilter = { query: '', cioId: 'all' };
 
 export const isTreeFilterActive = (f: TreeFilter): boolean =>
-  f.query.trim() !== '' || f.cioId !== 'all' || f.hideRef;
+  f.query.trim() !== '' || f.cioId !== 'all';
 
 /**
  * Видимые узлы дерева показателей.
@@ -45,9 +44,7 @@ export function visibleTree(
 
   if (isTreeFilterActive(f)) {
     const q = f.query.trim().toLowerCase();
-    const hardHidden = (i: Indicator) => f.hideRef && isReference(i);
     const match = (i: Indicator): boolean => {
-      if (hardHidden(i)) return false;
       if (f.cioId !== 'all' && i.cioId !== f.cioId) return false;
       if (q && !i.name.toLowerCase().includes(q)) return false;
       return true;
@@ -56,7 +53,7 @@ export function visibleTree(
     all.forEach((i) => {
       if (!match(i)) return;
       let cur: Indicator | undefined = i;
-      while (cur && !keep.has(cur.id) && !hardHidden(cur)) {
+      while (cur && !keep.has(cur.id)) {
         keep.add(cur.id);
         cur = cur.parentId ? byId.get(cur.parentId) : undefined;
       }

@@ -297,7 +297,7 @@ export function CioWorkspace({ hideOmsuApprove = false }: { hideOmsuApprove?: bo
                           const { avg, count } = avgByInd(ind.id, f.key);
                           return (
                             <td key={f.key} className={`p-1.5 text-center ${fieldTint(f.key)}`}>
-                              {editable ? (
+                              {editable && f.key === 'v2026' ? (
                                 <WithValueTip show={v[f.key] !== null} updatedAt={v.updatedAt} author={v.signedBy ?? 'Петров С.И.'}>
                                   <Input
                                     type="number"

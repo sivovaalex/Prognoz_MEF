@@ -8,6 +8,18 @@ function hasAnyValue(v: Record<ValueFieldKey, number | null>): boolean {
   return VALUE_FIELDS.some((f) => v[f.key] !== null);
 }
 
+const r2 = (v: number) => Math.round(v * 100) / 100;
+function calcForecasts(v2026: number) {
+  return {
+    cons2027: r2(v2026 * 1.0),
+    base2027: r2(v2026 * 1.02),
+    cons2028: r2(v2026 * 1.01),
+    base2028: r2(v2026 * 1.04),
+    cons2029: r2(v2026 * 1.02),
+    base2029: r2(v2026 * 1.06),
+  };
+}
+
 export type Action =
   | { type: 'OMSU_SET_VALUE'; munId: string; indId: string; field: ValueFieldKey; value: number | null }
   | { type: 'OMSU_SIGN_SEND'; munId: string; indId: string; actor: string }
@@ -42,6 +54,15 @@ function reducer(state: AppState, a: Action): AppState {
       const cur = state.omsuValues[a.munId][a.indId];
       if (cur.status === 'approved' || cur.status === 'pending_cio') return state;
       const next = { ...cur, [a.field]: a.value, updatedAt: now(), comment: undefined };
+      
+      if (a.field === 'v2026') {
+        if (typeof a.value === 'number') {
+          Object.assign(next, calcForecasts(a.value));
+        } else {
+          Object.assign(next, { cons2027: null, base2027: null, cons2028: null, base2028: null, cons2029: null, base2029: null });
+        }
+      }
+      
       next.status = hasAnyValue(next) ? 'draft' : 'not_filled';
       return {
         ...state,
@@ -121,6 +142,15 @@ function reducer(state: AppState, a: Action): AppState {
       if (cur && (cur.status === 'approved' || cur.status === 'pending_mef')) return state;
       const base0 = cur ?? { ...emptyValueFields(), status: 'not_filled' as const, updatedAt: null };
       const next = { ...base0, [a.field]: a.value, updatedAt: now(), comment: undefined };
+      
+      if (a.field === 'v2026') {
+        if (typeof a.value === 'number') {
+          Object.assign(next, calcForecasts(a.value));
+        } else {
+          Object.assign(next, { cons2027: null, base2027: null, cons2028: null, base2028: null, cons2029: null, base2029: null });
+        }
+      }
+
       next.status = hasAnyValue(next) ? 'draft' : 'not_filled';
       return {
         ...state,

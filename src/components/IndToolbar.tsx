@@ -40,10 +40,11 @@ interface Props {
   /** Фильтр по ОМСУ (если задан вместе с onMunChange) */
   munId?: string;
   onMunChange?: (v: string) => void;
+  allowAllMuns?: boolean;
 }
 
-/** Панель над таблицами показателей: поиск, фильтр по ЦИО / ОМСУ, «Скрыть справочные» */
-export function IndToolbar({ filter, onChange, shown, total, hideCioFilter, munId, onMunChange }: Props) {
+/** Панель над таблицами показателей: поиск, фильтр по ЦИО / ОМСУ */
+export function IndToolbar({ filter, onChange, shown, total, hideCioFilter, munId, onMunChange, allowAllMuns }: Props) {
   const active = isTreeFilterActive(filter);
   return (
     <div className="flex flex-wrap items-center gap-3 rounded-md border bg-white px-3 py-2">
@@ -73,19 +74,12 @@ export function IndToolbar({ filter, onChange, shown, total, hideCioFilter, munI
             <SelectValue placeholder="ОМСУ" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Все ОМСУ</SelectItem>
+            {allowAllMuns !== false && <SelectItem value="all">Все ОМСУ</SelectItem>}
             {MUNICIPALITIES.map((m) => <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>)}
           </SelectContent>
         </Select>
       )}
-      <div className="flex items-center gap-2">
-        <Switch
-          id="hide-ref"
-          checked={filter.hideRef}
-          onCheckedChange={(v) => onChange({ ...filter, hideRef: v })}
-        />
-        <Label htmlFor="hide-ref" className="text-sm cursor-pointer whitespace-nowrap">Скрыть справочные</Label>
-      </div>
+
       {active && shown !== undefined && total !== undefined && (
         <span className="text-xs text-muted-foreground ml-auto">
           Показано: {shown} из {total}

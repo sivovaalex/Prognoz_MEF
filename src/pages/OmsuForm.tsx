@@ -36,7 +36,8 @@ function dirStats(inds: { id: string }[], values: Record<string, { status: strin
 
 export function OmsuForm() {
   const { state, dispatch } = useStore();
-  const munId = CURRENT_OMSU;
+  const [munId, setMunId] = useState<string>(CURRENT_OMSU);
+  const isCurrentOmsu = munId === CURRENT_OMSU;
   const mun = MUNICIPALITIES.find((m) => m.id === munId)!;
   const [signTarget, setSignTarget] = useState<string | null>(null);
   // аккордеон: открыта только одна сфера
@@ -88,6 +89,9 @@ export function OmsuForm() {
         onChange={setTreeFilter}
         shown={visible.length}
         total={state.indicators.length}
+        munId={munId}
+        onMunChange={setMunId}
+        allowAllMuns={false}
       />
 
       {DIRECTIONS.map((d) => {
@@ -171,7 +175,7 @@ export function OmsuForm() {
                         );
                       }
                       const v = values[ind.id];
-                      const editable = v.status === 'not_filled' || v.status === 'draft' || v.status === 'returned';
+                      const editable = isCurrentOmsu && (v.status === 'not_filled' || v.status === 'draft' || v.status === 'returned');
                       return (
                         <tr key={ind.id} className="border-b hover:bg-slate-50 align-top">
                           <td className="p-2 text-muted-foreground whitespace-nowrap">{ind.num}</td>
@@ -220,7 +224,7 @@ export function OmsuForm() {
                           <td className="p-2"><Badge variant="secondary">{CIOS.find((c) => c.id === ind.cioId)?.short}</Badge></td>
                           {VALUE_FIELDS.map((f) => (
                             <td key={f.key} className={`p-1.5 text-center ${fieldTint(f.key)}`}>
-                              {editable ? (
+                              {editable && f.key === 'v2026' ? (
                                 <WithValueTip show={v[f.key] !== null} updatedAt={v.updatedAt} author={v.signedBy ?? 'Иванова А.П.'}>
                                   <Input
                                     type="number"
@@ -265,7 +269,7 @@ export function OmsuForm() {
                                 Подписать ЭЦП и отправить
                               </Button>
                             )}
-                            {v.status === 'pending_cio' && (
+                            {v.status === 'pending_cio' && isCurrentOmsu && (
                               <Button
                                 size="sm"
                                 variant="outline"
