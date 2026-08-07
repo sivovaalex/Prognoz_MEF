@@ -27,7 +27,7 @@ export function Setup() {
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
 
   const visible = visibleTree(state.indicators, collapsed, treeFilter);
-  const parents = chevronParents(state.indicators, treeFilter);
+  const parents = chevronParents(state.indicators);
   const toggleNode = (id: string) => setCollapsed((p) => ({ ...p, [id]: !p[id] }));
 
   const openNew = () => {

@@ -60,7 +60,7 @@ export function Overview({ role }: { role: RoleId }) {
   const [treeFilter, setTreeFilter] = useState<TreeFilter>(EMPTY_TREE_FILTER);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const scopeVisible = visibleTree(scopeInds, collapsed, treeFilter);
-  const parents = chevronParents(state.indicators, treeFilter);
+  const parents = chevronParents(state.indicators);
   const toggleNode = (id: string) => setCollapsed((p) => ({ ...p, [id]: !p[id] }));
 
   // Статистика по области видимости (только заполняемые показатели, без групп)

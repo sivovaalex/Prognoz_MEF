@@ -58,7 +58,7 @@ export function MefWorkspace({ hideOmsuApprove = false }: { hideOmsuApprove?: bo
   const scopeMuns = munFilter === 'all' ? MUNICIPALITIES : MUNICIPALITIES.filter((m) => m.id === munFilter);
   const myVisible = visibleTree(myIndicators, collapsed, treeFilter);
   const myOwnVisible = visibleTree(myFillable, collapsed, treeFilter);
-  const parents = chevronParents(state.indicators, treeFilter);
+  const parents = chevronParents(state.indicators);
   const toggleNode = (id: string) => setCollapsed((p) => ({ ...p, [id]: !p[id] }));
   const pendingCount = MUNICIPALITIES.reduce(
     (acc, m) => acc + myFillable.filter((i) => state.omsuValues[m.id]?.[i.id]?.status === 'pending_cio').length,
@@ -84,7 +84,7 @@ export function MefWorkspace({ hideOmsuApprove = false }: { hideOmsuApprove?: bo
   const pendingMef = cioRows.filter((r) => r.v.status === 'pending_mef');
   // дерево всех показателей (по сферам) для вкладки согласования ЦИО
   const cioVisibleInds = visibleTree(state.indicators, cioCollapsed, cioTreeFilter);
-  const cioParents = chevronParents(state.indicators, cioTreeFilter);
+  const cioParents = chevronParents(state.indicators);
   const toggleCioNode = (id: string) => setCioCollapsed((p) => ({ ...p, [id]: !p[id] }));
   const cioDirOpen = (id: string) => openCioDirs[id] ?? true;
 
