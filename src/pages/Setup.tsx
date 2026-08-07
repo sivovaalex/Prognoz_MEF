@@ -22,6 +22,7 @@ export function Setup() {
   const { state, dispatch } = useStore();
   const [editInd, setEditInd] = useState<Indicator | null>(null);
   const [isNew, setIsNew] = useState(false);
+  const [editDir, setEditDir] = useState<{num: string, name: string, cioId: string} | null>(null);
   const [treeFilter, setTreeFilter] = useState<TreeFilter>(EMPTY_TREE_FILTER);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
 
@@ -46,10 +47,19 @@ export function Setup() {
     });
   };
 
+  const openNewDir = () => {
+    setEditDir({ num: '', name: '', cioId: CIOS[0].id });
+  };
+
   const save = () => {
     if (!editInd || !editInd.name.trim()) return;
     dispatch({ type: isNew ? 'ADD_INDICATOR' : 'UPDATE_INDICATOR', indicator: editInd });
     setEditInd(null);
+  };
+
+  const saveDir = () => {
+    // В рамках прототипа просто закрываем окно (DIRECTIONS сейчас хранятся в константах)
+    setEditDir(null);
   };
 
   return (
@@ -61,7 +71,10 @@ export function Setup() {
             Перечень показателей, формулы и привязка к отраслевым ЦИО (по данным МЭФ). Отчётный период: {state.campaign.period}
           </p>
         </div>
-        <Button onClick={openNew}><Plus className="h-4 w-4 mr-1" /> Добавить показатель</Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={openNewDir}><Plus className="h-4 w-4 mr-1" /> Добавить направление</Button>
+          <Button onClick={openNew}><Plus className="h-4 w-4 mr-1" /> Добавить показатель</Button>
+        </div>
       </div>
 
       <Tabs defaultValue="indicators">
@@ -256,6 +269,39 @@ export function Setup() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditInd(null)}>Отмена</Button>
             <Button onClick={save}>Сохранить</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!editDir} onOpenChange={(v) => !v && setEditDir(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Новое направление</DialogTitle>
+          </DialogHeader>
+          {editDir && (
+            <div className="grid gap-3 text-sm">
+              <div className="grid grid-cols-4 items-center gap-2">
+                <Label>№</Label>
+                <Input className="col-span-3" value={editDir.num} onChange={(e) => setEditDir({ ...editDir, num: e.target.value })} />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-2">
+                <Label>Название</Label>
+                <Input className="col-span-3" value={editDir.name} onChange={(e) => setEditDir({ ...editDir, name: e.target.value })} />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-2">
+                <Label>ЦИО</Label>
+                <Select value={editDir.cioId} onValueChange={(v) => setEditDir({ ...editDir, cioId: v })}>
+                  <SelectTrigger className="col-span-3"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {CIOS.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditDir(null)}>Отмена</Button>
+            <Button onClick={saveDir}>Сохранить</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
