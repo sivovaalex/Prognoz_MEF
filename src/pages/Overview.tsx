@@ -180,29 +180,7 @@ export function Overview({ role }: { role: RoleId }) {
       <Tabs defaultValue="monitor">
         <TabsList>
           <TabsTrigger value="monitor">Мониторинг наполняемости</TabsTrigger>
-          <TabsTrigger value="stages">Этапы процесса</TabsTrigger>
-          <TabsTrigger value="history">Журнал событий</TabsTrigger>
         </TabsList>
-
-        <TabsContent value="stages">
-          <Card>
-            <CardContent className="pt-4">
-              <ol className="relative space-y-4 border-l border-slate-200 ml-3">
-                {STAGES.map((s) => (
-                  <li key={s.n} className="ml-6">
-                    <span className="absolute -left-3 flex h-6 w-6 items-center justify-center rounded-full bg-blue-700 text-white text-xs font-semibold">
-                      {s.n}
-                    </span>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-xs font-semibold uppercase tracking-wide text-blue-800 bg-blue-50 rounded px-2 py-0.5">{s.actor}</span>
-                    </div>
-                    <p className="text-sm text-slate-700 mt-1">{s.text}</p>
-                  </li>
-                ))}
-              </ol>
-            </CardContent>
-          </Card>
-        </TabsContent>
 
         <TabsContent value="monitor" className="space-y-4">
           <IndToolbar
@@ -355,21 +333,6 @@ export function Overview({ role }: { role: RoleId }) {
           })}
         </TabsContent>
 
-        <TabsContent value="history">
-          <Card>
-            <CardContent className="pt-4">
-              <ul className="space-y-2 text-sm">
-                {[...state.history].reverse().map((h, i) => (
-                  <li key={i} className="flex gap-3 items-start border-b pb-2 last:border-0">
-                    <span className="text-xs text-muted-foreground whitespace-nowrap pt-0.5 w-[120px]">{h.at}</span>
-                    <span className="text-xs font-medium text-blue-800 whitespace-nowrap pt-0.5">{h.actor}</span>
-                    <span>{h.action}</span>
-                  </li>
-                ))}
-              </ul>
-            </CardContent>
-          </Card>
-        </TabsContent>
       </Tabs>
     </div>
   );

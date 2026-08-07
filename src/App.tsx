@@ -42,12 +42,10 @@ const NAV: Record<RoleId, { id: PageId; label: string }[]> = {
   admin: [
     { id: 'overview', label: 'Обзор сбора' },
     { id: 'setup', label: 'Настройка показателей' },
-    { id: 'rating', label: 'Рейтинг' },
   ],
   mef: [
     { id: 'overview', label: 'Обзор сбора' },
     { id: 'mef-manage', label: 'Управление' },
-    { id: 'rating', label: 'Выходные формы' },
   ],
   cio: [
     { id: 'cio', label: 'Рабочее место ЦИО' },
@@ -117,14 +115,7 @@ function Shell({ onHome }: { onHome: () => void }) {
               <HomeIcon className="h-4 w-4" />
               К списку модулей
             </button>
-            <button
-              onClick={() => setPage('about')}
-              className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${page === 'about' ? 'bg-white text-[#1e5c8f]' : 'bg-white/15 hover:bg-white/25 text-white'
-                }`}
-            >
-              <BookOpen className="h-4 w-4" />
-              Описание системы
-            </button>
+
             <Popover>
               <PopoverTrigger asChild>
                 <button className="relative flex h-9 w-9 items-center justify-center rounded-full bg-white/15 hover:bg-white/25">

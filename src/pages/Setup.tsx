@@ -80,7 +80,6 @@ export function Setup() {
       <Tabs defaultValue="indicators">
         <TabsList>
           <TabsTrigger value="indicators"><Settings2 className="h-4 w-4 mr-1" /> Показатели и формулы</TabsTrigger>
-          <TabsTrigger value="summary"><TableProperties className="h-4 w-4 mr-1" /> Сводные формы рейтинга</TabsTrigger>
         </TabsList>
 
         <TabsContent value="indicators">
@@ -157,56 +156,6 @@ export function Setup() {
           </div>
         </TabsContent>
 
-        <TabsContent value="summary">
-          <div className="grid gap-4 md:grid-cols-2">
-            <Card>
-              <CardHeader><CardTitle className="text-base">Методика расчёта сводного рейтинга</CardTitle></CardHeader>
-              <CardContent className="space-y-3 text-sm">
-                <div className="rounded-md border p-3">
-                  <div className="font-medium">Шаг 1. Ранжирование значений</div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    По каждому показателю ОМСУ ранжируются: лучшее значение (с учётом оптимума max/min) получает место 1.
-                  </p>
-                </div>
-                <div className="rounded-md border p-3">
-                  <div className="font-medium">Шаг 2. Сумма мест</div>
-                  <p className="text-xs text-muted-foreground mt-1 font-mono">
-                    Значение рейтинга = Σ (место по показателю × вес)
-                  </p>
-                </div>
-                <div className="rounded-md border p-3">
-                  <div className="font-medium">Шаг 3. Итоговое место</div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    ОМСУ ранжируются по сумме мест: меньшая сумма — выше место. Цветовая шкала min→max.
-                  </p>
-                </div>
-                <div className="rounded-md border p-3">
-                  <div className="font-medium">Шаг 4. Режимы формирования</div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    <b>Предварительный</b> — по всем введённым данным (согласованным и несогласованным), доступен куратору МЭФ в ходе сбора.
-                    <b> Итоговый</b> — только по данным, согласованным ЦИО (показатели ОМСУ) и МЭФ (показатели ЦИО).
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader><CardTitle className="text-base">Состав сводных форм</CardTitle></CardHeader>
-              <CardContent className="space-y-2 text-sm">
-                {[
-                  ['Сводная оценка по территории', 'Показатели и места выбранного ОМСУ, итоговый рейтинг'],
-                  ['Сводная оценка по направлению', 'Территории по выбранному направлению / итоговому рейтингу'],
-                  ['Сводная оценка по показателям', 'Матрица «территории × показатели» с местами'],
-                  ['Сравнение вариантов расчёта', 'Сумма мест vs взвешенные нормированные баллы'],
-                ].map(([t, d]) => (
-                  <div key={t} className="rounded-md border p-3">
-                    <div className="font-medium">{t}</div>
-                    <div className="text-xs text-muted-foreground">{d}</div>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
       </Tabs>
 
       <Dialog open={!!editInd} onOpenChange={(v) => !v && setEditInd(null)}>
