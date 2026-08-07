@@ -21,19 +21,20 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Bell, Landmark, UserRound, BookOpen, Home as HomeIcon } from 'lucide-react';
 
 type PageId = 'overview' | 'setup' | 'omsu' | 'cio' | 'mef' | 'mef-manage' | 'rating' | 'about';
-type BlockId = 'mun' | 'obl' | 'params' | 'form2p';
+type BlockId = 'mun' | 'obl' | 'params' | 'form2p' | 'long_term';
 
 const BLOCK_LABELS: Record<BlockId, string> = {
   mun: 'Муниципальный прогноз',
   obl: 'Областной прогноз',
   params: 'Параметры СЭР',
   form2p: 'Форма 2П',
+  long_term: 'Долгосрочный прогноз',
 };
 
 const BLOCKS: Record<RoleId, BlockId[]> = {
-  admin: ['mun', 'obl', 'params', 'form2p'],
-  mef: ['mun', 'obl', 'params', 'form2p'],
-  cio: ['mun', 'obl', 'params', 'form2p'],
+  admin: ['mun', 'obl', 'params', 'form2p', 'long_term'],
+  mef: ['mun', 'obl', 'params', 'form2p', 'long_term'],
+  cio: ['mun', 'obl', 'params', 'form2p', 'long_term'],
   omsu: ['mun'],
 };
 
