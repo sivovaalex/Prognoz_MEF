@@ -18,7 +18,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Bell, Landmark, UserRound, BookOpen, Home as HomeIcon } from 'lucide-react';
+import { Bell, Landmark, UserRound, Home as HomeIcon } from 'lucide-react';
 
 type PageId = 'overview' | 'setup' | 'omsu' | 'cio' | 'mef-manage' | 'rating' | 'report' | 'about';
 type BlockId = 'mun' | 'obl' | 'params' | 'form2p' | 'long_term';

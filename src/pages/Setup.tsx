@@ -16,7 +16,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Pencil, Settings2, TableProperties } from 'lucide-react';
+import { Plus, Pencil, Settings2 } from 'lucide-react';
 
 export function Setup() {
   const { state, dispatch } = useStore();
