@@ -14,7 +14,7 @@ export function parentIdSet(inds: Indicator[]): Set<string> {
  * Узлы, у которых должна отрисовываться кнопка сворачивания:
  * есть хотя бы один потомок, не скрытый жёстким правилом «Скрыть справочные».
  */
-export function chevronParents(all: Indicator[], f: TreeFilter): Set<string> {
+export function chevronParents(all: Indicator[]): Set<string> {
   return parentIdSet(all);
 }
 
