@@ -6,9 +6,9 @@ import { Overview } from '@/pages/Overview';
 import { Setup } from '@/pages/Setup';
 import { OmsuForm } from '@/pages/OmsuForm';
 import { CioWorkspace } from '@/pages/CioWorkspace';
-import { MefWorkspace } from '@/pages/MefWorkspace';
 import { MefManage } from '@/pages/MefManage';
 import { RatingView } from '@/pages/RatingView';
+import { ReportView } from '@/pages/ReportView';
 import { Description } from '@/pages/Description';
 import { Home } from '@/pages/Home';
 import type { ModuleId } from '@/pages/Home';
@@ -20,7 +20,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Bell, Landmark, UserRound, BookOpen, Home as HomeIcon } from 'lucide-react';
 
-type PageId = 'overview' | 'setup' | 'omsu' | 'cio' | 'mef' | 'mef-manage' | 'rating' | 'about';
+type PageId = 'overview' | 'setup' | 'omsu' | 'cio' | 'mef-manage' | 'rating' | 'report' | 'about';
 type BlockId = 'mun' | 'obl' | 'params' | 'form2p' | 'long_term';
 
 const BLOCK_LABELS: Record<BlockId, string> = {
@@ -41,13 +41,12 @@ const BLOCKS: Record<RoleId, BlockId[]> = {
 const NAV: Record<RoleId, { id: PageId; label: string }[]> = {
   admin: [
     { id: 'overview', label: 'Обзор сбора' },
-    { id: 'setup', label: 'Настройка рейтинга' },
+    { id: 'setup', label: 'Настройка показателей' },
     { id: 'rating', label: 'Рейтинг' },
   ],
   mef: [
     { id: 'overview', label: 'Обзор сбора' },
     { id: 'mef-manage', label: 'Управление' },
-    { id: 'mef', label: 'Рабочее место МЭФ' },
     { id: 'rating', label: 'Выходные формы' },
   ],
   cio: [
@@ -120,9 +119,8 @@ function Shell({ onHome }: { onHome: () => void }) {
             </button>
             <button
               onClick={() => setPage('about')}
-              className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-                page === 'about' ? 'bg-white text-[#1e5c8f]' : 'bg-white/15 hover:bg-white/25 text-white'
-              }`}
+              className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${page === 'about' ? 'bg-white text-[#1e5c8f]' : 'bg-white/15 hover:bg-white/25 text-white'
+                }`}
             >
               <BookOpen className="h-4 w-4" />
               Описание системы
@@ -177,11 +175,10 @@ function Shell({ onHome }: { onHome: () => void }) {
               <button
                 key={b}
                 onClick={() => switchBlock(b)}
-                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-                  block === b
+                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${block === b
                     ? 'border-white text-white'
                     : 'border-transparent text-white/70 hover:text-white'
-                }`}
+                  }`}
               >
                 {BLOCK_LABELS[b]}
               </button>
@@ -196,11 +193,10 @@ function Shell({ onHome }: { onHome: () => void }) {
               <button
                 key={item.id}
                 onClick={() => setPage(item.id)}
-                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-                  page === item.id
+                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${page === item.id
                     ? 'border-[#1e5c8f] text-[#1e5c8f]'
                     : 'border-transparent text-slate-500 hover:text-slate-800'
-                }`}
+                  }`}
               >
                 {item.label}
               </button>
@@ -223,9 +219,9 @@ function Shell({ onHome }: { onHome: () => void }) {
         {page === 'setup' && <Setup />}
         {page === 'omsu' && <OmsuForm />}
         {page === 'cio' && <CioWorkspace key={block} hideOmsuApprove={block !== 'mun'} />}
-        {page === 'mef' && <MefWorkspace key={block} hideOmsuApprove={block !== 'mun'} />}
-        {page === 'mef-manage' && <MefManage goRating={() => setPage('rating')} />}
+        {page === 'mef-manage' && <MefManage goRating={() => setPage('rating')} goReport={() => setPage('report')} />}
         {page === 'rating' && <RatingView />}
+        {page === 'report' && <ReportView />}
         {page === 'about' && <Description />}
       </main>
 

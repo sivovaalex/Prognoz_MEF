@@ -8,9 +8,10 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { CheckCircle2, PlayCircle, StopCircle, CalendarClock, Send, BarChart3 } from 'lucide-react';
 import { approvalStats, allApproved } from '@/lib/rating';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 
-/** Вкладка «Управление» МЭФ: управление сбором, сроки, готовность к рейтингу */
-export function MefManage({ goRating }: { goRating: () => void }) {
+/** Вкладка «Управление» МЭФ: управление сбором, сроки, готовность к отчёту */
+export function MefManage({ goRating, goReport }: { goRating: () => void; goReport: () => void }) {
   const { state, dispatch } = useStore();
   const [startDate, setStartDate] = useState(state.campaign.startDate ?? '2026-07-20');
   const [dlOmsu, setDlOmsu] = useState(state.campaign.deadlineOmsu);
@@ -19,13 +20,15 @@ export function MefManage({ goRating }: { goRating: () => void }) {
 
   const stats = approvalStats(state);
   const complete = allApproved(state);
+  const [preReportModalOpen, setPreReportModalOpen] = useState(false);
+  const [reportType, setReportType] = useState('ind');
 
   return (
     <div className="space-y-4">
       <div>
         <h2 className="text-lg font-semibold">Управление сбором</h2>
         <p className="text-sm text-muted-foreground">
-          Куратор рейтинга: запуск сбора, контроль сроков, предварительный и итоговый рейтинг
+          Куратор отчёта: запуск сбора, контроль сроков, предварительный и итоговый отчёт
         </p>
       </div>
 
@@ -83,7 +86,7 @@ export function MefManage({ goRating }: { goRating: () => void }) {
         </Card>
 
         <Card>
-          <CardHeader><CardTitle className="text-base">Готовность к итоговому рейтингу</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="text-base">Готовность к итоговому отчёту</CardTitle></CardHeader>
           <CardContent className="space-y-3 text-sm">
             <div className="flex flex-wrap gap-2 text-xs">
               <Badge variant="outline" className="text-green-700 border-green-300">Согласовано ЦИО: {stats.approved}/{stats.total}</Badge>
@@ -91,23 +94,23 @@ export function MefManage({ goRating }: { goRating: () => void }) {
               <Badge variant="outline" className="text-gray-600">Не заполнено/черновики: {stats.empty + stats.draft}</Badge>
             </div>
             <div className="rounded-md border p-3">
-              <div className="font-medium">Предварительный рейтинг</div>
+              <div className="font-medium">Предварительный отчёт</div>
               <p className="text-xs text-muted-foreground mb-2">
                 Доступен в любой момент: рассчитывается по введённым данным (согласованным и несогласованным).
               </p>
-              <Button variant="outline" size="sm" onClick={goRating}>
-                <BarChart3 className="h-4 w-4 mr-1" /> Сформировать предварительный рейтинг
+              <Button variant="outline" size="sm" onClick={() => setPreReportModalOpen(true)}>
+                <BarChart3 className="h-4 w-4 mr-1" /> Сформировать предварительный отчёт
               </Button>
             </div>
             <div className="rounded-md border p-3">
-              <div className="font-medium">Итоговый рейтинг</div>
+              <div className="font-medium">Итоговый отчёт</div>
               <p className="text-xs text-muted-foreground mb-2">
                 {complete
-                  ? 'Все показатели согласованы. Можно формировать итоговый сводный рейтинг.'
+                  ? 'Все показатели согласованы. Можно формировать итоговый сводный отчёт.'
                   : 'Доступен после согласования всех показателей: ОМСУ — отраслевыми ЦИО, ЦИО — МЭФ.'}
               </p>
               <Button size="sm" disabled={!complete} onClick={() => { dispatch({ type: 'PUBLISH_FINAL' }); goRating(); }}>
-                <CheckCircle2 className="h-4 w-4 mr-1" /> Сформировать итоговый рейтинг
+                <CheckCircle2 className="h-4 w-4 mr-1" /> Сформировать итоговый отчёт
               </Button>
               {state.finalPublished && (
                 <Badge className="ml-2 bg-green-100 text-green-700 hover:bg-green-100">Опубликован</Badge>
@@ -116,6 +119,65 @@ export function MefManage({ goRating }: { goRating: () => void }) {
           </CardContent>
         </Card>
       </div>
+
+      <Dialog open={preReportModalOpen} onOpenChange={setPreReportModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Формирование предварительного отчёта</DialogTitle>
+          </DialogHeader>
+          <div className="py-4 space-y-3">
+            <Label>Выберите тип отчёта:</Label>
+            <div className="space-y-2 text-sm">
+              <label className="flex items-center gap-2 cursor-not-allowed opacity-50">
+                <input
+                  type="radio"
+                  name="reportType"
+                  value="cio"
+                  checked={reportType === 'cio'}
+                  disabled
+                  onChange={(e) => setReportType(e.target.value)}
+                  className="w-4 h-4 text-[#1e5c8f] border-gray-300"
+                />
+                ЦИО
+              </label>
+              <label className="flex items-center gap-2 cursor-not-allowed opacity-50">
+                <input
+                  type="radio"
+                  name="reportType"
+                  value="omsu"
+                  checked={reportType === 'omsu'}
+                  disabled
+                  onChange={(e) => setReportType(e.target.value)}
+                  className="w-4 h-4 text-[#1e5c8f] border-gray-300"
+                />
+                ОМСУ
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="reportType"
+                  value="ind"
+                  checked={reportType === 'ind'}
+                  onChange={(e) => setReportType(e.target.value)}
+                  className="w-4 h-4 text-[#1e5c8f] border-gray-300"
+                />
+                показатель
+              </label>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPreReportModalOpen(false)}>Отмена</Button>
+            <Button onClick={() => {
+              setPreReportModalOpen(false);
+              if (reportType === 'ind') {
+                goReport();
+              } else {
+                goRating();
+              }
+            }}>Сформировать</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

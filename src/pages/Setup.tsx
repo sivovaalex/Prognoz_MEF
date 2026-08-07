@@ -22,7 +22,7 @@ export function Setup() {
   const { state, dispatch } = useStore();
   const [editInd, setEditInd] = useState<Indicator | null>(null);
   const [isNew, setIsNew] = useState(false);
-  const [editDir, setEditDir] = useState<{num: string, name: string, cioId: string} | null>(null);
+  const [editDir, setEditDir] = useState<{ num: string, name: string, cioId: string } | null>(null);
   const [treeFilter, setTreeFilter] = useState<TreeFilter>(EMPTY_TREE_FILTER);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
 
@@ -66,7 +66,7 @@ export function Setup() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-semibold">Настройка рейтинга</h2>
+          <h2 className="text-lg font-semibold">Настройка показателей</h2>
           <p className="text-sm text-muted-foreground">
             Перечень показателей, формулы и привязка к отраслевым ЦИО (по данным МЭФ). Отчётный период: {state.campaign.period}
           </p>
