@@ -19,7 +19,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/dialog';
-import { CheckCircle2, Undo2, FileSignature, Lock, Info, ChevronDown, ChevronRight } from 'lucide-react';
+import { CheckCircle2, Undo2, Send, Lock, Info, ChevronDown, ChevronRight } from 'lucide-react';
 import { fmt } from '@/lib/rating';
 
 /** ФИО сотрудника МЭФ (для демо) */
@@ -369,7 +369,7 @@ export function MefWorkspace({ hideOmsuApprove = false }: { hideOmsuApprove?: bo
                         <td className="p-2 text-right whitespace-nowrap">
                           {editable && v.v2026 !== null && (
                             <Button size="sm" onClick={() => setSignTarget(ind.id)}>
-                              <FileSignature className="h-3.5 w-3.5 mr-1" /> Подписать ЭЦП и отправить на согласование
+                              <Send className="h-3.5 w-3.5 mr-1" /> Отправить на согласование
                             </Button>
                           )}
                           {v.status === 'pending_mef' && (

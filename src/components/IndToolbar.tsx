@@ -40,10 +40,11 @@ interface Props {
   munId?: string;
   onMunChange?: (v: string) => void;
   allowAllMuns?: boolean;
+  showStatusFilter?: boolean;
 }
 
 /** Панель над таблицами показателей: поиск, фильтр по ЦИО / ОМСУ */
-export function IndToolbar({ filter, onChange, shown, total, hideCioFilter, munId, onMunChange, allowAllMuns }: Props) {
+export function IndToolbar({ filter, onChange, shown, total, hideCioFilter, munId, onMunChange, allowAllMuns, showStatusFilter }: Props) {
   const active = isTreeFilterActive(filter);
   return (
     <div className="flex flex-wrap items-center gap-3 rounded-md border bg-white px-3 py-2">
@@ -75,6 +76,23 @@ export function IndToolbar({ filter, onChange, shown, total, hideCioFilter, munI
           <SelectContent>
             {allowAllMuns !== false && <SelectItem value="all">Все ОМСУ</SelectItem>}
             {MUNICIPALITIES.map((m) => <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      )}
+
+      {showStatusFilter && (
+        <Select value={filter.status || 'all'} onValueChange={(v) => onChange({ ...filter, status: v })}>
+          <SelectTrigger className="h-9 w-[220px]">
+            <SelectValue placeholder="Статус" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Все статусы</SelectItem>
+            <SelectItem value="not_filled">Не заполнено</SelectItem>
+            <SelectItem value="draft">Черновик</SelectItem>
+            <SelectItem value="pending_cio">На согласовании (ЦИО)</SelectItem>
+            <SelectItem value="returned">Возвращено</SelectItem>
+            <SelectItem value="pending_mef">На согласовании (МЭФ)</SelectItem>
+            <SelectItem value="approved">Согласовано</SelectItem>
           </SelectContent>
         </Select>
       )}

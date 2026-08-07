@@ -21,12 +21,13 @@ export function chevronParents(all: Indicator[]): Set<string> {
 export interface TreeFilter {
   query: string;   // поиск по наименованию
   cioId: string;   // 'all' или id ответственного ЦИО
+  status?: string; // статус
 }
 
-export const EMPTY_TREE_FILTER: TreeFilter = { query: '', cioId: 'all' };
+export const EMPTY_TREE_FILTER: TreeFilter = { query: '', cioId: 'all', status: 'all' };
 
 export const isTreeFilterActive = (f: TreeFilter): boolean =>
-  f.query.trim() !== '' || f.cioId !== 'all';
+  f.query.trim() !== '' || f.cioId !== 'all' || (f.status !== undefined && f.status !== 'all');
 
 /**
  * Видимые узлы дерева показателей.

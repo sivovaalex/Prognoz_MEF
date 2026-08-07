@@ -1,9 +1,6 @@
-import { useState } from 'react';
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { FileKey2, CheckCircle2, Loader2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { CheckCircle2, Loader2 } from 'lucide-react';
 
 interface Props {
   open: boolean;
@@ -12,68 +9,39 @@ interface Props {
   onSigned: () => void;
 }
 
-/** Имитация подписания ЭЦП */
-export function SignDialog({ open, onOpenChange, title, onSigned }: Props) {
-  const [stage, setStage] = useState<'choose' | 'signing' | 'done'>('choose');
+export function SignDialog({ open, onOpenChange, onSigned }: Props) {
+  const [stage, setStage] = useState<'sending' | 'done'>('sending');
 
-  const sign = () => {
-    setStage('signing');
-    setTimeout(() => {
-      setStage('done');
-      setTimeout(() => {
+  useEffect(() => {
+    if (open) {
+      setStage('sending');
+      const t1 = setTimeout(() => {
+        setStage('done');
         onSigned();
+      }, 500);
+      const t2 = setTimeout(() => {
         onOpenChange(false);
-        setStage('choose');
-      }, 700);
-    }, 900);
-  };
+      }, 1500);
+      return () => { clearTimeout(t1); clearTimeout(t2); };
+    }
+  }, [open, onSigned, onOpenChange]);
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { onOpenChange(v); if (!v) setStage('choose'); }}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <FileKey2 className="h-5 w-5 text-blue-700" />
-            Подписание ЭЦП
-          </DialogTitle>
-          <DialogDescription>{title}</DialogDescription>
-        </DialogHeader>
-
-        {stage === 'choose' && (
-          <div className="space-y-3">
-            <div className="rounded-md border p-3 text-sm">
-              <div className="font-medium">Сертификат: Иванова Анна Петровна</div>
-              <div className="text-muted-foreground text-xs mt-1">
-                УЦ: АО «Национальный удостоверяющий центр» · действителен до 14.03.2027
-              </div>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              После подписания данные будут направлены на согласование. Изменение без отзыва станет недоступно.
-            </p>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-sm sm:max-w-sm [&>button]:hidden">
+        {stage === 'sending' ? (
+          <div className="flex flex-col items-center justify-center py-6 gap-4">
+             <Loader2 className="h-8 w-8 animate-spin text-blue-700" />
+             <div className="text-sm">Отправка…</div>
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center py-6 gap-4">
+             <CheckCircle2 className="h-8 w-8 text-green-700" />
+             <div className="text-sm font-medium">Отправлено успешно</div>
           </div>
         )}
-        {stage === 'signing' && (
-          <div className="flex items-center gap-3 py-4 text-sm">
-            <Loader2 className="h-5 w-5 animate-spin text-blue-700" />
-            Формирование подписи…
-          </div>
-        )}
-        {stage === 'done' && (
-          <div className="flex items-center gap-3 py-4 text-sm text-green-700">
-            <CheckCircle2 className="h-5 w-5" />
-            Документ подписан и отправлен
-          </div>
-        )}
-
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={stage !== 'choose'}>
-            Отмена
-          </Button>
-          <Button onClick={sign} disabled={stage !== 'choose'}>
-            Подписать и отправить
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
+

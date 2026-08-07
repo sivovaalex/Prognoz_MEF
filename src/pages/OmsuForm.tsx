@@ -18,7 +18,7 @@ import {
 import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { FileSignature, Undo2, Lock, AlertTriangle, Info, ChevronDown, Users } from 'lucide-react';
+import { Send, Undo2, Lock, AlertTriangle, Info, ChevronDown, Users } from 'lucide-react';
 
 /** Сводка статусов по набору показателей сферы */
 function dirStats(inds: { id: string }[], values: Record<string, { status: string } | undefined>) {
@@ -265,8 +265,8 @@ export function OmsuForm() {
                           <td className="p-2 text-right whitespace-nowrap">
                             {editable && v.v2026 !== null && (
                               <Button size="sm" variant="default" onClick={() => setSignTarget(ind.id)}>
-                                <FileSignature className="h-3.5 w-3.5 mr-1" />
-                                Подписать ЭЦП и отправить
+                                <Send className="h-3.5 w-3.5 mr-1" />
+                                Отправить
                               </Button>
                             )}
                             {v.status === 'pending_cio' && isCurrentOmsu && (

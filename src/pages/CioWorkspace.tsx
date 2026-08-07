@@ -17,7 +17,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/dialog';
-import { CheckCircle2, Undo2, FileSignature, Lock, Info, ChevronDown, ChevronRight } from 'lucide-react';
+import { CheckCircle2, Undo2, Send, Lock, Info, ChevronDown, ChevronRight } from 'lucide-react';
 import { fmt } from '@/lib/rating';
 
 export function CioWorkspace({ hideOmsuApprove = false }: { hideOmsuApprove?: boolean }) {
@@ -71,178 +71,178 @@ export function CioWorkspace({ hideOmsuApprove = false }: { hideOmsuApprove?: bo
       <Tabs defaultValue={hideOmsuApprove ? 'own' : 'approve'}>
         <TabsList>
           {!hideOmsuApprove && (
-          <TabsTrigger value="approve">
-            Согласование показателей ОМСУ
-            {pendingCount > 0 && <Badge className="ml-2 bg-amber-500">{pendingCount}</Badge>}
-          </TabsTrigger>
+            <TabsTrigger value="approve">
+              Согласование показателей ОМСУ
+              {pendingCount > 0 && <Badge className="ml-2 bg-amber-500">{pendingCount}</Badge>}
+            </TabsTrigger>
           )}
           <TabsTrigger value="own">Собственные показатели ЦИО</TabsTrigger>
         </TabsList>
 
         {!hideOmsuApprove && (
-        <TabsContent value="approve" className="space-y-4 mt-4">
-          <IndToolbar
-            filter={treeFilter}
-            onChange={setTreeFilter}
-            shown={myVisible.length}
-            total={myIndicators.length}
-            hideCioFilter
-            munId={munFilter}
-            onMunChange={setMunFilter}
-          />
-          <div className="rounded-md border border-blue-200 bg-blue-50 p-3 text-sm flex gap-2">
-            <Info className="h-4 w-4 text-blue-700 mt-0.5 shrink-0" />
-            <span>
-              Согласуйте подписанные ЭЦП значения ОМСУ по показателям вашей отрасли или верните на доработку с комментарием.
-              После согласования изменение показателя ОМСУ блокируется. Наведите курсор на значение, чтобы увидеть дату
-              внесения и ФИО внёсшего данные. Сферы и показатели можно сворачивать.
-            </span>
-          </div>
+          <TabsContent value="approve" className="space-y-4 mt-4">
+            <IndToolbar
+              filter={treeFilter}
+              onChange={setTreeFilter}
+              shown={myVisible.length}
+              total={myIndicators.length}
+              hideCioFilter
+              munId={munFilter}
+              onMunChange={setMunFilter}
+            />
+            <div className="rounded-md border border-blue-200 bg-blue-50 p-3 text-sm flex gap-2">
+              <Info className="h-4 w-4 text-blue-700 mt-0.5 shrink-0" />
+              <span>
+                Согласуйте подписанные ЭЦП значения ОМСУ по показателям вашей отрасли или верните на доработку с комментарием.
+                После согласования изменение показателя ОМСУ блокируется. Наведите курсор на значение, чтобы увидеть дату
+                внесения и ФИО внёсшего данные. Сферы и показатели можно сворачивать.
+              </span>
+            </div>
 
-          {DIRECTIONS.map((d) => {
-            const inds = myVisible.filter((i) => i.directionId === d.id);
-            if (!inds.length) return null;
-            const dOpen = dirOpen(d.id);
-            const fillCount = inds.filter((i) => !i.isGroup).length;
-            const dirPend = inds.reduce(
-              (acc, i) => acc + (i.isGroup ? 0 : scopeMuns.filter((m) => state.omsuValues[m.id]?.[i.id]?.status === 'pending_cio').length),
-              0,
-            );
-            return (
-              <Card key={d.id}>
-                <CardHeader className="py-3">
-                  <button
-                    onClick={() => setOpenDirs((p) => ({ ...p, [d.id]: !dOpen }))}
-                    className="flex w-full items-center gap-2 text-left"
-                  >
-                    {dOpen ? <ChevronDown className="h-4 w-4 shrink-0 text-slate-500" /> : <ChevronRight className="h-4 w-4 shrink-0 text-slate-500" />}
-                    <CardTitle className="text-base flex-1">{d.name}</CardTitle>
-                    <span className="text-xs font-normal text-muted-foreground">
-                      Показателей: {fillCount}
-                      {dirPend > 0 && <span className="text-amber-700"> · На согласовании: {dirPend}</span>}
-                    </span>
-                  </button>
-                </CardHeader>
-                {dOpen && (
-                <CardContent className="pt-0 overflow-x-auto">
-                  <table className="w-full text-sm border-collapse">
-                    <thead>
-                      <ValueGroupHeader
-                        leading={(
-                          <>
-                            <th rowSpan={2} className="text-left p-2 w-12 align-middle">№</th>
-                            <th rowSpan={2} className="text-left p-2 align-middle min-w-[220px]">Показатель</th>
-                            <th rowSpan={2} className="text-left p-2 align-middle min-w-[130px]">ОМСУ</th>
-                          </>
-                        )}
-                        trailing={(
-                          <>
-                            <th rowSpan={2} className="text-left p-2 align-middle border-l">Статус</th>
-                            <th rowSpan={2} className="text-right p-2 w-64 align-middle">Действия</th>
-                          </>
-                        )}
-                      />
-                    </thead>
-                    <tbody>
-                      {inds.map((ind) => {
-                        if (ind.isGroup) {
-                          return (
-                            <tr key={ind.id} className="border-b bg-slate-50/80">
-                              <td colSpan={3 + VALUE_FIELDS.length + 2} className="p-2 align-middle">
-                                <span
-                                  className="flex items-center gap-1 font-semibold text-slate-700"
-                                  style={{ paddingLeft: `${(ind.level - 1) * 18}px` }}
-                                >
-                                  <TreeToggle
-                                    hasChildren={parents.has(ind.id)}
-                                    collapsed={!!collapsed[ind.id]}
-                                    onToggle={() => toggleNode(ind.id)}
-                                  />
-                                  <span>
-                                    <span className="mr-1 text-slate-400">▸</span>
-                                    {ind.num}. {ind.name}
-                                  </span>
-                                </span>
-                              </td>
-                            </tr>
-                          );
-                        }
-                        const rows = scopeMuns
-                          .map((m) => ({ m, v: state.omsuValues[m.id]?.[ind.id] }))
-                          .filter((r) => r.v);
-                        const appr = rows.filter((r) => r.v!.status === 'approved').length;
-                        const pend = rows.filter((r) => r.v!.status === 'pending_cio').length;
-                        return (
-                          <Fragment key={ind.id}>
-                            {rows.map(({ m, v }, ri) => (
-                              <tr key={m.id} className={`border-b ${v!.status === 'pending_cio' ? 'bg-amber-50/60' : 'hover:bg-slate-50'}`}>
-                                {ri === 0 && (
-                                  <td rowSpan={rows.length} className="p-2 text-muted-foreground whitespace-nowrap align-top">{ind.num}</td>
-                                )}
-                                {ri === 0 && (
-                                  <td rowSpan={rows.length} className="p-2 align-top">
-                                    <div className="flex items-start gap-1" style={{ paddingLeft: `${(ind.level - 1) * 18}px` }}>
-                                      <span className="mt-0.5 inline-flex shrink-0">
-                                        <TreeToggle
-                                          hasChildren={parents.has(ind.id)}
-                                          collapsed={!!collapsed[ind.id]}
-                                          onToggle={() => toggleNode(ind.id)}
-                                        />
+            {DIRECTIONS.map((d) => {
+              const inds = myVisible.filter((i) => i.directionId === d.id);
+              if (!inds.length) return null;
+              const dOpen = dirOpen(d.id);
+              const fillCount = inds.filter((i) => !i.isGroup).length;
+              const dirPend = inds.reduce(
+                (acc, i) => acc + (i.isGroup ? 0 : scopeMuns.filter((m) => state.omsuValues[m.id]?.[i.id]?.status === 'pending_cio').length),
+                0,
+              );
+              return (
+                <Card key={d.id}>
+                  <CardHeader className="py-3">
+                    <button
+                      onClick={() => setOpenDirs((p) => ({ ...p, [d.id]: !dOpen }))}
+                      className="flex w-full items-center gap-2 text-left"
+                    >
+                      {dOpen ? <ChevronDown className="h-4 w-4 shrink-0 text-slate-500" /> : <ChevronRight className="h-4 w-4 shrink-0 text-slate-500" />}
+                      <CardTitle className="text-base flex-1">{d.name}</CardTitle>
+                      <span className="text-xs font-normal text-muted-foreground">
+                        Показателей: {fillCount}
+                        {dirPend > 0 && <span className="text-amber-700"> · На согласовании: {dirPend}</span>}
+                      </span>
+                    </button>
+                  </CardHeader>
+                  {dOpen && (
+                    <CardContent className="pt-0 overflow-x-auto">
+                      <table className="w-full text-sm border-collapse">
+                        <thead>
+                          <ValueGroupHeader
+                            leading={(
+                              <>
+                                <th rowSpan={2} className="text-left p-2 w-12 align-middle">№</th>
+                                <th rowSpan={2} className="text-left p-2 align-middle min-w-[220px]">Показатель</th>
+                                <th rowSpan={2} className="text-left p-2 align-middle min-w-[130px]">ОМСУ</th>
+                              </>
+                            )}
+                            trailing={(
+                              <>
+                                <th rowSpan={2} className="text-left p-2 align-middle border-l">Статус</th>
+                                <th rowSpan={2} className="text-right p-2 w-64 align-middle">Действия</th>
+                              </>
+                            )}
+                          />
+                        </thead>
+                        <tbody>
+                          {inds.map((ind) => {
+                            if (ind.isGroup) {
+                              return (
+                                <tr key={ind.id} className="border-b bg-slate-50/80">
+                                  <td colSpan={3 + VALUE_FIELDS.length + 2} className="p-2 align-middle">
+                                    <span
+                                      className="flex items-center gap-1 font-semibold text-slate-700"
+                                      style={{ paddingLeft: `${(ind.level - 1) * 18}px` }}
+                                    >
+                                      <TreeToggle
+                                        hasChildren={parents.has(ind.id)}
+                                        collapsed={!!collapsed[ind.id]}
+                                        onToggle={() => toggleNode(ind.id)}
+                                      />
+                                      <span>
+                                        <span className="mr-1 text-slate-400">▸</span>
+                                        {ind.num}. {ind.name}
                                       </span>
-                                      <div>
-                                        <span className="font-medium">{ind.name} <span className="font-normal text-muted-foreground">({ind.unit})</span></span>
-                                        <div className="mt-0.5 text-xs text-muted-foreground">
-                                          Согласовано: {appr} из {rows.length}
-                                          {pend > 0 && <span className="text-amber-700"> · На согласовании: {pend}</span>}
-                                        </div>
-                                      </div>
-                                    </div>
-                                  </td>
-                                )}
-                                <td className="p-2 font-medium">{m.name}</td>
-                                {VALUE_FIELDS.map((f) => (
-                                  <td key={f.key} className={`p-1.5 text-center ${f.key === 'v2026' ? 'font-medium' : ''} ${fieldTint(f.key)}`}>
-                                    <ValueTip value={v![f.key]} updatedAt={v!.updatedAt} author={v!.signedBy ?? 'Иванова А.П.'} />
-                                  </td>
-                                ))}
-                                <td className="p-2"><OmsuStatusBadge status={v!.status} /></td>
-                                <td className="p-2 text-right whitespace-nowrap">
-                                  {v!.status === 'pending_cio' && (
-                                    <div className="flex gap-1 justify-end">
-                                      <Button
-                                        size="sm"
-                                        onClick={() => dispatch({ type: 'CIO_APPROVE', munId: m.id, indId: ind.id, actor: cio.short })}
-                                      >
-                                        <CheckCircle2 className="h-3.5 w-3.5 mr-1" /> Согласовать
-                                      </Button>
-                                      <Button
-                                        size="sm"
-                                        variant="outline"
-                                        onClick={() => { setReturnTarget({ munId: m.id, indId: ind.id }); setComment(''); }}
-                                      >
-                                        <Undo2 className="h-3.5 w-3.5 mr-1" /> Вернуть
-                                      </Button>
-                                    </div>
-                                  )}
-                                  {v!.status === 'approved' && (
-                                    <span className="inline-flex items-center gap-1 text-xs text-green-700">
-                                      <Lock className="h-3.5 w-3.5" /> заблокировано
                                     </span>
-                                  )}
-                                </td>
-                              </tr>
-                            ))}
-                          </Fragment>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </CardContent>
-                )}
-              </Card>
-            );
-          })}
-        </TabsContent>
+                                  </td>
+                                </tr>
+                              );
+                            }
+                            const rows = scopeMuns
+                              .map((m) => ({ m, v: state.omsuValues[m.id]?.[ind.id] }))
+                              .filter((r) => r.v);
+                            const appr = rows.filter((r) => r.v!.status === 'approved').length;
+                            const pend = rows.filter((r) => r.v!.status === 'pending_cio').length;
+                            return (
+                              <Fragment key={ind.id}>
+                                {rows.map(({ m, v }, ri) => (
+                                  <tr key={m.id} className={`border-b ${v!.status === 'pending_cio' ? 'bg-amber-50/60' : 'hover:bg-slate-50'}`}>
+                                    {ri === 0 && (
+                                      <td rowSpan={rows.length} className="p-2 text-muted-foreground whitespace-nowrap align-top">{ind.num}</td>
+                                    )}
+                                    {ri === 0 && (
+                                      <td rowSpan={rows.length} className="p-2 align-top">
+                                        <div className="flex items-start gap-1" style={{ paddingLeft: `${(ind.level - 1) * 18}px` }}>
+                                          <span className="mt-0.5 inline-flex shrink-0">
+                                            <TreeToggle
+                                              hasChildren={parents.has(ind.id)}
+                                              collapsed={!!collapsed[ind.id]}
+                                              onToggle={() => toggleNode(ind.id)}
+                                            />
+                                          </span>
+                                          <div>
+                                            <span className="font-medium">{ind.name} <span className="font-normal text-muted-foreground">({ind.unit})</span></span>
+                                            <div className="mt-0.5 text-xs text-muted-foreground">
+                                              Согласовано: {appr} из {rows.length}
+                                              {pend > 0 && <span className="text-amber-700"> · На согласовании: {pend}</span>}
+                                            </div>
+                                          </div>
+                                        </div>
+                                      </td>
+                                    )}
+                                    <td className="p-2 font-medium">{m.name}</td>
+                                    {VALUE_FIELDS.map((f) => (
+                                      <td key={f.key} className={`p-1.5 text-center ${f.key === 'v2026' ? 'font-medium' : ''} ${fieldTint(f.key)}`}>
+                                        <ValueTip value={v![f.key]} updatedAt={v!.updatedAt} author={v!.signedBy ?? 'Иванова А.П.'} />
+                                      </td>
+                                    ))}
+                                    <td className="p-2"><OmsuStatusBadge status={v!.status} /></td>
+                                    <td className="p-2 text-right whitespace-nowrap">
+                                      {v!.status === 'pending_cio' && (
+                                        <div className="flex gap-1 justify-end">
+                                          <Button
+                                            size="sm"
+                                            onClick={() => dispatch({ type: 'CIO_APPROVE', munId: m.id, indId: ind.id, actor: cio.short })}
+                                          >
+                                            <CheckCircle2 className="h-3.5 w-3.5 mr-1" /> Согласовать
+                                          </Button>
+                                          <Button
+                                            size="sm"
+                                            variant="outline"
+                                            onClick={() => { setReturnTarget({ munId: m.id, indId: ind.id }); setComment(''); }}
+                                          >
+                                            <Undo2 className="h-3.5 w-3.5 mr-1" /> Вернуть
+                                          </Button>
+                                        </div>
+                                      )}
+                                      {v!.status === 'approved' && (
+                                        <span className="inline-flex items-center gap-1 text-xs text-green-700">
+                                          <Lock className="h-3.5 w-3.5" /> заблокировано
+                                        </span>
+                                      )}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </Fragment>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </CardContent>
+                  )}
+                </Card>
+              );
+            })}
+          </TabsContent>
         )}
 
         <TabsContent value="own" className="space-y-4 mt-4">
@@ -334,7 +334,7 @@ export function CioWorkspace({ hideOmsuApprove = false }: { hideOmsuApprove?: bo
                         <td className="p-2 text-right whitespace-nowrap">
                           {editable && v.v2026 !== null && (
                             <Button size="sm" onClick={() => setSignTarget(ind.id)}>
-                              <FileSignature className="h-3.5 w-3.5 mr-1" /> Подписать ЭЦП и отправить в МЭФ
+                              <Send className="h-3.5 w-3.5 mr-1" /> Отправить
                             </Button>
                           )}
                           {v.status === 'pending_mef' && (

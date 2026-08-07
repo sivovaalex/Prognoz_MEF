@@ -7,19 +7,10 @@ import { IndToolbar, TreeToggle } from '@/components/IndToolbar';
 import { ValueGroupHeader, fieldTint } from '@/components/ValueColumns';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { OmsuStatusBadge, CioStatusBadge } from '@/components/StatusBadge';
 import { ValueTip } from '@/components/ValueTip';
 import { Info, ChevronDown, ChevronRight } from 'lucide-react';
-
-
-const CAMPAIGN_BADGE: Record<string, { label: string; cls: string }> = {
-  draft: { label: 'Подготовка', cls: 'bg-gray-100 text-gray-700' },
-  scheduled: { label: 'Запланирован', cls: 'bg-blue-100 text-blue-700' },
-  collecting: { label: 'Идёт сбор', cls: 'bg-amber-100 text-amber-800' },
-  completed: { label: 'Завершён', cls: 'bg-green-100 text-green-700' },
-};
 
 export function Overview({ role }: { role: RoleId }) {
   const { state } = useStore();
@@ -41,38 +32,28 @@ export function Overview({ role }: { role: RoleId }) {
 
   // Область видимости: ОМСУ — только своё ОМСУ; ЦИО — только показатели своей отрасли
   const scopeMuns = role === 'omsu' ? MUNICIPALITIES.filter((m) => m.id === CURRENT_OMSU) : MUNICIPALITIES;
-  const scopeInds = role === 'cio' ? state.indicators.filter((i) => i.cioId === CURRENT_CIO) : state.indicators;
-  const scoped = role === 'omsu' || role === 'cio';
+  const scopeIndsRaw = role === 'cio' ? state.indicators.filter((i) => i.cioId === CURRENT_CIO) : state.indicators;
 
   // дерево показателей: сворачивание дочерних и фильтры
   const [treeFilter, setTreeFilter] = useState<TreeFilter>(EMPTY_TREE_FILTER);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+
+  const scopeInds = treeFilter.status && treeFilter.status !== 'all'
+    ? scopeIndsRaw.filter(ind => {
+        if (ind.isGroup) return true;
+        return scopeMuns.some(m => {
+          const v = state.omsuValues[m.id]?.[ind.id];
+          const st = v ? v.status : 'not_filled';
+          return st === treeFilter.status;
+        });
+      })
+    : scopeIndsRaw;
+
   const scopeVisible = visibleTree(scopeInds, collapsed, treeFilter);
   const parents = chevronParents(state.indicators);
   const toggleNode = (id: string) => setCollapsed((p) => ({ ...p, [id]: !p[id] }));
 
-  // Статистика по области видимости (только заполняемые показатели, без групп)
-  const scopeFill = scopeInds.filter((i) => !i.isGroup);
-  let total = 0, approved = 0, pending = 0, returned = 0, draft = 0, empty = 0;
-  scopeMuns.forEach((m) => {
-    scopeFill.forEach((ind) => {
-      const v = state.omsuValues[m.id]?.[ind.id];
-      total += 1;
-      if (!v || v.status === 'not_filled') empty += 1;
-      else if (v.status === 'approved') approved += 1;
-      else if (v.status === 'pending_cio') pending += 1;
-      else if (v.status === 'returned') returned += 1;
-      else draft += 1;
-    });
-  });
-  const stats = { total, approved, pending, returned, draft, empty };
-  const pct = total ? Math.round((approved / total) * 100) : 0;
-  const camp = CAMPAIGN_BADGE[state.campaign.status];
 
-  const progressLabel =
-    role === 'omsu' ? 'Согласовано ваших показателей' :
-    role === 'cio' ? 'Согласовано показателей вашей отрасли' :
-    'Согласовано показателей ОМСУ';
 
   const scopeNote =
     role === 'omsu' ? 'Отображаются данные только вашего ОМСУ.' :
@@ -86,84 +67,7 @@ export function Overview({ role }: { role: RoleId }) {
           <Info className="h-4 w-4 shrink-0" /> {scopeNote}
         </div>
       )}
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card className="md:col-span-2">
-          <CardHeader className="pb-2">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-lg">
-                {state.campaign.name} — {state.campaign.period}
-              </CardTitle>
-              <span className={`rounded-full px-3 py-1 text-xs font-medium ${camp.cls}`}>{camp.label}</span>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <div className="rounded-md bg-slate-50 p-3">
-                <div className="text-xs text-muted-foreground">Дата запуска</div>
-                <div className="font-medium">{state.campaign.startDate?.split('-').reverse().join('.') ?? '—'}</div>
-              </div>
-              <div className="rounded-md bg-slate-50 p-3">
-                <div className="text-xs text-muted-foreground">Срок ОМСУ</div>
-                <div className="font-medium">{state.campaign.deadlineOmsu.split('-').reverse().join('.')}</div>
-              </div>
-              <div className="rounded-md bg-slate-50 p-3">
-                <div className="text-xs text-muted-foreground">Срок ЦИО</div>
-                <div className="font-medium">{state.campaign.deadlineCio.split('-').reverse().join('.')}</div>
-              </div>
-              <div className="rounded-md bg-slate-50 p-3">
-                <div className="text-xs text-muted-foreground">Срок МЭФ</div>
-                <div className="font-medium">{state.campaign.deadlineMef.split('-').reverse().join('.')}</div>
-              </div>
-            </div>
-            <div>
-              <div className="flex justify-between text-xs text-muted-foreground mb-1">
-                <span>{progressLabel}: {stats.approved} из {stats.total}</span>
-                <span>{pct}%</span>
-              </div>
-              <Progress value={pct} className="h-2" />
-            </div>
-            <div className="flex flex-wrap gap-2 text-xs">
-              <Badge variant="outline" className="text-green-700 border-green-300">Согласовано: {stats.approved}</Badge>
-              <Badge variant="outline" className="text-amber-700 border-amber-300">На согласовании: {stats.pending}</Badge>
-              <Badge variant="outline" className="text-blue-700 border-blue-300">Черновики: {stats.draft}</Badge>
-              <Badge variant="outline" className="text-red-700 border-red-300">Возвращено: {stats.returned}</Badge>
-              <Badge variant="outline" className="text-gray-600">Не заполнено: {stats.empty}</Badge>
-            </div>
-          </CardContent>
-        </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">{scoped ? 'Ваш участок сбора' : 'Участники сбора'}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2 text-sm">
-            {role === 'omsu' && (
-              <>
-                <div className="flex justify-between"><span className="text-muted-foreground">ОМСУ</span><span className="font-medium">{scopeMuns[0]?.name}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Показатели к заполнению</span><span className="font-medium">{scopeFill.length}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Разделы показателя</span><span className="font-medium">{DIRECTIONS.length}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Согласующие ЦИО</span><span className="font-medium">{CIOS.length}</span></div>
-              </>
-            )}
-            {role === 'cio' && (
-              <>
-                <div className="flex justify-between"><span className="text-muted-foreground">Отраслевой ЦИО</span><span className="font-medium">{CIOS.find((c) => c.id === CURRENT_CIO)?.short}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Показатели отрасли</span><span className="font-medium">{scopeFill.length}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">ОМСУ на согласовании</span><span className="font-medium">{MUNICIPALITIES.length}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Срок согласования</span><span className="font-medium">{state.campaign.deadlineCio.split('-').reverse().join('.')}</span></div>
-              </>
-            )}
-            {!scoped && (
-              <>
-                <div className="flex justify-between"><span className="text-muted-foreground">ОМСУ</span><span className="font-medium">{MUNICIPALITIES.length}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Отраслевые ЦИО</span><span className="font-medium">{CIOS.length}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Разделы показателя</span><span className="font-medium">{DIRECTIONS.length}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Показатели ОМСУ</span><span className="font-medium">{state.indicators.filter((i) => !i.isGroup).length}</span></div>
-              </>
-            )}
-          </CardContent>
-        </Card>
-      </div>
 
       <Tabs defaultValue="monitor">
         <TabsList>
@@ -175,7 +79,8 @@ export function Overview({ role }: { role: RoleId }) {
             filter={treeFilter}
             onChange={setTreeFilter}
             shown={scopeVisible.length}
-            total={scopeInds.length}
+            total={scopeIndsRaw.length}
+            showStatusFilter
           />
           <div className="rounded-md border border-blue-200 bg-blue-50 p-2.5 text-xs text-blue-900 flex gap-2 items-center">
             <Info className="h-4 w-4 shrink-0" />
@@ -202,6 +107,17 @@ export function Overview({ role }: { role: RoleId }) {
             const inds = scopeVisible.filter((i) => i.directionId === d.id);
             if (!inds.length) return null;
             const dOpen = dirOpen(d.id);
+            const fillInds = inds.filter((i) => !i.isGroup);
+            let dirTotal = 0;
+            let dirApproved = 0;
+            scopeMuns.forEach(m => {
+              fillInds.forEach(ind => {
+                dirTotal++;
+                if (state.omsuValues[m.id]?.[ind.id]?.status === 'approved') dirApproved++;
+              });
+            });
+            const dirPct = dirTotal > 0 ? Math.round((dirApproved / dirTotal) * 100) : 0;
+
             return (
               <Card key={d.id}>
                 <CardHeader className="py-3">
@@ -212,7 +128,7 @@ export function Overview({ role }: { role: RoleId }) {
                     {dOpen ? <ChevronDown className="h-4 w-4 shrink-0 text-slate-500" /> : <ChevronRight className="h-4 w-4 shrink-0 text-slate-500" />}
                     <CardTitle className="text-base flex-1">{d.name}</CardTitle>
                     <span className="text-xs font-normal text-muted-foreground">
-                      Показателей: {inds.filter((i) => !i.isGroup).length}
+                      Показателей: {fillInds.length} <span className="ml-2 text-green-600">({dirPct}% согласовано)</span>
                     </span>
                   </button>
                 </CardHeader>
@@ -245,6 +161,7 @@ export function Overview({ role }: { role: RoleId }) {
                       .map((m) => state.omsuValues[m.id]?.[ind.id])
                       .filter((v) => v && v.status !== 'not_filled');
                     const apprCnt = indVals.filter((v) => v!.status === 'approved').length;
+                    const indPct = indVals.length > 0 ? Math.round((apprCnt / indVals.length) * 100) : 0;
                     return (
                       <div key={ind.id} className="rounded-md border" style={{ marginLeft: `${(ind.level - 1) * 20}px` }}>
                         <button
@@ -263,7 +180,7 @@ export function Overview({ role }: { role: RoleId }) {
                             </span>
                           </div>
                           <div className="flex items-center gap-2 text-xs">
-                            <span className="text-muted-foreground">Согласовано: {apprCnt} из {indVals.length}</span>
+                            <span className="text-muted-foreground">Согласовано: {apprCnt} из {indVals.length} ({indPct}%)</span>
                             <span className="text-muted-foreground">Курирующий ЦИО:</span>
                             <Badge variant="secondary">{cio?.short}</Badge>
                             <span className="text-muted-foreground hidden md:inline">{cio?.name}</span>
@@ -294,6 +211,8 @@ export function Overview({ role }: { role: RoleId }) {
                               {/* ОМСУ */}
                               {scopeMuns.map((m) => {
                                 const v = state.omsuValues[m.id]?.[ind.id];
+                                const st = v ? v.status : 'not_filled';
+                                if (treeFilter.status && treeFilter.status !== 'all' && st !== treeFilter.status) return null;
                                 if (!v) return null;
                                 return (
                                   <tr key={m.id} className="border-b last:border-0 hover:bg-slate-50">
