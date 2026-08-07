@@ -13,6 +13,7 @@ import { Description } from '@/pages/Description';
 import { Home } from '@/pages/Home';
 import type { ModuleId } from '@/pages/Home';
 import { ModuleStub } from '@/pages/ModuleStub';
+import { Login } from '@/pages/Login';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
@@ -237,7 +238,7 @@ function Shell({ onHome }: { onHome: () => void }) {
 }
 
 export default function App() {
-  const [view, setView] = useState<'home' | 'app' | 'stub'>('home');
+  const [view, setView] = useState<'login' | 'home' | 'app' | 'stub'>('login');
   const [stubModule, setStubModule] = useState<Exclude<ModuleId, 'ser'>>('rating');
 
   const openModule = (m: ModuleId) => {
@@ -251,6 +252,7 @@ export default function App() {
 
   return (
     <StoreProvider>
+      {view === 'login' && <Login onLogin={() => setView('home')} />}
       {view === 'home' && <Home onOpen={openModule} />}
       {view === 'stub' && <ModuleStub title={STUB_TITLES[stubModule]} onBack={() => setView('home')} />}
       {view === 'app' && <Shell onHome={() => setView('home')} />}
