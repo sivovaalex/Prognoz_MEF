@@ -14,8 +14,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 export function MefManage({ goRating, goReport }: { goRating: () => void; goReport: () => void }) {
   const { state, dispatch } = useStore();
   const [startDate, setStartDate] = useState(state.campaign.startDate ?? '2026-07-20');
-  const [dlOmsu, setDlOmsu] = useState(state.campaign.deadlineOmsu);
-  const [dlCio, setDlCio] = useState(state.campaign.deadlineCio);
   const [dlMef, setDlMef] = useState(state.campaign.deadlineMef);
 
   const stats = approvalStats(state);
@@ -41,22 +39,14 @@ export function MefManage({ goRating, goReport }: { goRating: () => void; goRepo
               <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
             </div>
             <div className="grid grid-cols-2 items-center gap-2">
-              <Label>Срок заполнения ОМСУ</Label>
-              <Input type="date" value={dlOmsu} onChange={(e) => setDlOmsu(e.target.value)} />
-            </div>
-            <div className="grid grid-cols-2 items-center gap-2">
-              <Label>Срок согласования ЦИО</Label>
-              <Input type="date" value={dlCio} onChange={(e) => setDlCio(e.target.value)} />
-            </div>
-            <div className="grid grid-cols-2 items-center gap-2">
-              <Label>Срок согласования МЭФ</Label>
+              <Label>Дата окончания сбора</Label>
               <Input type="date" value={dlMef} onChange={(e) => setDlMef(e.target.value)} />
             </div>
             <div className="flex gap-2 pt-2">
               <Button
                 variant="outline"
                 onClick={() =>
-                  dispatch({ type: 'CAMPAIGN_SCHEDULE', startDate, deadlineOmsu: dlOmsu, deadlineCio: dlCio, deadlineMef: dlMef })
+                  dispatch({ type: 'CAMPAIGN_SCHEDULE', startDate, deadlineOmsu: state.campaign.deadlineOmsu, deadlineCio: state.campaign.deadlineCio, deadlineMef: dlMef })
                 }
               >
                 <CalendarClock className="h-4 w-4 mr-1" /> Сохранить даты
