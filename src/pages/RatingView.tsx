@@ -93,7 +93,7 @@ export function RatingView() {
           <Tabs defaultValue="territory">
             <TabsList className="mb-4">
               <TabsTrigger value="territory">Сводная оценка по территории</TabsTrigger>
-              <TabsTrigger value="direction">Сводная оценка по направлению</TabsTrigger>
+              <TabsTrigger value="direction">Сводная оценка по разделу показателя</TabsTrigger>
               <TabsTrigger value="indicators">Сводная оценка по показателям</TabsTrigger>
               <TabsTrigger value="compare">Сравнение вариантов расчёта</TabsTrigger>
             </TabsList>
@@ -122,7 +122,7 @@ export function RatingView() {
                 <table className="w-full border-collapse">
                   <thead>
                     <tr>
-                      <th className={thCls}>Направления/показатели</th>
+                      <th className={thCls}>Разделы показателя/показатели</th>
                       <th className={thCls}>Значение</th>
                       <th className={thCls}>Место по значению</th>
                       <th className={thCls}>Динамика</th>
@@ -210,7 +210,7 @@ export function RatingView() {
                   <SelectTrigger className="w-80"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="total">Итоговый рейтинг</SelectItem>
-                    {DIRECTIONS.map((d) => <SelectItem key={d.id} value={d.id}>Направление: {d.name}</SelectItem>)}
+                    {DIRECTIONS.map((d) => <SelectItem key={d.id} value={d.id}>Раздел показателя: {d.name}</SelectItem>)}
                     {state.indicators.filter((i) => !i.isGroup).map((i) => <SelectItem key={i.id} value={i.id}>{i.num} {i.name}</SelectItem>)}
                   </SelectContent>
                 </Select>

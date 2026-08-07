@@ -141,7 +141,7 @@ export function Overview({ role }: { role: RoleId }) {
               <>
                 <div className="flex justify-between"><span className="text-muted-foreground">ОМСУ</span><span className="font-medium">{scopeMuns[0]?.name}</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">Показатели к заполнению</span><span className="font-medium">{scopeFill.length}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Направления</span><span className="font-medium">{DIRECTIONS.length}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Разделы показателя</span><span className="font-medium">{DIRECTIONS.length}</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">Согласующие ЦИО</span><span className="font-medium">{CIOS.length}</span></div>
               </>
             )}
@@ -157,7 +157,7 @@ export function Overview({ role }: { role: RoleId }) {
               <>
                 <div className="flex justify-between"><span className="text-muted-foreground">ОМСУ</span><span className="font-medium">{MUNICIPALITIES.length}</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">Отраслевые ЦИО</span><span className="font-medium">{CIOS.length}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Направления</span><span className="font-medium">{DIRECTIONS.length}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Разделы показателя</span><span className="font-medium">{DIRECTIONS.length}</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">Показатели ОМСУ</span><span className="font-medium">{state.indicators.filter((i) => !i.isGroup).length}</span></div>
               </>
             )}

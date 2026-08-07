@@ -72,7 +72,7 @@ export function Setup() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={openNewDir}><Plus className="h-4 w-4 mr-1" /> Добавить направление</Button>
+          <Button variant="outline" onClick={openNewDir}><Plus className="h-4 w-4 mr-1" /> Добавить раздел показателя</Button>
           <Button onClick={openNew}><Plus className="h-4 w-4 mr-1" /> Добавить показатель</Button>
         </div>
       </div>
@@ -106,8 +106,6 @@ export function Setup() {
                           <th className="text-left p-2">Показатель</th>
                           <th className="text-left p-2">Отраслевой ЦИО</th>
                           <th className="text-left p-2">Ед. изм.</th>
-                          <th className="text-left p-2">Оптимум</th>
-                          <th className="text-left p-2">Вес</th>
                           <th className="text-left p-2">Формула расчёта</th>
                           <th className="p-2 w-10"></th>
                         </tr>
@@ -131,14 +129,6 @@ export function Setup() {
                             </td>
                             <td className="p-2"><Badge variant="secondary">{CIOS.find((c) => c.id === ind.cioId)?.short}</Badge></td>
                             <td className="p-2">{ind.isGroup ? '—' : ind.unit}</td>
-                            <td className="p-2">
-                              {ind.isGroup ? <span className="text-muted-foreground">—</span> : (
-                                <Badge variant="outline" className={ind.optimum === 'max' ? 'text-green-700 border-green-300' : 'text-red-700 border-red-300'}>
-                                  {ind.optimum === 'max' ? '↑ max' : '↓ min'}
-                                </Badge>
-                              )}
-                            </td>
-                            <td className="p-2">{ind.isGroup ? '—' : ind.weight}</td>
                             <td className="p-2 text-xs text-muted-foreground font-mono">{ind.isGroup ? '—' : ind.formula}</td>
                             <td className="p-2">
                               <Button variant="ghost" size="icon" onClick={() => { setIsNew(false); setEditInd({ ...ind }); }}>
@@ -174,7 +164,7 @@ export function Setup() {
                 <Input className="col-span-3" value={editInd.name} onChange={(e) => setEditInd({ ...editInd, name: e.target.value })} />
               </div>
               <div className="grid grid-cols-4 items-center gap-2">
-                <Label>Направление</Label>
+                <Label>Раздел показателя</Label>
                 <Select value={editInd.directionId} onValueChange={(v) => setEditInd({ ...editInd, directionId: v })}>
                   <SelectTrigger className="col-span-3"><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -182,33 +172,12 @@ export function Setup() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="grid grid-cols-4 items-center gap-2">
-                <Label>ЦИО</Label>
-                <Select value={editInd.cioId} onValueChange={(v) => setEditInd({ ...editInd, cioId: v })}>
-                  <SelectTrigger className="col-span-3"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {CIOS.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
+
               <div className="grid grid-cols-4 items-center gap-2">
                 <Label>Ед. изм.</Label>
                 <Input className="col-span-3" value={editInd.unit} onChange={(e) => setEditInd({ ...editInd, unit: e.target.value })} />
               </div>
-              <div className="grid grid-cols-4 items-center gap-2">
-                <Label>Оптимум</Label>
-                <Select value={editInd.optimum} onValueChange={(v) => setEditInd({ ...editInd, optimum: v as 'max' | 'min' })}>
-                  <SelectTrigger className="col-span-3"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="max">Максимум (больше — лучше)</SelectItem>
-                    <SelectItem value="min">Минимум (меньше — лучше)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid grid-cols-4 items-center gap-2">
-                <Label>Вес</Label>
-                <Input className="col-span-3" type="number" step="0.1" value={editInd.weight} onChange={(e) => setEditInd({ ...editInd, weight: Number(e.target.value) || 1 })} />
-              </div>
+
               <div className="grid grid-cols-4 items-center gap-2">
                 <Label>Формула</Label>
                 <Input className="col-span-3 font-mono text-xs" value={editInd.formula} onChange={(e) => setEditInd({ ...editInd, formula: e.target.value })} />
@@ -225,7 +194,7 @@ export function Setup() {
       <Dialog open={!!editDir} onOpenChange={(v) => !v && setEditDir(null)}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Новое направление</DialogTitle>
+            <DialogTitle>Новый раздел показателя</DialogTitle>
           </DialogHeader>
           {editDir && (
             <div className="grid gap-3 text-sm">
