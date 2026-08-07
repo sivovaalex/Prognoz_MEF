@@ -42,6 +42,7 @@ export function Setup() {
       optimum: 'max',
       weight: 1,
       formula: '',
+      consCoeff: '',
       level: 1,
       parentId: null,
     });
@@ -106,7 +107,8 @@ export function Setup() {
                           <th className="text-left p-2">Показатель</th>
                           <th className="text-left p-2">Отраслевой ЦИО</th>
                           <th className="text-left p-2">Ед. изм.</th>
-                          <th className="text-left p-2">Формула расчёта</th>
+                          <th className="text-left p-2">Формула базового прогноза</th>
+                          <th className="text-left p-2">Коэффициент консервативного прогноза</th>
                           <th className="p-2 w-10"></th>
                         </tr>
                       </thead>
@@ -130,6 +132,7 @@ export function Setup() {
                             <td className="p-2"><Badge variant="secondary">{CIOS.find((c) => c.id === ind.cioId)?.short}</Badge></td>
                             <td className="p-2">{ind.isGroup ? '—' : ind.unit}</td>
                             <td className="p-2 text-xs text-muted-foreground font-mono">{ind.isGroup ? '—' : ind.formula}</td>
+                            <td className="p-2 text-xs text-muted-foreground font-mono">{ind.isGroup ? '—' : (ind.consCoeff || '—')}</td>
                             <td className="p-2">
                               <Button variant="ghost" size="icon" onClick={() => { setIsNew(false); setEditInd({ ...ind }); }}>
                                 <Pencil className="h-4 w-4" />
@@ -179,8 +182,13 @@ export function Setup() {
               </div>
 
               <div className="grid grid-cols-4 items-center gap-2">
-                <Label>Формула</Label>
+                <Label>Формула баз. прогноза</Label>
                 <Input className="col-span-3 font-mono text-xs" value={editInd.formula} onChange={(e) => setEditInd({ ...editInd, formula: e.target.value })} />
+              </div>
+
+              <div className="grid grid-cols-4 items-center gap-2">
+                <Label>Коэфф. консерв. прогноза</Label>
+                <Input className="col-span-3 font-mono text-xs" value={editInd.consCoeff || ''} onChange={(e) => setEditInd({ ...editInd, consCoeff: e.target.value })} />
               </div>
             </div>
           )}

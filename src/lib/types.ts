@@ -50,7 +50,8 @@ export interface Indicator {
   unit: string;
   optimum: 'max' | 'min'; // что лучше: больше или меньше
   weight: number;
-  formula: string;        // формула нормирования/расчёта
+  formula: string;        // формула базового прогноза
+  consCoeff?: string;     // коэффициент консервативного прогноза
   level: number;          // уровень в иерархии: 1 — верхний, 2+ — вложенные (по отступу в файле показателей)
   parentId: string | null;
   isGroup?: boolean;      // строка-группа (без единицы измерения): не заполняется и не участвует в рейтинге
