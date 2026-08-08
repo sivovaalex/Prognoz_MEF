@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { StoreProvider, useStore } from '@/lib/store';
 import { ROLES } from '@/lib/data';
 import type { RoleId } from '@/lib/types';
@@ -22,7 +22,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Bell, Landmark, UserRound, Home as HomeIcon } from 'lucide-react';
 
 type PageId = 'overview' | 'setup' | 'omsu' | 'cio' | 'mef-manage' | 'rating' | 'report' | 'about' | 'users';
-type BlockId = 'mun' | 'obl' | 'params' | 'form2p' | 'long_term' | 'admin_block';
+type BlockId = 'mun' | 'obl' | 'params' | 'form2p' | 'long_term' | 'admin_block' | 'ukaz_main' | 'rating_main' | 'rating_view';
 
 const BLOCK_LABELS: Record<BlockId, string> = {
   mun: 'Муниципальный прогноз',
@@ -31,13 +31,23 @@ const BLOCK_LABELS: Record<BlockId, string> = {
   form2p: 'Форма 2П',
   long_term: 'Долгосрочный прогноз',
   admin_block: 'Администрирование',
+  ukaz_main: 'Указ Президента РФ №607',
+  rating_main: 'Показатели',
+  rating_view: 'Рейтинг ОМСУ',
 };
 
-const BLOCKS: Record<RoleId, BlockId[]> = {
-  admin: ['mun', 'obl', 'params', 'form2p', 'long_term', 'admin_block'],
-  mef: ['mun', 'obl', 'params', 'form2p', 'long_term'],
-  cio: ['mun', 'obl', 'params', 'form2p', 'long_term'],
-  omsu: ['mun'],
+const getBlocks = (role: RoleId, module: ModuleId): BlockId[] => {
+  if (module === 'ukaz') {
+    return role === 'admin' ? ['ukaz_main', 'admin_block'] : ['ukaz_main'];
+  }
+  if (module === 'rating') {
+    if (role === 'admin') return ['rating_main', 'rating_view', 'admin_block'];
+    if (role === 'mef') return ['rating_main', 'rating_view'];
+    return ['rating_main'];
+  }
+  if (role === 'admin') return ['mun', 'obl', 'params', 'form2p', 'long_term', 'admin_block'];
+  if (role === 'mef' || role === 'cio') return ['mun', 'obl', 'params', 'form2p', 'long_term'];
+  return ['mun'];
 };
 
 const NAV: Record<RoleId, { id: PageId; label: string }[]> = {
@@ -69,18 +79,26 @@ const STUB_TITLES: Record<Exclude<ModuleId, 'ser'>, string> = {
   ukaz: 'Контроль исполнения Указа Президента РФ №607',
 };
 
-function Shell({ onHome }: { onHome: () => void }) {
-  const { state } = useStore();
+function Shell({ activeModule, onHome }: { activeModule: ModuleId, onHome: () => void }) {
+  const { state, dispatch } = useStore();
   const [role, setRole] = useState<RoleId>('admin');
   const [page, setPage] = useState<PageId>('setup');
   const [block, setBlock] = useState<BlockId>('mun');
 
+  useEffect(() => {
+    dispatch({ type: 'SET_MODULE', module: activeModule });
+    const b = getBlocks(role, activeModule);
+    setBlock(b[0]);
+    setPage(DEFAULT_PAGE[role]);
+  }, [activeModule, dispatch]);
+
   const roleInfo = ROLES.find((r) => r.id === role)!;
   const notifs = state.notifications.filter((n) => n.forRoles.includes(role)).slice(-8).reverse();
+  const availableBlocks = getBlocks(role, activeModule);
 
   const switchRole = (r: RoleId) => {
     setRole(r);
-    setBlock(BLOCKS[r][0]);
+    setBlock(getBlocks(r, activeModule)[0]);
     setPage(DEFAULT_PAGE[r]);
   };
 
@@ -91,7 +109,9 @@ function Shell({ onHome }: { onHome: () => void }) {
 
   const activeNav = block === 'admin_block'
     ? [{ id: 'users' as PageId, label: 'Управление пользователями' }]
-    : NAV[role];
+    : block === 'rating_view'
+      ? [{ id: 'rating' as PageId, label: 'Рейтинг ОМСУ' }]
+      : NAV[role];
 
   return (
     <div className="min-h-screen bg-slate-100">
@@ -107,7 +127,7 @@ function Shell({ onHome }: { onHome: () => void }) {
                 ГАС «Управление» МО · Конструктор форм
               </div>
               <div className="text-xs text-white/80">
-                Модуль «Прогноз СЭР МО» · служба техподдержки: support.mosreg.ru
+                Модуль «{activeModule === 'ukaz' ? 'Указ Президента РФ №607' : 'Прогноз СЭР МО'}» · служба техподдержки: support.mosreg.ru
               </div>
             </div>
           </div>
@@ -168,7 +188,7 @@ function Shell({ onHome }: { onHome: () => void }) {
         {/* Блоки модуля */}
         <div className="bg-[#16486f]/60">
           <div className="w-full px-4 flex gap-1">
-            {BLOCKS[role].map((b) => (
+            {availableBlocks.map((b) => (
               <button
                 key={b}
                 onClick={() => switchBlock(b)}
@@ -234,13 +254,15 @@ function Shell({ onHome }: { onHome: () => void }) {
 
 export default function App() {
   const [view, setView] = useState<'login' | 'home' | 'app' | 'stub'>('login');
-  const [stubModule, setStubModule] = useState<Exclude<ModuleId, 'ser'>>('rating');
+  const [activeModule, setActiveModule] = useState<ModuleId>('ser');
+  const [stubModule, setStubModule] = useState<Exclude<ModuleId, 'ser' | 'ukaz' | 'rating'>>('rating' as any);
 
   const openModule = (m: ModuleId) => {
-    if (m === 'ser') {
+    if (m === 'ser' || m === 'ukaz' || m === 'rating') {
+      setActiveModule(m);
       setView('app');
     } else {
-      setStubModule(m);
+      setStubModule(m as any);
       setView('stub');
     }
   };
@@ -250,7 +272,7 @@ export default function App() {
       {view === 'login' && <Login onLogin={() => setView('home')} />}
       {view === 'home' && <Home onOpen={openModule} />}
       {view === 'stub' && <ModuleStub title={STUB_TITLES[stubModule]} onBack={() => setView('home')} />}
-      {view === 'app' && <Shell onHome={() => setView('home')} />}
+      {view === 'app' && <Shell activeModule={activeModule} onHome={() => setView('home')} />}
     </StoreProvider>
   );
 }

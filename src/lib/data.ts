@@ -290,17 +290,15 @@ const makeFields = (v2026: number): Pick<OmsuValue,
   base2029: r2(v2026 * 1.06),
 });
 
-// Заполняемые (не групповые) показатели
-const FILLABLE = INDICATORS.filter((i) => !i.isGroup);
-
-function buildOmsuValues(): Record<string, Record<string, OmsuValue>> {
+function buildOmsuValues(indicators: Indicator[]): Record<string, Record<string, OmsuValue>> {
+  const fillable = indicators.filter(i => !i.isGroup);
   const out: Record<string, Record<string, OmsuValue>> = {};
   for (let mi = 0; mi < MUNICIPALITIES.length; mi++) {
     const m = MUNICIPALITIES[mi];
     const rand = seedRand(mi * 997 + 13);
     out[m.id] = {};
-    for (let ii = 0; ii < FILLABLE.length; ii++) {
-      const ind = FILLABLE[ii];
+    for (let ii = 0; ii < fillable.length; ii++) {
+      const ind = fillable[ii];
       const [lo, hi] = RANGES[ind.id] ?? [100, 1000];
       const v = r2(lo + rand() * (hi - lo));
 
@@ -337,10 +335,11 @@ function buildOmsuValues(): Record<string, Record<string, OmsuValue>> {
   return out;
 }
 
-function buildCioValues(): Record<string, Record<string, CioValue>> {
+function buildCioValues(indicators: Indicator[]): Record<string, Record<string, CioValue>> {
   const out: Record<string, Record<string, CioValue>> = {};
   const rand = seedRand(4242);
-  for (const ind of FILLABLE) {
+  const fillable = indicators.filter(i => !i.isGroup);
+  for (const ind of fillable) {
     const [lo, hi] = RANGES[ind.id] ?? [100, 1000];
     const v = r2((lo + rand() * (hi - lo)) * 8.4); // областной уровень
     if (ind.cioId === CURRENT_CIO || ind.cioId === MEF_CIO) {
@@ -362,33 +361,46 @@ function buildCioValues(): Record<string, Record<string, CioValue>> {
 // Начальное состояние хранилища
 // ─────────────────────────────────────────────────────────────
 
-export const INITIAL_STATE: AppState = {
-  campaign: {
-    name: 'Муниципальный прогноз СЭР МО',
-    period: 'Прогноз на 2027–2029 гг.',
-    status: 'collecting',
-    startDate: '2026-07-20',
-    deadlineOmsu: '2026-07-31',
-    deadlineCio: '2026-08-07',
-    deadlineMef: '2026-08-14',
-    launchedAt: '20.07.2026 09:00',
-  },
-  indicators: INDICATORS,
-  omsuValues: buildOmsuValues(),
-  cioValues: buildCioValues(),
-  history: [
-    { at: '20.07.2026 09:00', actor: 'МЭФ', action: 'Запущена кампания «Муниципальный прогноз СЭР МО»: уведомления направлены 12 ОМСУ и 5 ЦИО' },
-    { at: '22.07.2026 14:12', actor: 'г.о. Балашиха', action: 'Заполнена форма по показателю «Численность постоянного населения»: направлена на согласование ЦИО' },
-    { at: '23.07.2026 10:45', actor: 'Мининвест', action: 'Форма ЦИО подписана ЭЦП и передана в МЭФ (разделы 3, 7, 8, 11 — 15 показателей)' },
-    { at: '24.07.2026 16:03', actor: 'МЭФ', action: 'Сформирован проект областного прогноза СЭР. Полнота данных: 71%' },
-  ],
-  notifications: [
-    { id: 1, at: '26.07.2026 14:05', text: 'Форма по показателю «Общий коэффициент рождаемости» возвращена на доработку: уточните значение на 2026 год', forRoles: ['omsu'] },
-    { id: 2, at: '25.07.2026 09:00', text: 'Напоминание: срок представления форм ОМСУ — 31.07.2026', forRoles: ['omsu', 'cio'] },
-  ],
-  ratingMode: 'preview',
-  finalPublished: false,
-};
+export function buildInitialState(moduleId: string): AppState {
+  let indicators = INDICATORS;
+  let directions = DIRECTIONS;
+  if (moduleId === 'ukaz') {
+    indicators = UKAZ_INDICATORS;
+    directions = UKAZ_DIRECTIONS;
+  } else if (moduleId === 'rating') {
+    indicators = RATING_INDICATORS;
+    directions = RATING_DIRECTIONS;
+  }
+
+  return {
+    indicators,
+    directions,
+    omsuValues: buildOmsuValues(indicators),
+    cioValues: buildCioValues(indicators),
+    campaign: {
+      name: moduleId === 'ukaz' ? 'Указ Президента РФ №607' : moduleId === 'rating' ? 'Рейтинг ОМСУ' : 'Муниципальный прогноз СЭР МО',
+      period: moduleId === 'rating' ? 'Оценка за 2026 год' : '2027–2029 годы',
+      status: 'collecting',
+      startDate: '2026-07-20',
+      deadlineOmsu: '2026-07-31',
+      deadlineCio: '2026-08-07',
+      deadlineMef: '2026-08-14',
+      launchedAt: '20.07.2026 09:00',
+    },
+    history: [
+      { at: '20.07.2026 09:00', actor: 'МЭФ', action: `Запущена кампания «${moduleId === 'ukaz' ? 'Указ Президента РФ №607' : moduleId === 'rating' ? 'Рейтинг ОМСУ' : 'Муниципальный прогноз СЭР МО'}»: уведомления направлены 12 ОМСУ и 5 ЦИО` },
+      { at: '22.07.2026 14:12', actor: 'г.о. Балашиха', action: 'Заполнена форма по показателю «Численность постоянного населения»: направлена на согласование ЦИО' },
+      { at: '23.07.2026 10:45', actor: 'Мининвест', action: 'Форма ЦИО подписана ЭЦП и передана в МЭФ' },
+      { at: '24.07.2026 16:03', actor: 'МЭФ', action: 'Сформирован проект прогноза. Полнота данных: 71%' },
+    ],
+    notifications: [
+      { id: 1, at: '26.07.2026 14:05', text: 'Форма по показателю возвращена на доработку: уточните значение на 2026 год', forRoles: ['omsu'] },
+      { id: 2, at: '25.07.2026 09:00', text: 'Напоминание: срок представления форм ОМСУ — 31.07.2026', forRoles: ['omsu', 'cio'] },
+    ],
+    ratingMode: 'preview',
+    finalPublished: false,
+  };
+}
 
 export const OMSU_STATUS_META: Record<OmsuValue['status'], { label: string; color: string; bg: string }> = {
   not_filled: { label: 'Не заполнена', color: '#64748b', bg: '#f1f5f9' },
@@ -449,4 +461,226 @@ export const MOCK_USERS: SysUser[] = [
     isLocked: false,
     roleId: 'omsu'
   }
+];
+
+export const UKAZ_DIRECTIONS: Direction[] = [
+  { id: 'd_ukaz', name: '1. Указ Президента РФ №607' },
+];
+
+export const UKAZ_INDICATORS: Indicator[] = [
+  {
+    id: 'u1',
+    num: '1',
+    name: 'Число субъектов малого и среднего предпринимательства в расчете на 10 тыс. человек населения.',
+    unit: 'ед.',
+    directionId: 'd_ukaz',
+    cioId: 'cio1',
+    formula: 'X / Y * 10000',
+    optimum: 'max',
+    weight: 1,
+    level: 1,
+    parentId: null,
+  },
+  {
+    id: 'u2',
+    num: '2',
+    name: 'Доля среднесписочной численности работников малых и средних предприятий в среднесписочной численности работников всех предприятий.',
+    unit: '%',
+    directionId: 'd_ukaz',
+    cioId: 'cio1',
+    formula: 'X / Y * 100',
+    optimum: 'max',
+    weight: 1,
+    level: 1,
+    parentId: null,
+  },
+  {
+    id: 'u3',
+    num: '3',
+    name: 'Доля протяженности автомобильных дорог общего пользования местного значения, не отвечающих нормативным требованиям.',
+    unit: '%',
+    directionId: 'd_ukaz',
+    cioId: 'cio2',
+    formula: 'X / Y * 100',
+    optimum: 'max',
+    weight: 1,
+    level: 1,
+    parentId: null,
+  },
+  {
+    id: 'u4',
+    num: '4',
+    name: 'Доля населения, проживающего в населенных пунктах, не имеющих регулярного автобусного и (или) железнодорожного сообщения с административным центром.',
+    unit: '%',
+    directionId: 'd_ukaz',
+    cioId: 'cio2',
+    formula: 'X / Y * 100',
+    optimum: 'max',
+    weight: 1,
+    level: 1,
+    parentId: null,
+  },
+  {
+    id: 'u5',
+    num: '5',
+    name: 'Доля площади земельных участков, являющихся объектами налогообложения земельным налогом, в общей площади территории.',
+    unit: '%',
+    directionId: 'd_ukaz',
+    cioId: 'cio3',
+    formula: 'X / Y * 100',
+    optimum: 'max',
+    weight: 1,
+    level: 1,
+    parentId: null,
+  },
+  {
+    id: 'u6',
+    num: '6',
+    name: 'Доля детей в возрасте от одного года до шести лет, состоящих на учете для определения в ДОУ.',
+    unit: '%',
+    directionId: 'd_ukaz',
+    cioId: 'cio4',
+    formula: 'X / Y * 100',
+    optimum: 'max',
+    weight: 1,
+    level: 1,
+    parentId: null,
+  },
+  {
+    id: 'u8',
+    num: '8',
+    name: 'Общая площадь жилых помещений, приходящаяся в среднем на одного жителя, - всего, в том числе введенная в действие за один год.',
+    unit: 'кв. м',
+    directionId: 'd_ukaz',
+    cioId: 'cio3',
+    formula: 'X / Y',
+    optimum: 'max',
+    weight: 1,
+    level: 1,
+    parentId: null,
+  },
+  {
+    id: 'u9',
+    num: '9',
+    name: 'Доля организаций коммунального комплекса, использующих объекты коммунальной инфраструктуры на праве частной собственности, по договору аренды или концессии.',
+    unit: '%',
+    directionId: 'd_ukaz',
+    cioId: 'cio3',
+    formula: 'X / Y * 100',
+    optimum: 'max',
+    weight: 1,
+    level: 1,
+    parentId: null,
+  },
+  {
+    id: 'u10',
+    num: '10',
+    name: 'Доля многоквартирных домов, расположенных на земельных участках, в отношении которых осуществлен государственный кадастровый учет.',
+    unit: '%',
+    directionId: 'd_ukaz',
+    cioId: 'cio3',
+    formula: 'X / Y * 100',
+    optimum: 'max',
+    weight: 1,
+    level: 1,
+    parentId: null,
+  },
+  {
+    id: 'u11',
+    num: '11',
+    name: 'Удельная величина потребления энергетических ресурсов в многоквартирных домах.',
+    unit: 'ед.',
+    directionId: 'd_ukaz',
+    cioId: 'cio3',
+    formula: 'X / Y',
+    optimum: 'max',
+    weight: 1,
+    level: 1,
+    parentId: null,
+  },
+  {
+    id: 'u12',
+    num: '12',
+    name: 'Удельная величина потребления энергетических ресурсов муниципальными бюджетными учреждениями.',
+    unit: 'ед.',
+    directionId: 'd_ukaz',
+    cioId: 'cio3',
+    formula: 'X / Y',
+    optimum: 'max',
+    weight: 1,
+    level: 1,
+    parentId: null,
+  },
+  {
+    id: 'u13',
+    num: '13',
+    name: 'Удовлетворенность населения деятельностью органов местного самоуправления (процент от числа опрошенных).',
+    unit: '%',
+    directionId: 'd_ukaz',
+    cioId: 'cio1',
+    formula: 'X',
+    optimum: 'max',
+    weight: 1,
+    level: 1,
+    parentId: null,
+  },
+  {
+    id: 'u14',
+    num: '14',
+    name: 'Результаты независимой оценки качества условий оказания услуг муниципальными организациями.',
+    unit: 'балл',
+    directionId: 'd_ukaz',
+    cioId: 'cio4',
+    formula: 'X',
+    optimum: 'max',
+    weight: 1,
+    level: 1,
+    parentId: null,
+  },
+];
+
+export const RATING_DIRECTIONS: Direction[] = [
+  { id: 'd_rating', name: 'Рейтинг 45 показателей' },
+];
+
+export const RATING_INDICATORS: Indicator[] = [
+  {
+    id: 'r1',
+    num: '1',
+    name: 'Доверие к власти',
+    unit: '%',
+    directionId: 'd_rating',
+    cioId: 'cio1',
+    formula: 'X / Y * 100',
+    optimum: 'max',
+    weight: 1,
+    level: 1,
+    parentId: null,
+  },
+  {
+    id: 'r2',
+    num: '2',
+    name: 'Качество дорог',
+    unit: '%',
+    directionId: 'd_rating',
+    cioId: 'cio2',
+    formula: 'X / Y * 100',
+    optimum: 'max',
+    weight: 1,
+    level: 1,
+    parentId: null,
+  },
+  {
+    id: 'r3',
+    num: '3',
+    name: 'Жалобы жителей (Добродел)',
+    unit: 'шт',
+    directionId: 'd_rating',
+    cioId: 'cio3',
+    formula: 'X',
+    optimum: 'min',
+    weight: 1,
+    level: 1,
+    parentId: null,
+  },
 ];

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useStore } from '@/lib/store';
-import { DIRECTIONS, CIOS } from '@/lib/data';
+import { CIOS } from '@/lib/data';
 import type { Indicator } from '@/lib/types';
 import { EMPTY_TREE_FILTER, chevronParents, visibleTree, type TreeFilter } from '@/lib/indTree';
 import { IndToolbar, TreeToggle } from '@/components/IndToolbar';
@@ -36,7 +36,7 @@ export function Setup() {
       id: `i${Date.now()}`,
       num: `${state.indicators.length + 1}.1`,
       name: '',
-      directionId: DIRECTIONS[0].id,
+      directionId: state.directions[0]?.id || '',
       cioId: CIOS[0].id,
       unit: '%',
       optimum: 'max',
@@ -91,7 +91,7 @@ export function Setup() {
               shown={visible.length}
               total={state.indicators.length}
             />
-            {DIRECTIONS.map((d) => {
+            {state.directions.map((d) => {
               const inds = visible.filter((i) => i.directionId === d.id);
               if (!inds.length) return null;
               return (
@@ -176,7 +176,7 @@ export function Setup() {
                 <Select value={editInd.directionId} onValueChange={(v) => setEditInd({ ...editInd, directionId: v })}>
                   <SelectTrigger className="col-span-3"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {DIRECTIONS.map((d) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
+                    {state.directions.map((d) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
@@ -197,6 +197,17 @@ export function Setup() {
               <div className="grid grid-cols-4 items-center gap-2">
                 <Label>Ед. изм.</Label>
                 <Input className="col-span-3" value={editInd.unit} onChange={(e) => setEditInd({ ...editInd, unit: e.target.value })} />
+              </div>
+
+              <div className="grid grid-cols-4 items-center gap-2">
+                <Label>Оптимум *</Label>
+                <Select value={editInd.optimum} onValueChange={(v: 'max' | 'min') => setEditInd({ ...editInd, optimum: v })}>
+                  <SelectTrigger className="col-span-3"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="max">Максимум (max)</SelectItem>
+                    <SelectItem value="min">Минимум (min)</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="grid grid-cols-4 items-center gap-2">

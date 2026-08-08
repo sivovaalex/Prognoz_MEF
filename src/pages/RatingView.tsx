@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useStore } from '@/lib/store';
-import { MUNICIPALITIES, DIRECTIONS } from '@/lib/data';
+import { MUNICIPALITIES } from '@/lib/data';
 import { computeRating, computeDirectionRatings, rankColor, fmt } from '@/lib/rating';
 import { EMPTY_TREE_FILTER, chevronParents, visibleTree, type TreeFilter } from '@/lib/indTree';
 import { IndToolbar, TreeToggle } from '@/components/IndToolbar';
@@ -139,7 +139,7 @@ export function RatingView() {
                       <td className={tdCls}>—</td>
                       <td className={tdCls} style={{ background: rankColor(mun.place, n) }}>{mun.place ?? '—'}</td>
                     </tr>
-                    {DIRECTIONS.map((d) => {
+                    {state.directions.map((d) => {
                       const dr = dirRows[d.id]?.[selMun];
                       const inds = visible.filter((i) => i.directionId === d.id);
                       if (!inds.length) return [];
@@ -210,7 +210,7 @@ export function RatingView() {
                   <SelectTrigger className="w-80"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="total">Итоговый рейтинг</SelectItem>
-                    {DIRECTIONS.map((d) => <SelectItem key={d.id} value={d.id}>Раздел показателя: {d.name}</SelectItem>)}
+                    {state.directions.map((d) => <SelectItem key={d.id} value={d.id}>Раздел показателя: {d.name}</SelectItem>)}
                     {state.indicators.filter((i) => !i.isGroup).map((i) => <SelectItem key={i.id} value={i.id}>{i.num} {i.name}</SelectItem>)}
                   </SelectContent>
                 </Select>

@@ -36,7 +36,7 @@ const MODULES: ModuleCard[] = [
     accent: 'from-amber-100/80 to-orange-200/60',
     ring: 'border-amber-200/60',
     iconTint: 'bg-amber-50 text-amber-700',
-    ready: false,
+    ready: true,
   },
   {
     id: 'ukaz',
@@ -47,7 +47,7 @@ const MODULES: ModuleCard[] = [
     accent: 'from-violet-100/80 to-purple-200/60',
     ring: 'border-violet-200/60',
     iconTint: 'bg-violet-50 text-violet-700',
-    ready: false,
+    ready: true,
   },
 ];
 

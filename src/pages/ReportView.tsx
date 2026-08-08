@@ -1,6 +1,6 @@
 import React from 'react';
 import { useStore } from '@/lib/store';
-import { DIRECTIONS } from '@/lib/data';
+import { } from '@/lib/data';
 import type { IndicatorValues } from '@/lib/types';
 import { Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -66,7 +66,7 @@ export function ReportView() {
             </tr>
           </thead>
           <tbody>
-            {DIRECTIONS.map((dir, dIdx) => (
+            {state.directions.map((dir, dIdx) => (
               <React.Fragment key={dir.id}>
                 <tr className="bg-slate-100 font-semibold">
                   <td className={tdCls} colSpan={11}>

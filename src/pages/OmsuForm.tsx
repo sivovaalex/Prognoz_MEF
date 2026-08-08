@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useStore } from '@/lib/store';
-import { DIRECTIONS, CIOS, CURRENT_OMSU, MUNICIPALITIES } from '@/lib/data';
+import { CIOS, CURRENT_OMSU, MUNICIPALITIES } from '@/lib/data';
 import { VALUE_FIELDS } from '@/lib/types';
 import { EMPTY_TREE_FILTER, chevronParents, visibleTree, type TreeFilter } from '@/lib/indTree';
 import { IndToolbar, TreeToggle } from '@/components/IndToolbar';
@@ -41,7 +41,7 @@ export function OmsuForm() {
   const mun = MUNICIPALITIES.find((m) => m.id === munId)!;
   const [signTarget, setSignTarget] = useState<string | null>(null);
   // аккордеон: открыта только одна сфера
-  const [openDir, setOpenDir] = useState<string | null>(DIRECTIONS[0]?.id ?? null);
+  const [openDir, setOpenDir] = useState<string | null>(state.directions[0]?.id ?? null);
   // показатель, по которому открыто модальное окно со значениями всех ОМСУ
   const [compareInd, setCompareInd] = useState<string | null>(null);
   // дерево показателей: сворачивание дочерних и фильтры
@@ -94,7 +94,7 @@ export function OmsuForm() {
         allowAllMuns={false}
       />
 
-      {DIRECTIONS.map((d) => {
+      {state.directions.map((d) => {
         const inds = visible.filter((i) => i.directionId === d.id);
         if (!inds.length) return null;
         const st = dirStats(state.indicators.filter((i) => i.directionId === d.id && !i.isGroup), values);

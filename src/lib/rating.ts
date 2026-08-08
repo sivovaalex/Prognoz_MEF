@@ -1,5 +1,5 @@
 import type { AppState } from './types';
-import { MUNICIPALITIES, DIRECTIONS } from './data';
+import { MUNICIPALITIES } from './data';
 
 export interface CellData {
   value: number | null;
@@ -96,7 +96,7 @@ export function computeRating(state: AppState, mode: 'preview' | 'final'): MunRa
 /** Рейтинг по направлению */
 export function computeDirectionRatings(state: AppState, rows: MunRating[]): Record<string, Record<string, DirectionRating>> {
   const result: Record<string, Record<string, DirectionRating>> = {};
-  DIRECTIONS.forEach((d) => {
+  state.directions.forEach((d) => {
     const inds = state.indicators.filter((i) => i.directionId === d.id && !i.isGroup);
     const scores = rows.map((r) => {
       let sum = 0;

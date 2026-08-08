@@ -1,6 +1,6 @@
 import { Fragment, useState } from 'react';
 import { useStore } from '@/lib/store';
-import { MUNICIPALITIES, CIOS, DIRECTIONS, MEF_CIO } from '@/lib/data';
+import { MUNICIPALITIES, CIOS, MEF_CIO } from '@/lib/data';
 import { VALUE_FIELDS, emptyValueFields, type ValueFieldKey } from '@/lib/types';
 import { EMPTY_TREE_FILTER, chevronParents, visibleTree, type TreeFilter } from '@/lib/indTree';
 import { IndToolbar, TreeToggle } from '@/components/IndToolbar';
@@ -131,7 +131,7 @@ export function MefWorkspace({ hideOmsuApprove = false }: { hideOmsuApprove?: bo
             </span>
           </div>
 
-          {DIRECTIONS.map((d) => {
+          {state.directions.map((d) => {
             const inds = myVisible.filter((i) => i.directionId === d.id);
             if (!inds.length) return null;
             const dOpen = dirOpen(d.id);
@@ -419,7 +419,7 @@ export function MefWorkspace({ hideOmsuApprove = false }: { hideOmsuApprove?: bo
             </span>
           </div>
 
-          {DIRECTIONS.map((d) => {
+          {state.directions.map((d) => {
             const inds = cioVisibleInds.filter((i) => i.directionId === d.id);
             if (!inds.length) return null;
             const shownInds = onlyPending

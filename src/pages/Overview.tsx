@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useStore } from '@/lib/store';
-import { MUNICIPALITIES, DIRECTIONS, CIOS, CURRENT_OMSU, CURRENT_CIO } from '@/lib/data';
+import { MUNICIPALITIES, CIOS, CURRENT_OMSU, CURRENT_CIO } from '@/lib/data';
 import { VALUE_FIELDS, type RoleId } from '@/lib/types';
 import { EMPTY_TREE_FILTER, chevronParents, visibleTree, type TreeFilter } from '@/lib/indTree';
 import { IndToolbar, TreeToggle } from '@/components/IndToolbar';
@@ -23,7 +23,7 @@ export function Overview({ role }: { role: RoleId }) {
   const indOpen = (id: string) => openInds[id] ?? (role !== 'mef');
   const setAll = (open: boolean) => {
     const nd: Record<string, boolean> = {};
-    DIRECTIONS.forEach((d) => { nd[d.id] = open; });
+    state.directions.forEach((d) => { nd[d.id] = open; });
     setOpenDirs(nd);
     const ni: Record<string, boolean> = {};
     state.indicators.forEach((i) => { ni[i.id] = open; });
@@ -103,7 +103,7 @@ export function Overview({ role }: { role: RoleId }) {
               </button>
             </span>
           </div>
-          {DIRECTIONS.map((d) => {
+          {state.directions.map((d) => {
             const inds = scopeVisible.filter((i) => i.directionId === d.id);
             if (!inds.length) return null;
             const dOpen = dirOpen(d.id);

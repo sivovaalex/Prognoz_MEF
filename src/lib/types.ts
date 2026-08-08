@@ -177,6 +177,7 @@ export interface HistoryItem {
 export interface AppState {
   campaign: Campaign;
   indicators: Indicator[];
+  directions: Direction[];
   omsuValues: Record<string, Record<string, OmsuValue>>; // munId -> indId -> value
   cioValues: Record<string, Record<string, CioValue>>;   // indId -> cioId -> собственное значение ЦИО по тому же показателю
   history: HistoryItem[];

@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useReducer } from 'react';
 import { VALUE_FIELDS, emptyValueFields } from './types';
 import type { AppState, Indicator, RoleId, ValueFieldKey } from './types';
-import { INITIAL_STATE } from './data';
+import { buildInitialState } from './data';
 
 /** Заполнено ли хотя бы одно поле значения */
 function hasAnyValue(v: Record<ValueFieldKey, number | null>): boolean {
@@ -38,7 +38,8 @@ export type Action =
   | { type: 'PUBLISH_FINAL' }
   | { type: 'ADD_INDICATOR'; indicator: Indicator }
   | { type: 'UPDATE_INDICATOR'; indicator: Indicator }
-  | { type: 'NOTIFY'; text: string; forRoles: RoleId[] };
+  | { type: 'NOTIFY'; text: string; forRoles: RoleId[] }
+  | { type: 'SET_MODULE'; module: string };
 
 function now(): string {
   const d = new Date();
@@ -246,18 +247,20 @@ function reducer(state: AppState, a: Action): AppState {
       return { ...state, indicators: state.indicators.map((i) => (i.id === a.indicator.id ? a.indicator : i)) };
     case 'NOTIFY':
       return { ...state, notifications: [...state.notifications, { id: ++notifId, at: now(), text: a.text, forRoles: a.forRoles }] };
+    case 'SET_MODULE':
+      return buildInitialState(a.module);
     default:
       return state;
   }
 }
 
 const StoreCtx = createContext<{ state: AppState; dispatch: React.Dispatch<Action> }>({
-  state: INITIAL_STATE,
+  state: buildInitialState('ser'),
   dispatch: () => undefined,
 });
 
 export function StoreProvider({ children }: { children: React.ReactNode }) {
-  const [state, dispatch] = useReducer(reducer, INITIAL_STATE);
+  const [state, dispatch] = useReducer(reducer, buildInitialState('ser'));
   return <StoreCtx.Provider value={{ state, dispatch }}>{children}</StoreCtx.Provider>;
 }
 
