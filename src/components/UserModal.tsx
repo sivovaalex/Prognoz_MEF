@@ -24,6 +24,12 @@ const CIO_BLOCKS = [
   { id: 'long_term', name: 'Долгосрочный прогноз' },
 ];
 
+const MODULE_OPTIONS = [
+  { id: 'ser', name: 'Прогноз СЭР МО' },
+  { id: 'rating', name: 'Рейтинг ОМСУ МО' },
+  { id: 'ukaz', name: 'Указ Президента РФ №607' }
+];
+
 function MultiSelect({ options, selected, onChange, placeholder }: any) {
   return (
     <Popover>
@@ -85,6 +91,7 @@ export function UserModal({ open, onOpenChange, user, onSave }: UserModalProps) 
     cioIds: [],
     cioBlocks: [],
     omsuId: '',
+    modules: [],
   };
 
   const updatePerms = (updates: Partial<typeof perms>) => {
@@ -233,6 +240,33 @@ export function UserModal({ open, onOpenChange, user, onSave }: UserModalProps) 
                     </tr>
                   </thead>
                   <tbody className="divide-y">
+                    {/* Модули */}
+                    <tr>
+                      <td className="p-3 text-center align-top">
+                        <input 
+                          type="checkbox" 
+                          className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-4 h-4 mt-2 cursor-pointer"
+                          checked={(perms.modules || []).length > 0}
+                          onChange={(e) => updatePerms({ modules: e.target.checked ? ['ser'] : [] })}
+                        />
+                      </td>
+                      <td className="p-3 align-top">
+                        <div className="font-medium text-slate-700">Модули</div>
+                        <div className="text-xs text-muted-foreground mt-1">Доступ к модулям системы</div>
+                      </td>
+                      <td className="p-3">
+                        <div className={((perms.modules || []).length > 0) ? '' : 'opacity-50 pointer-events-none'}>
+                          <Label className="text-xs text-slate-500 mb-1.5 block">Доступные модули</Label>
+                          <MultiSelect 
+                            options={MODULE_OPTIONS}
+                            selected={perms.modules || []}
+                            onChange={(vals: string[]) => updatePerms({ modules: vals })}
+                            placeholder="Выберите модули..."
+                          />
+                        </div>
+                      </td>
+                    </tr>
+
                     {/* ЦИО */}
                     <tr className={perms.isCio ? 'bg-blue-50/30' : ''}>
                       <td className="p-3 text-center align-top">

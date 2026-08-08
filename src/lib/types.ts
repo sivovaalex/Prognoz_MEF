@@ -138,6 +138,7 @@ export interface SysUser {
     cioIds: string[];
     cioBlocks: string[];
     omsuId: string;
+    modules?: string[];
   };
 }
 

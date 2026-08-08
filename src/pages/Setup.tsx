@@ -199,16 +199,18 @@ export function Setup() {
                 <Input className="col-span-3" value={editInd.unit} onChange={(e) => setEditInd({ ...editInd, unit: e.target.value })} />
               </div>
 
-              <div className="grid grid-cols-4 items-center gap-2">
-                <Label>Оптимум *</Label>
-                <Select value={editInd.optimum} onValueChange={(v: 'max' | 'min') => setEditInd({ ...editInd, optimum: v })}>
-                  <SelectTrigger className="col-span-3"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="max">Максимум (max)</SelectItem>
-                    <SelectItem value="min">Минимум (min)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              {state.campaign.name === 'Рейтинг ОМСУ' && (
+                <div className="grid grid-cols-4 items-center gap-2">
+                  <Label>Оптимум *</Label>
+                  <Select value={editInd.optimum} onValueChange={(v: 'max' | 'min') => setEditInd({ ...editInd, optimum: v })}>
+                    <SelectTrigger className="col-span-3"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="max">Максимум (max)</SelectItem>
+                      <SelectItem value="min">Минимум (min)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
 
               <div className="grid grid-cols-4 items-center gap-2">
                 <Label>Формула баз. прогноза *</Label>
