@@ -11,6 +11,7 @@ import { RatingView } from '@/pages/RatingView';
 import { ReportView } from '@/pages/ReportView';
 import { Description } from '@/pages/Description';
 import { Home } from '@/pages/Home';
+import { UserManagement } from '@/pages/UserManagement';
 import type { ModuleId } from '@/pages/Home';
 import { ModuleStub } from '@/pages/ModuleStub';
 import { Login } from '@/pages/Login';
@@ -20,8 +21,8 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Bell, Landmark, UserRound, Home as HomeIcon } from 'lucide-react';
 
-type PageId = 'overview' | 'setup' | 'omsu' | 'cio' | 'mef-manage' | 'rating' | 'report' | 'about';
-type BlockId = 'mun' | 'obl' | 'params' | 'form2p' | 'long_term';
+type PageId = 'overview' | 'setup' | 'omsu' | 'cio' | 'mef-manage' | 'rating' | 'report' | 'about' | 'users';
+type BlockId = 'mun' | 'obl' | 'params' | 'form2p' | 'long_term' | 'admin_block';
 
 const BLOCK_LABELS: Record<BlockId, string> = {
   mun: 'Муниципальный прогноз',
@@ -29,10 +30,11 @@ const BLOCK_LABELS: Record<BlockId, string> = {
   params: 'Параметры СЭР',
   form2p: 'Форма 2П',
   long_term: 'Долгосрочный прогноз',
+  admin_block: 'Администрирование',
 };
 
 const BLOCKS: Record<RoleId, BlockId[]> = {
-  admin: ['mun', 'obl', 'params', 'form2p', 'long_term'],
+  admin: ['mun', 'obl', 'params', 'form2p', 'long_term', 'admin_block'],
   mef: ['mun', 'obl', 'params', 'form2p', 'long_term'],
   cio: ['mun', 'obl', 'params', 'form2p', 'long_term'],
   omsu: ['mun'],
@@ -84,8 +86,12 @@ function Shell({ onHome }: { onHome: () => void }) {
 
   const switchBlock = (b: BlockId) => {
     setBlock(b);
-    setPage(DEFAULT_PAGE[role]);
+    setPage(b === 'admin_block' ? 'users' : DEFAULT_PAGE[role]);
   };
+
+  const activeNav = block === 'admin_block'
+    ? [{ id: 'users' as PageId, label: 'Управление пользователями' }]
+    : NAV[role];
 
   return (
     <div className="min-h-screen bg-slate-100">
@@ -180,7 +186,7 @@ function Shell({ onHome }: { onHome: () => void }) {
         {/* Вкладки активного блока */}
         <div className="bg-white border-b border-slate-200">
           <div className="w-full px-4 flex gap-1">
-            {NAV[role].map((item) => (
+            {activeNav.map((item) => (
               <button
                 key={item.id}
                 onClick={() => setPage(item.id)}
@@ -214,6 +220,7 @@ function Shell({ onHome }: { onHome: () => void }) {
         {page === 'rating' && <RatingView />}
         {page === 'report' && <ReportView />}
         {page === 'about' && <Description />}
+        {page === 'users' && <UserManagement />}
       </main>
 
       <footer className="border-t bg-white py-3">

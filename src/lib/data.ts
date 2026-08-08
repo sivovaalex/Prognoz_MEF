@@ -405,3 +405,48 @@ export const CIO_STATUS_META: Record<CioValue['status'], { label: string; color:
   returned: { label: 'Возвращена МЭФ', color: '#be123c', bg: '#ffe4e6' },
   approved: { label: 'Согласована МЭФ', color: '#047857', bg: '#d1fae5' },
 };
+
+import type { SysUser } from './types';
+
+export const MOCK_USERS: SysUser[] = [
+  {
+    id: 'u1',
+    login: 'exception',
+    lastName: 'Иванов',
+    firstName: 'Иван',
+    email: 'AleksandrovAA@mosreg.ru',
+    position: 'Администратор',
+    isLocked: false,
+    roleId: 'admin'
+  },
+  {
+    id: 'u2',
+    login: 'test1',
+    lastName: 'Петров',
+    firstName: 'Петр',
+    email: 'test555@mail.ru',
+    position: 'Сотрудник ЦИО',
+    isLocked: false,
+    roleId: 'cio'
+  },
+  {
+    id: 'u3',
+    login: 'autotest',
+    lastName: 'Сидоров',
+    firstName: 'Сидор',
+    email: 'SidorovAZ@mosreg.ru',
+    position: 'Тестировщик',
+    isLocked: true,
+    roleId: 'mef'
+  },
+  {
+    id: 'u4',
+    login: 'kkp_user',
+    lastName: 'Михайлов',
+    firstName: 'Михаил',
+    email: 'kkpuser1@mosreg.ru',
+    position: 'Сотрудник ОМСУ',
+    isLocked: false,
+    roleId: 'omsu'
+  }
+];

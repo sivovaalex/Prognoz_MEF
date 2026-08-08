@@ -114,6 +114,33 @@ export interface OmsuValue extends IndicatorValues {
   signedBy?: string;
 }
 
+export interface SysUser {
+  id: string;
+  login: string;
+  lastName: string;
+  firstName: string;
+  middleName?: string;
+  email: string;
+  position: string;
+  phone?: string;
+  telegram?: string;
+  birthDate?: string;
+  city?: string;
+  organization?: string;
+  department?: string;
+  isLocked: boolean;
+  roleId?: RoleId;
+  perms?: {
+    isCio: boolean;
+    isOmsu: boolean;
+    isMef: boolean;
+    isAdmin: boolean;
+    cioIds: string[];
+    cioBlocks: string[];
+    omsuId: string;
+  };
+}
+
 export interface CioValue extends IndicatorValues {
   status: CioStatus;
   updatedAt: string | null;

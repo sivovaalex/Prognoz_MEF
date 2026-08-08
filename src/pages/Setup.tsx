@@ -97,7 +97,12 @@ export function Setup() {
               return (
                 <Card key={d.id}>
                   <CardHeader className="py-3">
-                    <CardTitle className="text-base">{d.name}</CardTitle>
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-base">{d.name}</CardTitle>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditDir({ num: d.name.split('.')[0] || '', name: d.name, cioId: CIOS[0].id })}>
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </CardHeader>
                   <CardContent className="pt-0 overflow-x-auto">
                     <table className="w-full text-sm border-collapse">
@@ -163,15 +168,28 @@ export function Setup() {
                 <Input className="col-span-3" value={editInd.num} onChange={(e) => setEditInd({ ...editInd, num: e.target.value })} />
               </div>
               <div className="grid grid-cols-4 items-center gap-2">
-                <Label>Название</Label>
+                <Label>Название *</Label>
                 <Input className="col-span-3" value={editInd.name} onChange={(e) => setEditInd({ ...editInd, name: e.target.value })} />
               </div>
               <div className="grid grid-cols-4 items-center gap-2">
-                <Label>Раздел показателя</Label>
+                <Label>Раздел показателя *</Label>
                 <Select value={editInd.directionId} onValueChange={(v) => setEditInd({ ...editInd, directionId: v })}>
                   <SelectTrigger className="col-span-3"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {DIRECTIONS.map((d) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="grid grid-cols-4 items-center gap-2">
+                <Label>Родительский показатель</Label>
+                <Select value={editInd.parentId || 'none'} onValueChange={(v) => setEditInd({ ...editInd, parentId: v === 'none' ? null : v })}>
+                  <SelectTrigger className="col-span-3"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Нет (верхний уровень)</SelectItem>
+                    {state.indicators.filter(i => i.id !== editInd.id).map(i => (
+                      <SelectItem key={i.id} value={i.id}>{i.num}. {i.name}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -182,14 +200,15 @@ export function Setup() {
               </div>
 
               <div className="grid grid-cols-4 items-center gap-2">
-                <Label>Формула баз. прогноза</Label>
+                <Label>Формула баз. прогноза *</Label>
                 <Input className="col-span-3 font-mono text-xs" value={editInd.formula} onChange={(e) => setEditInd({ ...editInd, formula: e.target.value })} />
               </div>
 
               <div className="grid grid-cols-4 items-center gap-2">
-                <Label>Коэфф. консерв. прогноза</Label>
+                <Label>Коэфф. консерв. прогноза *</Label>
                 <Input className="col-span-3 font-mono text-xs" value={editInd.consCoeff || ''} onChange={(e) => setEditInd({ ...editInd, consCoeff: e.target.value })} />
               </div>
+
             </div>
           )}
           <DialogFooter>
@@ -211,11 +230,11 @@ export function Setup() {
                 <Input className="col-span-3" value={editDir.num} onChange={(e) => setEditDir({ ...editDir, num: e.target.value })} />
               </div>
               <div className="grid grid-cols-4 items-center gap-2">
-                <Label>Название</Label>
+                <Label>Название *</Label>
                 <Input className="col-span-3" value={editDir.name} onChange={(e) => setEditDir({ ...editDir, name: e.target.value })} />
               </div>
               <div className="grid grid-cols-4 items-center gap-2">
-                <Label>ЦИО</Label>
+                <Label>ЦИО *</Label>
                 <Select value={editDir.cioId} onValueChange={(v) => setEditDir({ ...editDir, cioId: v })}>
                   <SelectTrigger className="col-span-3"><SelectValue /></SelectTrigger>
                   <SelectContent>
