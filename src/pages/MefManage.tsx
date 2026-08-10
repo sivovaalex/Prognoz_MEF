@@ -100,20 +100,23 @@ export function MefManage({ goRating, goReport }: { goRating: () => void; goRepo
                 </Button>
               </div>
             )}
-            <div className="rounded-md border p-3">
-              <div className="font-medium">Итоговый отчёт</div>
-              <p className="text-xs text-muted-foreground mb-2">
-                {complete
-                  ? 'Все показатели согласованы. Можно формировать итоговый сводный отчёт.'
-                  : 'Обычно доступен после согласования всех показателей, но для тестирования кнопка разблокирована.'}
-              </p>
-              <Button size="sm" onClick={() => { setReportIntent('final'); setReportModalOpen(true); }}>
-                <CheckCircle2 className="h-4 w-4 mr-1" /> Сформировать итоговый отчёт
-              </Button>
-              {state.finalPublished && (
-                <Badge className="ml-2 bg-green-100 text-green-700 hover:bg-green-100">Опубликован</Badge>
-              )}
-            </div>
+            
+            {isRating && (
+              <div className="rounded-md border p-3">
+                <div className="font-medium">Итоговый отчёт</div>
+                <p className="text-xs text-muted-foreground mb-2">
+                  {complete
+                    ? 'Все показатели согласованы. Можно формировать итоговый сводный отчёт.'
+                    : 'Обычно доступен после согласования всех показателей, но для тестирования кнопка разблокирована.'}
+                </p>
+                <Button size="sm" onClick={() => { setReportIntent('final'); setReportModalOpen(true); }}>
+                  <CheckCircle2 className="h-4 w-4 mr-1" /> Сформировать итоговый отчёт
+                </Button>
+                {state.finalPublished && (
+                  <Badge className="ml-2 bg-green-100 text-green-700 hover:bg-green-100">Опубликован</Badge>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -138,46 +141,48 @@ export function MefManage({ goRating, goReport }: { goRating: () => void; goRepo
                 ))}
               </select>
             </div>
-            <div className="space-y-2">
-              <Label>Выберите тип отчёта:</Label>
-              <div className="space-y-2 text-sm">
-                <label className="flex items-center gap-2 cursor-not-allowed opacity-50">
-                  <input
-                    type="radio"
-                    name="reportType"
-                    value="cio"
-                    checked={reportType === 'cio'}
-                    disabled
-                    onChange={(e) => setReportType(e.target.value)}
-                    className="w-4 h-4 text-[#1e5c8f] border-gray-300"
-                  />
-                  ЦИО
-                </label>
-                <label className="flex items-center gap-2 cursor-not-allowed opacity-50">
-                  <input
-                    type="radio"
-                    name="reportType"
-                    value="omsu"
-                    checked={reportType === 'omsu'}
-                    disabled
-                    onChange={(e) => setReportType(e.target.value)}
-                    className="w-4 h-4 text-[#1e5c8f] border-gray-300"
-                  />
-                  ОМСУ
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="reportType"
-                    value="ind"
-                    checked={reportType === 'ind'}
-                    onChange={(e) => setReportType(e.target.value)}
-                    className="w-4 h-4 text-[#1e5c8f] border-gray-300"
-                  />
-                  показатель
-                </label>
+            {isRating && (
+              <div className="space-y-2">
+                <Label>Выберите тип отчёта:</Label>
+                <div className="space-y-2 text-sm">
+                  <label className="flex items-center gap-2 cursor-not-allowed opacity-50">
+                    <input
+                      type="radio"
+                      name="reportType"
+                      value="cio"
+                      checked={reportType === 'cio'}
+                      disabled
+                      onChange={(e) => setReportType(e.target.value)}
+                      className="w-4 h-4 text-[#1e5c8f] border-gray-300"
+                    />
+                    ЦИО
+                  </label>
+                  <label className="flex items-center gap-2 cursor-not-allowed opacity-50">
+                    <input
+                      type="radio"
+                      name="reportType"
+                      value="omsu"
+                      checked={reportType === 'omsu'}
+                      disabled
+                      onChange={(e) => setReportType(e.target.value)}
+                      className="w-4 h-4 text-[#1e5c8f] border-gray-300"
+                    />
+                    ОМСУ
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="reportType"
+                      value="ind"
+                      checked={reportType === 'ind'}
+                      onChange={(e) => setReportType(e.target.value)}
+                      className="w-4 h-4 text-[#1e5c8f] border-gray-300"
+                    />
+                    показатель
+                  </label>
+                </div>
               </div>
-            </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setReportModalOpen(false)}>Отмена</Button>

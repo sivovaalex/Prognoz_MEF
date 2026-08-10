@@ -13,6 +13,7 @@ import { Description } from '@/pages/Description';
 import { Home } from '@/pages/Home';
 import { UserManagement } from '@/pages/UserManagement';
 import { DictsManagement } from '@/pages/DictsManagement';
+import { OutputTablesView } from '@/pages/OutputTablesView';
 import type { ModuleId } from '@/pages/Home';
 import { ModuleStub } from '@/pages/ModuleStub';
 import { Login } from '@/pages/Login';
@@ -22,7 +23,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Bell, Landmark, UserRound, Home as HomeIcon } from 'lucide-react';
 
-type PageId = 'overview' | 'setup' | 'omsu' | 'cio' | 'mef-manage' | 'rating' | 'report' | 'about' | 'users' | 'dicts';
+type PageId = 'overview' | 'setup' | 'omsu' | 'cio' | 'mef-manage' | 'rating' | 'report' | 'about' | 'users' | 'dicts' | 'output-tables';
 type BlockId = 'mun' | 'obl' | 'params' | 'form2p' | 'long_term' | 'admin_block' | 'ukaz_main' | 'rating_main' | 'rating_view';
 
 const BLOCK_LABELS: Record<BlockId, string> = {
@@ -59,6 +60,7 @@ const NAV: Record<RoleId, { id: PageId; label: string }[]> = {
   mef: [
     { id: 'overview', label: 'Обзор сбора' },
     { id: 'mef-manage', label: 'Управление' },
+    { id: 'output-tables', label: 'Выходные таблицы' },
   ],
   cio: [
     { id: 'cio', label: 'Рабочее место ЦИО' },
@@ -243,6 +245,7 @@ function Shell({ activeModule, onHome }: { activeModule: ModuleId, onHome: () =>
         {page === 'mef-manage' && <MefManage goRating={() => setPage('rating')} goReport={() => setPage('report')} />}
         {page === 'rating' && <RatingView />}
         {page === 'report' && <ReportView />}
+        {page === 'output-tables' && <OutputTablesView />}
         {page === 'about' && <Description />}
         {page === 'users' && <UserManagement />}
         {page === 'dicts' && <DictsManagement />}
