@@ -1,6 +1,6 @@
 import { Fragment, useState } from 'react';
 import { useStore } from '@/lib/store';
-import { MUNICIPALITIES, CURRENT_CIO, CIOS } from '@/lib/data';
+import { CURRENT_CIO } from '@/lib/data';
 import { VALUE_FIELDS, emptyValueFields, type ValueFieldKey } from '@/lib/types';
 import { EMPTY_TREE_FILTER, chevronParents, visibleTree, type TreeFilter } from '@/lib/indTree';
 import { IndToolbar, TreeToggle } from '@/components/IndToolbar';
@@ -22,7 +22,7 @@ import { fmt } from '@/lib/rating';
 
 export function CioWorkspace({ hideOmsuApprove = false }: { hideOmsuApprove?: boolean }) {
   const { state, dispatch } = useStore();
-  const cio = CIOS.find((c) => c.id === CURRENT_CIO)!;
+  const cio = state.state.cios.find((c) => c.id === CURRENT_CIO)!;
   const [returnTarget, setReturnTarget] = useState<{ munId: string; indId: string } | null>(null);
   const [comment, setComment] = useState('');
   const [signTarget, setSignTarget] = useState<string | null>(null);
@@ -39,12 +39,12 @@ export function CioWorkspace({ hideOmsuApprove = false }: { hideOmsuApprove?: bo
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   // фильтр по ОМСУ на вкладке согласования
   const [munFilter, setMunFilter] = useState<string>('all');
-  const scopeMuns = munFilter === 'all' ? MUNICIPALITIES : MUNICIPALITIES.filter((m) => m.id === munFilter);
+  const scopeMuns = munFilter === 'all' ? state.omsus : state.omsus.filter((m) => m.id === munFilter);
   const myVisible = visibleTree(myIndicators, collapsed, treeFilter);
   const myOwnVisible = visibleTree(myFillable, collapsed, treeFilter);
   const parents = chevronParents(state.indicators);
   const toggleNode = (id: string) => setCollapsed((p) => ({ ...p, [id]: !p[id] }));
-  const pendingCount = MUNICIPALITIES.reduce(
+  const pendingCount = state.omsus.reduce(
     (acc, m) => acc + myFillable.filter((i) => state.omsuValues[m.id]?.[i.id]?.status === 'pending_cio').length,
     0,
   );
@@ -52,7 +52,7 @@ export function CioWorkspace({ hideOmsuApprove = false }: { hideOmsuApprove?: bo
   // Среднее значение по введённым показателям ОМСУ — по каждому показателю отрасли
   // и по каждому заполняемому полю (отчётные годы, оценка, варианты прогнозов)
   const avgByInd = (indId: string, field: ValueFieldKey) => {
-    const vals = MUNICIPALITIES
+    const vals = state.omsus
       .map((m) => state.omsuValues[m.id]?.[indId]?.[field])
       .filter((x): x is number => x !== null && x !== undefined);
     return {

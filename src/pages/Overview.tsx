@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useStore } from '@/lib/store';
-import { MUNICIPALITIES, CIOS, CURRENT_OMSU, CURRENT_CIO } from '@/lib/data';
+import { state.omsus, state.cios, CURRENT_OMSU, CURRENT_CIO } from '@/lib/data';
 import { VALUE_FIELDS, type RoleId } from '@/lib/types';
 import { EMPTY_TREE_FILTER, chevronParents, visibleTree, type TreeFilter } from '@/lib/indTree';
 import { IndToolbar, TreeToggle } from '@/components/IndToolbar';
@@ -31,7 +31,7 @@ export function Overview({ role }: { role: RoleId }) {
   };
 
   // Область видимости: ОМСУ — только своё ОМСУ; ЦИО — только показатели своей отрасли
-  const scopeMuns = role === 'omsu' ? MUNICIPALITIES.filter((m) => m.id === CURRENT_OMSU) : MUNICIPALITIES;
+  const scopeMuns = role === 'omsu' ? state.omsus.filter((m) => m.id === CURRENT_OMSU) : state.omsus;
   const scopeIndsRaw = role === 'cio' ? state.indicators.filter((i) => i.cioId === CURRENT_CIO) : state.indicators;
 
   // дерево показателей: сворачивание дочерних и фильтры
@@ -154,7 +154,7 @@ export function Overview({ role }: { role: RoleId }) {
                         </div>
                       );
                     }
-                    const cio = CIOS.find((c) => c.id === ind.cioId);
+                    const cio = state.cios.find((c) => c.id === ind.cioId);
                     const cioV = state.cioValues[ind.id]?.[ind.cioId];
                     const iOpen = indOpen(ind.id);
                     const indVals = scopeMuns

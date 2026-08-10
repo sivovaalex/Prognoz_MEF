@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useStore } from '@/lib/store';
-import { CIOS, MUNICIPALITIES } from '@/lib/data';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -70,7 +69,7 @@ export function MefManage({ goRating, goReport }: { goRating: () => void; goRepo
               )}
             </div>
             <p className="text-xs text-muted-foreground">
-              В указанную дату КФ автоматически рассылает уведомления и формы: {MUNICIPALITIES.length} ОМСУ и {CIOS.length} ЦИО.
+              В указанную дату КФ автоматически рассылает уведомления и формы: {state.omsus.length} ОМСУ и {state.cios.length} ЦИО.
             </p>
           </CardContent>
         </Card>

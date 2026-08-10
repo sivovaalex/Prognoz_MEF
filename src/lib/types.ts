@@ -34,11 +34,19 @@ export interface Cio {
   id: string;
   name: string;
   short: string;
+  isActive?: boolean;
 }
 
 export interface Municipality {
   id: string;
   name: string;
+  isActive?: boolean;
+}
+
+export interface Unit {
+  id: string;
+  name: string;
+  isActive?: boolean;
 }
 
 export interface Indicator {
@@ -179,6 +187,9 @@ export interface AppState {
   campaign: Campaign;
   indicators: Indicator[];
   directions: Direction[];
+  cios: Cio[];
+  omsus: Municipality[];
+  units: Unit[];
   omsuValues: Record<string, Record<string, OmsuValue>>; // munId -> indId -> value
   cioValues: Record<string, Record<string, CioValue>>;   // indId -> cioId -> собственное значение ЦИО по тому же показателю
   history: HistoryItem[];

@@ -6,9 +6,11 @@ import { Input } from '@/components/ui/input';
 import { Lock, LockOpen, Pencil, Plus, RefreshCw, Search } from 'lucide-react';
 import { UserModal } from '@/components/UserModal';
 
+import { DictsTab } from '@/components/DictsTab';
+
 export function UserManagement() {
   const [users, setUsers] = useState<SysUser[]>(MOCK_USERS);
-  const [tab, setTab] = useState<'users' | 'permissions'>('users');
+  const [tab, setTab] = useState<'users' | 'dicts'>('users');
   const [search, setSearch] = useState('');
   
   const [editingUser, setEditingUser] = useState<SysUser | Partial<SysUser> | null>(null);
@@ -43,10 +45,10 @@ export function UserManagement() {
             Пользователи
           </button>
           <button
-            onClick={() => setTab('permissions')}
-            className={`pb-2 text-sm font-medium border-b-2 transition-colors ${tab === 'permissions' ? 'border-[#1e5c8f] text-[#1e5c8f]' : 'border-transparent text-slate-500 hover:text-slate-800'}`}
+            onClick={() => setTab('dicts')}
+            className={`pb-2 text-sm font-medium border-b-2 transition-colors ${tab === 'dicts' ? 'border-[#1e5c8f] text-[#1e5c8f]' : 'border-transparent text-slate-500 hover:text-slate-800'}`}
           >
-            Разрешения
+            Справочники
           </button>
         </div>
       </div>
@@ -123,11 +125,7 @@ export function UserManagement() {
         </div>
       )}
 
-      {tab === 'permissions' && (
-        <div className="p-8 text-center text-slate-500">
-          Раздел управления разрешениями
-        </div>
-      )}
+      {tab === 'dicts' && <DictsTab />}
 
       {editingUser && (
         <UserModal

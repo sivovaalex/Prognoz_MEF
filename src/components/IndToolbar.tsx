@@ -1,4 +1,4 @@
-import { CIOS, MUNICIPALITIES } from '@/lib/data';
+import { useStore } from '@/lib/store';
 import { isTreeFilterActive, type TreeFilter } from '@/lib/indTree';
 import { Input } from '@/components/ui/input';
 
@@ -45,6 +45,7 @@ interface Props {
 
 /** Панель над таблицами показателей: поиск, фильтр по ЦИО / ОМСУ */
 export function IndToolbar({ filter, onChange, shown, total, hideCioFilter, munId, onMunChange, allowAllMuns, showStatusFilter }: Props) {
+  const { state } = useStore();
   const active = isTreeFilterActive(filter);
   return (
     <div className="flex flex-wrap items-center gap-3 rounded-md border bg-white px-3 py-2">
@@ -64,7 +65,7 @@ export function IndToolbar({ filter, onChange, shown, total, hideCioFilter, munI
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Все ответственные ЦИО</SelectItem>
-            {CIOS.map((c) => <SelectItem key={c.id} value={c.id}>{c.short}</SelectItem>)}
+            {state.cios.map((c) => <SelectItem key={c.id} value={c.id}>{c.short}</SelectItem>)}
           </SelectContent>
         </Select>
       )}
@@ -75,7 +76,7 @@ export function IndToolbar({ filter, onChange, shown, total, hideCioFilter, munI
           </SelectTrigger>
           <SelectContent>
             {allowAllMuns !== false && <SelectItem value="all">Все ОМСУ</SelectItem>}
-            {MUNICIPALITIES.map((m) => <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>)}
+            {state.omsus.map((m) => <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>)}
           </SelectContent>
         </Select>
       )}

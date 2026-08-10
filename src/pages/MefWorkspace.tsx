@@ -1,6 +1,6 @@
 import { Fragment, useState } from 'react';
 import { useStore } from '@/lib/store';
-import { MUNICIPALITIES, CIOS, MEF_CIO } from '@/lib/data';
+import { state.omsus, state.cios, MEF_CIO } from '@/lib/data';
 import { VALUE_FIELDS, emptyValueFields, type ValueFieldKey } from '@/lib/types';
 import { EMPTY_TREE_FILTER, chevronParents, visibleTree, type TreeFilter } from '@/lib/indTree';
 import { IndToolbar, TreeToggle } from '@/components/IndToolbar';
@@ -28,7 +28,7 @@ const MEF_USER = 'Сидорова Е.В.';
 export function MefWorkspace({ hideOmsuApprove = false }: { hideOmsuApprove?: boolean }) {
   const { state, dispatch } = useStore();
   // МЭФ выступает отраслевым ЦИО по закреплённым за ним показателям
-  const cio = CIOS.find((c) => c.id === MEF_CIO)!;
+  const cio = state.cios.find((c) => c.id === MEF_CIO)!;
 
   // ── Вкладка «Согласование показателей ОМСУ» ──
   const [returnTarget, setReturnTarget] = useState<{ munId: string; indId: string } | null>(null);
@@ -55,19 +55,19 @@ export function MefWorkspace({ hideOmsuApprove = false }: { hideOmsuApprove?: bo
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   // фильтр по ОМСУ на вкладке согласования
   const [munFilter, setMunFilter] = useState<string>('all');
-  const scopeMuns = munFilter === 'all' ? MUNICIPALITIES : MUNICIPALITIES.filter((m) => m.id === munFilter);
+  const scopeMuns = munFilter === 'all' ? state.omsus : state.omsus.filter((m) => m.id === munFilter);
   const myVisible = visibleTree(myIndicators, collapsed, treeFilter);
   const myOwnVisible = visibleTree(myFillable, collapsed, treeFilter);
   const parents = chevronParents(state.indicators);
   const toggleNode = (id: string) => setCollapsed((p) => ({ ...p, [id]: !p[id] }));
-  const pendingCount = MUNICIPALITIES.reduce(
+  const pendingCount = state.omsus.reduce(
     (acc, m) => acc + myFillable.filter((i) => state.omsuValues[m.id]?.[i.id]?.status === 'pending_cio').length,
     0,
   );
 
   // Среднее значение по введённым показателям ОМСУ — по каждому показателю МЭФ
   const avgByInd = (indId: string, field: ValueFieldKey) => {
-    const vals = MUNICIPALITIES
+    const vals = state.omsus
       .map((m) => state.omsuValues[m.id]?.[indId]?.[field])
       .filter((x): x is number => x !== null && x !== undefined);
     return {
@@ -493,7 +493,7 @@ export function MefWorkspace({ hideOmsuApprove = false }: { hideOmsuApprove?: bo
                         const v = state.cioValues[ind.id]?.[ind.cioId] ?? { ...emptyValueFields(), status: 'not_filled' as const, updatedAt: null };
                         return (
                           <tr key={ind.id} className={`border-b ${v.status === 'pending_mef' ? 'bg-amber-50/60' : 'hover:bg-slate-50'}`}>
-                            <td className="p-2 align-top"><Badge variant="secondary">{CIOS.find((c) => c.id === ind.cioId)?.short}</Badge></td>
+                            <td className="p-2 align-top"><Badge variant="secondary">{state.cios.find((c) => c.id === ind.cioId)?.short}</Badge></td>
                             <td className="p-2">
                               <div className="font-medium flex items-center gap-1" style={{ paddingLeft: `${(ind.level - 1) * 16}px` }}>
                                 <TreeToggle

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useStore } from '@/lib/store';
-import { CIOS, CURRENT_OMSU, MUNICIPALITIES } from '@/lib/data';
+import { state.cios, CURRENT_OMSU, state.omsus } from '@/lib/data';
 import { VALUE_FIELDS } from '@/lib/types';
 import { EMPTY_TREE_FILTER, chevronParents, visibleTree, type TreeFilter } from '@/lib/indTree';
 import { IndToolbar, TreeToggle } from '@/components/IndToolbar';
@@ -38,7 +38,7 @@ export function OmsuForm() {
   const { state, dispatch } = useStore();
   const [munId, setMunId] = useState<string>(CURRENT_OMSU);
   const isCurrentOmsu = munId === CURRENT_OMSU;
-  const mun = MUNICIPALITIES.find((m) => m.id === munId)!;
+  const mun = state.omsus.find((m) => m.id === munId)!;
   const [signTarget, setSignTarget] = useState<string | null>(null);
   // аккордеон: открыта только одна сфера
   const [openDir, setOpenDir] = useState<string | null>(state.directions[0]?.id ?? null);
@@ -205,7 +205,7 @@ export function OmsuForm() {
                                     <div><span className="opacity-60">Единица измерения:</span> {ind.unit}</div>
                                     <div><span className="opacity-60">Оптимум:</span> {ind.optimum === 'max' ? 'чем больше, тем лучше (↑ max)' : 'чем меньше, тем лучше (↓ min)'}</div>
                                     <div><span className="opacity-60">Вес в рейтинге:</span> {ind.weight}</div>
-                                    <div><span className="opacity-60">Отраслевой ЦИО:</span> {CIOS.find((c) => c.id === ind.cioId)?.short}</div>
+                                    <div><span className="opacity-60">Отраслевой ЦИО:</span> {state.cios.find((c) => c.id === ind.cioId)?.short}</div>
                                   </TooltipContent>
                                 </Tooltip>
                               </TooltipProvider>
@@ -221,7 +221,7 @@ export function OmsuForm() {
                               </Button>
                             </div>
                           </td>
-                          <td className="p-2"><Badge variant="secondary">{CIOS.find((c) => c.id === ind.cioId)?.short}</Badge></td>
+                          <td className="p-2"><Badge variant="secondary">{state.cios.find((c) => c.id === ind.cioId)?.short}</Badge></td>
                           {VALUE_FIELDS.map((f) => (
                             <td key={f.key} className={`p-1.5 text-center ${fieldTint(f.key)}`}>
                               {editable && f.key === 'v2026' ? (
@@ -327,7 +327,7 @@ export function OmsuForm() {
                 <tbody>
                   {/* Ответственный ЦИО — собственное значение по показателю */}
                   {(() => {
-                    const cio = CIOS.find((c) => c.id === cmpInd.cioId);
+                    const cio = state.cios.find((c) => c.id === cmpInd.cioId);
                     const cv = state.cioValues[cmpInd.id]?.[cmpInd.cioId];
                     return (
                       <tr className="border-b bg-violet-50/40">
@@ -343,7 +343,7 @@ export function OmsuForm() {
                       </tr>
                     );
                   })()}
-                  {MUNICIPALITIES.map((m) => {
+                  {state.omsus.map((m) => {
                     const v = state.omsuValues[m.id]?.[cmpInd.id];
                     if (!v) return null;
                     const isCurrent = m.id === munId;

@@ -372,9 +372,14 @@ export function buildInitialState(moduleId: string): AppState {
     directions = RATING_DIRECTIONS;
   }
 
+  const units = Array.from(new Set(indicators.map(i => i.unit).filter(Boolean)));
+
   return {
     indicators,
     directions,
+    cios: CIOS.map(c => ({ ...c, isActive: true })),
+    omsus: MUNICIPALITIES.map(m => ({ ...m, isActive: true })),
+    units: units.map((u, i) => ({ id: `u${i + 1}`, name: u, isActive: true })),
     omsuValues: buildOmsuValues(indicators),
     cioValues: buildCioValues(indicators),
     campaign: {

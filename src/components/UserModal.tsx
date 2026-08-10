@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import type { SysUser } from '@/lib/types';
-import { CIOS, MUNICIPALITIES } from '@/lib/data';
+import { useStore } from '@/lib/store';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -70,6 +70,9 @@ function MultiSelect({ options, selected, onChange, placeholder }: any) {
 
 export function UserModal({ open, onOpenChange, user, onSave }: UserModalProps) {
   const [tab, setTab] = useState<'info' | 'permissions'>('info');
+  const { state } = useStore();
+  const cios = state.cios;
+  const omsus = state.omsus;
   const [formData, setFormData] = useState<Partial<SysUser>>({});
 
   useEffect(() => {
@@ -287,7 +290,7 @@ export function UserModal({ open, onOpenChange, user, onSave }: UserModalProps) 
                             <Label className="text-xs text-muted-foreground mb-1 block">ЦИО (множественный выбор) *</Label>
                             {perms.isCio ? (
                               <MultiSelect 
-                                options={CIOS}
+                                options={cios}
                                 selected={perms.cioIds}
                                 onChange={(ids: string[]) => updatePerms({ cioIds: ids })}
                                 placeholder="Выберите ЦИО..."
@@ -336,7 +339,7 @@ export function UserModal({ open, onOpenChange, user, onSave }: UserModalProps) 
                                 <SelectValue placeholder="Выберите ОМСУ..." />
                               </SelectTrigger>
                               <SelectContent>
-                                {MUNICIPALITIES.map(m => (
+                                {omsus.map(m => (
                                   <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
                                 ))}
                               </SelectContent>

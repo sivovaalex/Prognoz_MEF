@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useStore } from '@/lib/store';
-import { MUNICIPALITIES } from '@/lib/data';
+
 import { computeRating, computeDirectionRatings, rankColor, fmt } from '@/lib/rating';
 import { EMPTY_TREE_FILTER, chevronParents, visibleTree, type TreeFilter } from '@/lib/indTree';
 import { IndToolbar, TreeToggle } from '@/components/IndToolbar';
@@ -36,7 +36,7 @@ export function RatingView() {
   const mode = state.ratingMode;
   const rows = useMemo(() => computeRating(state, mode), [state, mode]);
   const dirRows = useMemo(() => computeDirectionRatings(state, rows), [state, rows]);
-  const [selMun, setSelMun] = useState(MUNICIPALITIES[0].id);
+  const [selMun, setSelMun] = useState(state.omsus[0]?.id);
   const [selInd, setSelInd] = useState<string>('total');
   // дерево показателей в сводной оценке по территории
   const [treeFilter, setTreeFilter] = useState<TreeFilter>(EMPTY_TREE_FILTER);
@@ -45,7 +45,7 @@ export function RatingView() {
   const parents = chevronParents(state.indicators);
   const toggleNode = (id: string) => setCollapsed((p) => ({ ...p, [id]: !p[id] }));
 
-  const n = MUNICIPALITIES.length;
+  const n = state.omsus.length;
   const mun = rows.find((r) => r.munId === selMun)!;
 
   const thCls = 'p-2 text-xs font-medium text-left border-b bg-slate-50';
@@ -316,7 +316,7 @@ function CompareVariants() {
   const { state } = useStore();
   const mode = state.ratingMode;
   const rows = useMemo(() => computeRating(state, mode), [state, mode]);
-  const n = MUNICIPALITIES.length;
+  const n = state.omsus.length;
 
   const variantB = useMemo(() => {
     // нормирование: балл = 100 × (1 − (место−1)/(N−1))

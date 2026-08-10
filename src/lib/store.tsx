@@ -39,7 +39,10 @@ export type Action =
   | { type: 'ADD_INDICATOR'; indicator: Indicator }
   | { type: 'UPDATE_INDICATOR'; indicator: Indicator }
   | { type: 'NOTIFY'; text: string; forRoles: RoleId[] }
-  | { type: 'SET_MODULE'; module: string };
+  | { type: 'SET_MODULE'; module: string }
+  | { type: 'ADD_DICT_ITEM'; dict: 'cios' | 'omsus' | 'units'; item: any }
+  | { type: 'UPDATE_DICT_ITEM'; dict: 'cios' | 'omsus' | 'units'; item: any }
+  | { type: 'TOGGLE_DICT_ITEM'; dict: 'cios' | 'omsus' | 'units'; id: string };
 
 function now(): string {
   const d = new Date();
@@ -249,6 +252,20 @@ function reducer(state: AppState, a: Action): AppState {
       return { ...state, notifications: [...state.notifications, { id: ++notifId, at: now(), text: a.text, forRoles: a.forRoles }] };
     case 'SET_MODULE':
       return buildInitialState(a.module);
+    case 'ADD_DICT_ITEM':
+      return { ...state, [a.dict]: [...state[a.dict], a.item] };
+    case 'UPDATE_DICT_ITEM':
+      return {
+        ...state,
+        [a.dict]: state[a.dict].map((x: any) => (x.id === a.item.id ? a.item : x)),
+      };
+    case 'TOGGLE_DICT_ITEM':
+      return {
+        ...state,
+        [a.dict]: state[a.dict].map((x: any) =>
+          x.id === a.id ? { ...x, isActive: !x.isActive } : x
+        ),
+      };
     default:
       return state;
   }

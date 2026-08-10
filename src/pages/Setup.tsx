@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useStore } from '@/lib/store';
-import { CIOS } from '@/lib/data';
+
 import type { Indicator } from '@/lib/types';
 import { EMPTY_TREE_FILTER, chevronParents, visibleTree, type TreeFilter } from '@/lib/indTree';
 import { IndToolbar, TreeToggle } from '@/components/IndToolbar';
@@ -37,7 +37,7 @@ export function Setup() {
       num: `${state.indicators.length + 1}.1`,
       name: '',
       directionId: state.directions[0]?.id || '',
-      cioId: CIOS[0].id,
+      cioId: state.cios[0]?.id || '',
       unit: '%',
       optimum: 'max',
       weight: 1,
@@ -49,7 +49,7 @@ export function Setup() {
   };
 
   const openNewDir = () => {
-    setEditDir({ num: '', name: '', cioId: CIOS[0].id });
+    setEditDir({ num: '', name: '', cioId: state.cios[0]?.id || '' });
   };
 
   const save = () => {
@@ -99,7 +99,7 @@ export function Setup() {
                   <CardHeader className="py-3">
                     <div className="flex items-center justify-between">
                       <CardTitle className="text-base">{d.name}</CardTitle>
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditDir({ num: d.name.split('.')[0] || '', name: d.name, cioId: CIOS[0].id })}>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditDir({ num: d.name.split('.')[0] || '', name: d.name, cioId: state.cios[0]?.id || '' })}>
                         <Pencil className="h-4 w-4" />
                       </Button>
                     </div>
@@ -134,7 +134,7 @@ export function Setup() {
                                 </span>
                               </span>
                             </td>
-                            <td className="p-2"><Badge variant="secondary">{CIOS.find((c) => c.id === ind.cioId)?.short}</Badge></td>
+                            <td className="p-2"><Badge variant="secondary">{state.cios.find((c) => c.id === ind.cioId)?.short}</Badge></td>
                             <td className="p-2">{ind.isGroup ? '—' : ind.unit}</td>
                             <td className="p-2 text-xs text-muted-foreground font-mono">{ind.isGroup ? '—' : ind.formula}</td>
                             <td className="p-2 text-xs text-muted-foreground font-mono">{ind.isGroup ? '—' : (ind.consCoeff || '—')}</td>
@@ -251,7 +251,7 @@ export function Setup() {
                 <Select value={editDir.cioId} onValueChange={(v) => setEditDir({ ...editDir, cioId: v })}>
                   <SelectTrigger className="col-span-3"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {CIOS.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                    {state.cios.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
