@@ -6,9 +6,8 @@ import { Pencil, Plus, Search, CheckCircle2, XCircle } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 
-export function DictsTab() {
+export function DictsTab({ activeDict }: { activeDict: 'cios' | 'omsus' | 'units' }) {
   const { state, dispatch } = useStore();
-  const [activeDict, setActiveDict] = useState<'cios' | 'omsus' | 'units'>('cios');
   const [search, setSearch] = useState('');
   
   const [editingItem, setEditingItem] = useState<any | null>(null);
@@ -37,28 +36,7 @@ export function DictsTab() {
   };
 
   return (
-    <div className="bg-white rounded-lg border shadow-sm flex min-h-[500px]">
-      <div className="w-48 border-r bg-slate-50 p-2 flex flex-col gap-1">
-        <button
-          onClick={() => { setActiveDict('cios'); setSearch(''); }}
-          className={`text-left px-3 py-2 text-sm rounded-md transition-colors ${activeDict === 'cios' ? 'bg-[#1e5c8f] text-white font-medium' : 'text-slate-600 hover:bg-slate-200'}`}
-        >
-          ЦИО
-        </button>
-        <button
-          onClick={() => { setActiveDict('omsus'); setSearch(''); }}
-          className={`text-left px-3 py-2 text-sm rounded-md transition-colors ${activeDict === 'omsus' ? 'bg-[#1e5c8f] text-white font-medium' : 'text-slate-600 hover:bg-slate-200'}`}
-        >
-          ОМСУ
-        </button>
-        <button
-          onClick={() => { setActiveDict('units'); setSearch(''); }}
-          className={`text-left px-3 py-2 text-sm rounded-md transition-colors ${activeDict === 'units' ? 'bg-[#1e5c8f] text-white font-medium' : 'text-slate-600 hover:bg-slate-200'}`}
-        >
-          Единицы измерения
-        </button>
-      </div>
-
+    <div className="bg-white rounded-lg border shadow-sm flex flex-col min-h-[500px]">
       <div className="flex-1 flex flex-col">
         <div className="flex items-center gap-4 p-4 border-b">
           <Button size="sm" onClick={() => setEditingItem({})}>

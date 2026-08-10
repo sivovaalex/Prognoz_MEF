@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useStore } from '@/lib/store';
-import { state.cios, CURRENT_OMSU, state.omsus } from '@/lib/data';
+import { CURRENT_OMSU } from '@/lib/data';
 import { VALUE_FIELDS } from '@/lib/types';
 import { EMPTY_TREE_FILTER, chevronParents, visibleTree, type TreeFilter } from '@/lib/indTree';
 import { IndToolbar, TreeToggle } from '@/components/IndToolbar';

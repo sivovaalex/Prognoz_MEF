@@ -6,11 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Lock, LockOpen, Pencil, Plus, RefreshCw, Search } from 'lucide-react';
 import { UserModal } from '@/components/UserModal';
 
-import { DictsTab } from '@/components/DictsTab';
-
 export function UserManagement() {
   const [users, setUsers] = useState<SysUser[]>(MOCK_USERS);
-  const [tab, setTab] = useState<'users' | 'dicts'>('users');
   const [search, setSearch] = useState('');
   
   const [editingUser, setEditingUser] = useState<SysUser | Partial<SysUser> | null>(null);
@@ -36,26 +33,8 @@ export function UserManagement() {
 
   return (
     <div className="space-y-4 pt-4">
-      <div className="border-b">
-        <div className="flex gap-6">
-          <button
-            onClick={() => setTab('users')}
-            className={`pb-2 text-sm font-medium border-b-2 transition-colors ${tab === 'users' ? 'border-[#1e5c8f] text-[#1e5c8f]' : 'border-transparent text-slate-500 hover:text-slate-800'}`}
-          >
-            Пользователи
-          </button>
-          <button
-            onClick={() => setTab('dicts')}
-            className={`pb-2 text-sm font-medium border-b-2 transition-colors ${tab === 'dicts' ? 'border-[#1e5c8f] text-[#1e5c8f]' : 'border-transparent text-slate-500 hover:text-slate-800'}`}
-          >
-            Справочники
-          </button>
-        </div>
-      </div>
-
-      {tab === 'users' && (
-        <div className="bg-white rounded-lg border shadow-sm">
-          <div className="flex items-center gap-4 p-4 border-b">
+      <div className="bg-white rounded-lg border shadow-sm">
+        <div className="flex items-center gap-4 p-4 border-b">
             <Button variant="outline" size="sm" onClick={() => setUsers([...users])}>
               <RefreshCw className="h-4 w-4 mr-2" /> Обновить
             </Button>
@@ -122,10 +101,7 @@ export function UserManagement() {
               </tbody>
             </table>
           </div>
-        </div>
-      )}
-
-      {tab === 'dicts' && <DictsTab />}
+      </div>
 
       {editingUser && (
         <UserModal

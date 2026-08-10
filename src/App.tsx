@@ -12,6 +12,7 @@ import { ReportView } from '@/pages/ReportView';
 import { Description } from '@/pages/Description';
 import { Home } from '@/pages/Home';
 import { UserManagement } from '@/pages/UserManagement';
+import { DictsManagement } from '@/pages/DictsManagement';
 import type { ModuleId } from '@/pages/Home';
 import { ModuleStub } from '@/pages/ModuleStub';
 import { Login } from '@/pages/Login';
@@ -21,7 +22,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Bell, Landmark, UserRound, Home as HomeIcon } from 'lucide-react';
 
-type PageId = 'overview' | 'setup' | 'omsu' | 'cio' | 'mef-manage' | 'rating' | 'report' | 'about' | 'users';
+type PageId = 'overview' | 'setup' | 'omsu' | 'cio' | 'mef-manage' | 'rating' | 'report' | 'about' | 'users' | 'dicts';
 type BlockId = 'mun' | 'obl' | 'params' | 'form2p' | 'long_term' | 'admin_block' | 'ukaz_main' | 'rating_main' | 'rating_view';
 
 const BLOCK_LABELS: Record<BlockId, string> = {
@@ -108,7 +109,10 @@ function Shell({ activeModule, onHome }: { activeModule: ModuleId, onHome: () =>
   };
 
   const activeNav = block === 'admin_block'
-    ? [{ id: 'users' as PageId, label: 'Управление пользователями' }]
+    ? [
+        { id: 'users' as PageId, label: 'Управление пользователями' },
+        { id: 'dicts' as PageId, label: 'Справочники' },
+      ]
     : block === 'rating_view'
       ? [{ id: 'rating' as PageId, label: 'Рейтинг ОМСУ' }]
       : NAV[role];
@@ -241,6 +245,7 @@ function Shell({ activeModule, onHome }: { activeModule: ModuleId, onHome: () =>
         {page === 'report' && <ReportView />}
         {page === 'about' && <Description />}
         {page === 'users' && <UserManagement />}
+        {page === 'dicts' && <DictsManagement />}
       </main>
 
       <footer className="border-t bg-white py-3">

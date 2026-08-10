@@ -22,7 +22,7 @@ import { fmt } from '@/lib/rating';
 
 export function CioWorkspace({ hideOmsuApprove = false }: { hideOmsuApprove?: boolean }) {
   const { state, dispatch } = useStore();
-  const cio = state.state.cios.find((c) => c.id === CURRENT_CIO)!;
+  const cio = state.cios.find((c) => c.id === CURRENT_CIO)!;
   const [returnTarget, setReturnTarget] = useState<{ munId: string; indId: string } | null>(null);
   const [comment, setComment] = useState('');
   const [signTarget, setSignTarget] = useState<string | null>(null);
