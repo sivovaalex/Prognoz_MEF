@@ -204,7 +204,6 @@ export function OmsuForm() {
                                     <div><span className="opacity-60">Формула расчёта:</span> {ind.formula}</div>
                                     <div><span className="opacity-60">Единица измерения:</span> {ind.unit}</div>
                                     <div><span className="opacity-60">Оптимум:</span> {ind.optimum === 'max' ? 'чем больше, тем лучше (↑ max)' : 'чем меньше, тем лучше (↓ min)'}</div>
-                                    <div><span className="opacity-60">Вес в рейтинге:</span> {ind.weight}</div>
                                     <div><span className="opacity-60">Отраслевой ЦИО:</span> {state.cios.find((c) => c.id === ind.cioId)?.short}</div>
                                   </TooltipContent>
                                 </Tooltip>

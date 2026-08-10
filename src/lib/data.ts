@@ -383,6 +383,7 @@ export function buildInitialState(moduleId: string): AppState {
     omsuValues: buildOmsuValues(indicators),
     cioValues: buildCioValues(indicators),
     campaign: {
+      module: moduleId,
       name: moduleId === 'ukaz' ? 'Указ Президента РФ №607' : moduleId === 'rating' ? 'Рейтинг ОМСУ' : 'Муниципальный прогноз СЭР МО',
       period: moduleId === 'rating' ? 'Оценка за 2026 год' : '2027–2029 годы',
       status: 'collecting',

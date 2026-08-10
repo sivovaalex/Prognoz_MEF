@@ -160,6 +160,7 @@ export interface CioValue extends IndicatorValues {
 export type CampaignStatus = 'draft' | 'scheduled' | 'collecting' | 'completed';
 
 export interface Campaign {
+  module: string;
   name: string;
   period: string;
   status: CampaignStatus;

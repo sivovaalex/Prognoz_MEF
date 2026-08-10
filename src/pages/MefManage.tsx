@@ -17,8 +17,15 @@ export function MefManage({ goRating, goReport }: { goRating: () => void; goRepo
 
   const stats = approvalStats(state);
   const complete = allApproved(state);
-  const [preReportModalOpen, setPreReportModalOpen] = useState(false);
+  const [reportModalOpen, setReportModalOpen] = useState(false);
+  const [reportIntent, setReportIntent] = useState<'pre' | 'final'>('final');
   const [reportType, setReportType] = useState('ind');
+  const [period, setPeriod] = useState('2024');
+
+  const isRating = state.campaign.module === 'rating';
+  const periods = isRating 
+    ? ['2023 год', '1 квартал 2024', '2 квартал 2024', '3 квартал 2024', '4 квартал 2024', '2024 год']
+    : ['2023 год', '2024 год', '2025 год', '2026 год'];
 
   return (
     <div className="space-y-4">
@@ -82,23 +89,25 @@ export function MefManage({ goRating, goReport }: { goRating: () => void; goRepo
               <Badge variant="outline" className="text-amber-700 border-amber-300">На согласовании: {stats.pending}</Badge>
               <Badge variant="outline" className="text-gray-600">Не заполнено/черновики: {stats.empty + stats.draft}</Badge>
             </div>
-            <div className="rounded-md border p-3">
-              <div className="font-medium">Предварительный отчёт</div>
-              <p className="text-xs text-muted-foreground mb-2">
-                Доступен в любой момент: рассчитывается по введённым данным (согласованным и несогласованным).
-              </p>
-              <Button variant="outline" size="sm" onClick={() => setPreReportModalOpen(true)}>
-                <BarChart3 className="h-4 w-4 mr-1" /> Сформировать предварительный отчёт
-              </Button>
-            </div>
+            {isRating && (
+              <div className="rounded-md border p-3">
+                <div className="font-medium">Предварительный отчёт</div>
+                <p className="text-xs text-muted-foreground mb-2">
+                  Доступен в любой момент: рассчитывается по введённым данным (согласованным и несогласованным).
+                </p>
+                <Button variant="outline" size="sm" onClick={() => { setReportIntent('pre'); setReportModalOpen(true); }}>
+                  <BarChart3 className="h-4 w-4 mr-1" /> Сформировать предварительный отчёт
+                </Button>
+              </div>
+            )}
             <div className="rounded-md border p-3">
               <div className="font-medium">Итоговый отчёт</div>
               <p className="text-xs text-muted-foreground mb-2">
                 {complete
                   ? 'Все показатели согласованы. Можно формировать итоговый сводный отчёт.'
-                  : 'Доступен после согласования всех показателей: ОМСУ — отраслевыми ЦИО, ЦИО — МЭФ.'}
+                  : 'Обычно доступен после согласования всех показателей, но для тестирования кнопка разблокирована.'}
               </p>
-              <Button size="sm" disabled={!complete} onClick={() => { dispatch({ type: 'PUBLISH_FINAL' }); goRating(); }}>
+              <Button size="sm" onClick={() => { setReportIntent('final'); setReportModalOpen(true); }}>
                 <CheckCircle2 className="h-4 w-4 mr-1" /> Сформировать итоговый отчёт
               </Button>
               {state.finalPublished && (
@@ -109,55 +118,74 @@ export function MefManage({ goRating, goReport }: { goRating: () => void; goRepo
         </Card>
       </div>
 
-      <Dialog open={preReportModalOpen} onOpenChange={setPreReportModalOpen}>
+      <Dialog open={reportModalOpen} onOpenChange={setReportModalOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Формирование предварительного отчёта</DialogTitle>
+            <DialogTitle>
+              {reportIntent === 'pre' ? 'Формирование предварительного отчёта' : 'Формирование итогового отчёта'}
+            </DialogTitle>
           </DialogHeader>
-          <div className="py-4 space-y-3">
-            <Label>Выберите тип отчёта:</Label>
-            <div className="space-y-2 text-sm">
-              <label className="flex items-center gap-2 cursor-not-allowed opacity-50">
-                <input
-                  type="radio"
-                  name="reportType"
-                  value="cio"
-                  checked={reportType === 'cio'}
-                  disabled
-                  onChange={(e) => setReportType(e.target.value)}
-                  className="w-4 h-4 text-[#1e5c8f] border-gray-300"
-                />
-                ЦИО
-              </label>
-              <label className="flex items-center gap-2 cursor-not-allowed opacity-50">
-                <input
-                  type="radio"
-                  name="reportType"
-                  value="omsu"
-                  checked={reportType === 'omsu'}
-                  disabled
-                  onChange={(e) => setReportType(e.target.value)}
-                  className="w-4 h-4 text-[#1e5c8f] border-gray-300"
-                />
-                ОМСУ
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="reportType"
-                  value="ind"
-                  checked={reportType === 'ind'}
-                  onChange={(e) => setReportType(e.target.value)}
-                  className="w-4 h-4 text-[#1e5c8f] border-gray-300"
-                />
-                показатель
-              </label>
+          <div className="py-4 space-y-4">
+            <div className="space-y-2">
+              <Label>Период</Label>
+              <select 
+                className="flex h-9 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                value={period}
+                onChange={e => setPeriod(e.target.value)}
+              >
+                {periods.map(p => (
+                  <option key={p} value={p}>{p}</option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-2">
+              <Label>Выберите тип отчёта:</Label>
+              <div className="space-y-2 text-sm">
+                <label className="flex items-center gap-2 cursor-not-allowed opacity-50">
+                  <input
+                    type="radio"
+                    name="reportType"
+                    value="cio"
+                    checked={reportType === 'cio'}
+                    disabled
+                    onChange={(e) => setReportType(e.target.value)}
+                    className="w-4 h-4 text-[#1e5c8f] border-gray-300"
+                  />
+                  ЦИО
+                </label>
+                <label className="flex items-center gap-2 cursor-not-allowed opacity-50">
+                  <input
+                    type="radio"
+                    name="reportType"
+                    value="omsu"
+                    checked={reportType === 'omsu'}
+                    disabled
+                    onChange={(e) => setReportType(e.target.value)}
+                    className="w-4 h-4 text-[#1e5c8f] border-gray-300"
+                  />
+                  ОМСУ
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="reportType"
+                    value="ind"
+                    checked={reportType === 'ind'}
+                    onChange={(e) => setReportType(e.target.value)}
+                    className="w-4 h-4 text-[#1e5c8f] border-gray-300"
+                  />
+                  показатель
+                </label>
+              </div>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setPreReportModalOpen(false)}>Отмена</Button>
+            <Button variant="outline" onClick={() => setReportModalOpen(false)}>Отмена</Button>
             <Button onClick={() => {
-              setPreReportModalOpen(false);
+              if (reportIntent === 'final') {
+                dispatch({ type: 'PUBLISH_FINAL' });
+              }
+              setReportModalOpen(false);
               if (reportType === 'ind') {
                 goReport();
               } else {
