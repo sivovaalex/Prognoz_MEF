@@ -159,6 +159,11 @@ export interface CioValue extends IndicatorValues {
 
 export type CampaignStatus = 'draft' | 'scheduled' | 'collecting' | 'completed';
 
+export interface BlockSettings {
+  approvers: ('omsu' | 'cio' | 'mef')[];
+}
+
+
 export interface Campaign {
   module: string;
   name: string;
@@ -191,8 +196,10 @@ export interface AppState {
   cios: Cio[];
   omsus: Municipality[];
   units: Unit[];
+  blockSettings: Record<string, BlockSettings>; // module_block -> BlockSettings
   omsuValues: Record<string, Record<string, OmsuValue>>; // munId -> indId -> value
   cioValues: Record<string, Record<string, CioValue>>;   // indId -> cioId -> собственное значение ЦИО по тому же показателю
+  cioTerritoryValues: Record<string, Record<string, Record<string, CioValue>>>; // cioId -> indId -> omsuId -> value
   history: HistoryItem[];
   notifications: NotificationItem[];
   ratingMode: 'preview' | 'final';

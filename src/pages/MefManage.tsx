@@ -81,15 +81,15 @@ export function MefManage({ goRating, goReport }: { goRating: () => void; goRepo
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader><CardTitle className="text-base">Готовность к итоговому отчёту</CardTitle></CardHeader>
-          <CardContent className="space-y-3 text-sm">
-            <div className="flex flex-wrap gap-2 text-xs">
-              <Badge variant="outline" className="text-green-700 border-green-300">Согласовано ЦИО: {stats.approved}/{stats.total}</Badge>
-              <Badge variant="outline" className="text-amber-700 border-amber-300">На согласовании: {stats.pending}</Badge>
-              <Badge variant="outline" className="text-gray-600">Не заполнено/черновики: {stats.empty + stats.draft}</Badge>
-            </div>
-            {isRating && (
+        {isRating && (
+          <Card>
+            <CardHeader><CardTitle className="text-base">Готовность к итоговому отчёту</CardTitle></CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              <div className="flex flex-wrap gap-2 text-xs">
+                <Badge variant="outline" className="text-green-700 border-green-300">Согласовано ЦИО: {stats.approved}/{stats.total}</Badge>
+                <Badge variant="outline" className="text-amber-700 border-amber-300">На согласовании: {stats.pending}</Badge>
+                <Badge variant="outline" className="text-gray-600">Не заполнено/черновики: {stats.empty + stats.draft}</Badge>
+              </div>
               <div className="rounded-md border p-3">
                 <div className="font-medium">Предварительный отчёт</div>
                 <p className="text-xs text-muted-foreground mb-2">
@@ -99,9 +99,7 @@ export function MefManage({ goRating, goReport }: { goRating: () => void; goRepo
                   <BarChart3 className="h-4 w-4 mr-1" /> Сформировать предварительный отчёт
                 </Button>
               </div>
-            )}
-            
-            {isRating && (
+              
               <div className="rounded-md border p-3">
                 <div className="font-medium">Итоговый отчёт</div>
                 <p className="text-xs text-muted-foreground mb-2">
@@ -116,9 +114,9 @@ export function MefManage({ goRating, goReport }: { goRating: () => void; goRepo
                   <Badge className="ml-2 bg-green-100 text-green-700 hover:bg-green-100">Опубликован</Badge>
                 )}
               </div>
-            )}
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       <Dialog open={reportModalOpen} onOpenChange={setReportModalOpen}>

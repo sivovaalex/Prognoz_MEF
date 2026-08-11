@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { StoreProvider, useStore } from '@/lib/store';
 import { ROLES } from '@/lib/data';
-import type { RoleId } from '@/lib/types';
+import type { RoleId, AppState } from '@/lib/types';
 import { Overview } from '@/pages/Overview';
 import { Setup } from '@/pages/Setup';
 import { OmsuForm } from '@/pages/OmsuForm';
@@ -17,13 +17,14 @@ import { OutputTablesView } from '@/pages/OutputTablesView';
 import type { ModuleId } from '@/pages/Home';
 import { ModuleStub } from '@/pages/ModuleStub';
 import { Login } from '@/pages/Login';
+import { MefWorkspace } from '@/pages/MefWorkspace';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Bell, Landmark, UserRound, Home as HomeIcon } from 'lucide-react';
 
-type PageId = 'overview' | 'setup' | 'omsu' | 'cio' | 'mef-manage' | 'rating' | 'report' | 'about' | 'users' | 'dicts' | 'output-tables';
+type PageId = 'overview' | 'setup' | 'omsu' | 'cio' | 'mef-manage' | 'rating' | 'report' | 'about' | 'users' | 'dicts' | 'output-tables' | 'mef-workspace';
 type BlockId = 'mun' | 'obl' | 'params' | 'form2p' | 'long_term' | 'admin_block' | 'ukaz_main' | 'rating_main' | 'rating_view';
 
 const BLOCK_LABELS: Record<BlockId, string> = {
@@ -38,29 +39,38 @@ const BLOCK_LABELS: Record<BlockId, string> = {
   rating_view: 'Рейтинг ОМСУ',
 };
 
-const getBlocks = (role: RoleId, module: ModuleId): BlockId[] => {
+const getBlocks = (role: RoleId, module: ModuleId, settings: AppState['blockSettings']): BlockId[] => {
+  let blocks: BlockId[] = [];
   if (module === 'ukaz') {
-    return role === 'admin' ? ['ukaz_main', 'admin_block'] : ['ukaz_main'];
+    blocks = role === 'admin' ? ['ukaz_main', 'admin_block'] : ['ukaz_main'];
+  } else if (module === 'rating') {
+    if (role === 'admin') blocks = ['rating_main', 'rating_view', 'admin_block'];
+    else if (role === 'mef') blocks = ['rating_main', 'rating_view'];
+    else blocks = ['rating_main'];
+  } else {
+    if (role === 'admin') blocks = ['mun', 'obl', 'params', 'form2p', 'long_term', 'admin_block'];
+    else if (role === 'mef' || role === 'cio') blocks = ['mun', 'obl', 'params', 'form2p', 'long_term'];
+    else blocks = ['mun', 'obl', 'params', 'form2p', 'long_term']; // OMSU base blocks, filtered below
   }
-  if (module === 'rating') {
-    if (role === 'admin') return ['rating_main', 'rating_view', 'admin_block'];
-    if (role === 'mef') return ['rating_main', 'rating_view'];
-    return ['rating_main'];
+  
+  if (role !== 'admin' && role !== 'mef') {
+    blocks = blocks.filter(b => b === 'rating_view' || b === 'admin_block' || (settings[b] && settings[b].approvers.includes(role)));
   }
-  if (role === 'admin') return ['mun', 'obl', 'params', 'form2p', 'long_term', 'admin_block'];
-  if (role === 'mef' || role === 'cio') return ['mun', 'obl', 'params', 'form2p', 'long_term'];
-  return ['mun'];
+  return blocks.length ? blocks : ['mun'];
 };
 
 const NAV: Record<RoleId, { id: PageId; label: string }[]> = {
   admin: [
     { id: 'overview', label: 'Обзор сбора' },
     { id: 'setup', label: 'Настройка показателей' },
+    { id: 'mef-manage', label: 'Управление' },
+    { id: 'output-tables', label: 'Выходные таблицы' },
   ],
   mef: [
     { id: 'overview', label: 'Обзор сбора' },
     { id: 'mef-manage', label: 'Управление' },
     { id: 'output-tables', label: 'Выходные таблицы' },
+    { id: 'mef-workspace', label: 'Рабочее место МЭФ' },
   ],
   cio: [
     { id: 'cio', label: 'Рабочее место ЦИО' },
@@ -90,18 +100,18 @@ function Shell({ activeModule, onHome }: { activeModule: ModuleId, onHome: () =>
 
   useEffect(() => {
     dispatch({ type: 'SET_MODULE', module: activeModule });
-    const b = getBlocks(role, activeModule);
+    const b = getBlocks(role, activeModule, state.blockSettings);
     setBlock(b[0]);
     setPage(DEFAULT_PAGE[role]);
   }, [activeModule, dispatch]);
 
   const roleInfo = ROLES.find((r) => r.id === role)!;
   const notifs = state.notifications.filter((n) => n.forRoles.includes(role)).slice(-8).reverse();
-  const availableBlocks = getBlocks(role, activeModule);
+  const availableBlocks = getBlocks(role, activeModule, state.blockSettings);
 
   const switchRole = (r: RoleId) => {
     setRole(r);
-    setBlock(getBlocks(r, activeModule)[0]);
+    setBlock(getBlocks(r, activeModule, state.blockSettings)[0]);
     setPage(DEFAULT_PAGE[r]);
   };
 
@@ -110,7 +120,7 @@ function Shell({ activeModule, onHome }: { activeModule: ModuleId, onHome: () =>
     setPage(b === 'admin_block' ? 'users' : DEFAULT_PAGE[role]);
   };
 
-  const activeNav = block === 'admin_block'
+  let activeNav = block === 'admin_block'
     ? [
         { id: 'users' as PageId, label: 'Управление пользователями' },
         { id: 'dicts' as PageId, label: 'Справочники' },
@@ -118,6 +128,17 @@ function Shell({ activeModule, onHome }: { activeModule: ModuleId, onHome: () =>
     : block === 'rating_view'
       ? [{ id: 'rating' as PageId, label: 'Рейтинг ОМСУ' }]
       : NAV[role];
+      
+  // Filter NAV tabs based on block settings
+  if (block !== 'admin_block' && block !== 'rating_view') {
+    const approvers = state.blockSettings[block]?.approvers || [];
+    activeNav = activeNav.filter(item => {
+      if (item.id === 'omsu') return approvers.includes('omsu');
+      if (item.id === 'cio') return approvers.includes('cio');
+      if (item.id === 'mef-workspace') return approvers.includes('mef');
+      return true;
+    });
+  }
 
   return (
     <div className="min-h-screen bg-slate-100">
@@ -239,13 +260,14 @@ function Shell({ activeModule, onHome }: { activeModule: ModuleId, onHome: () =>
 
       <main className="w-full px-4 pb-10">
         {page === 'overview' && <Overview role={role} />}
-        {page === 'setup' && <Setup />}
+        {page === 'setup' && <Setup block={block} />}
         {page === 'omsu' && <OmsuForm />}
-        {page === 'cio' && <CioWorkspace key={block} hideOmsuApprove={block !== 'mun'} />}
+        {page === 'cio' && <CioWorkspace key={block} hideOmsuApprove={!state.blockSettings[block]?.approvers.includes('omsu')} />}
         {page === 'mef-manage' && <MefManage goRating={() => setPage('rating')} goReport={() => setPage('report')} />}
         {page === 'rating' && <RatingView />}
         {page === 'report' && <ReportView />}
         {page === 'output-tables' && <OutputTablesView />}
+        {page === 'mef-workspace' && <MefWorkspace />}
         {page === 'about' && <Description />}
         {page === 'users' && <UserManagement />}
         {page === 'dicts' && <DictsManagement />}

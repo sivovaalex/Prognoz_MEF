@@ -342,13 +342,15 @@ function buildCioValues(indicators: Indicator[]): Record<string, Record<string, 
   for (const ind of fillable) {
     const [lo, hi] = RANGES[ind.id] ?? [100, 1000];
     const v = r2((lo + rand() * (hi - lo)) * 8.4); // областной уровень
-    if (ind.cioId === CURRENT_CIO || ind.cioId === MEF_CIO) {
-      // Для текущего ЦИО и для МЭФ — форма не заполнена (рабочий сценарий)
+    
+    const status: CioValue['status'] = rand() > 0.4 ? 'approved' : 'pending_mef';
+    
+    // Оставляем несколько пустых для теста работы самого ЦИО
+    if (ind.cioId === CURRENT_CIO && rand() > 0.7) {
       out[ind.id] = {
         [ind.cioId]: { ...emptyValueFields(), status: 'not_filled', updatedAt: null },
       };
     } else {
-      const status: CioValue['status'] = rand() > 0.4 ? 'approved' : 'pending_mef';
       out[ind.id] = {
         [ind.cioId]: { ...makeFields(v), status, updatedAt: '23.07.2026 15:30' },
       };
@@ -380,8 +382,17 @@ export function buildInitialState(moduleId: string): AppState {
     cios: CIOS.map(c => ({ ...c, isActive: true })),
     omsus: MUNICIPALITIES.map(m => ({ ...m, isActive: true })),
     units: units.map((u, i) => ({ id: `u${i + 1}`, name: u, isActive: true })),
+    blockSettings: {
+      mun: { approvers: ['omsu', 'cio', 'mef'] },
+      obl: { approvers: ['cio', 'mef'] },
+      rating_main: { approvers: ['omsu', 'cio', 'mef'] },
+      ukaz_main: { approvers: ['omsu', 'cio', 'mef'] },
+      form2p: { approvers: ['cio', 'mef'] },
+      long_term: { approvers: ['cio', 'mef'] },
+    },
     omsuValues: buildOmsuValues(indicators),
     cioValues: buildCioValues(indicators),
+    cioTerritoryValues: {},
     campaign: {
       module: moduleId,
       name: moduleId === 'ukaz' ? 'Указ Президента РФ №607' : moduleId === 'rating' ? 'Рейтинг ОМСУ' : 'Муниципальный прогноз СЭР МО',
@@ -436,6 +447,16 @@ export const MOCK_USERS: SysUser[] = [
     position: 'Администратор',
     isLocked: false,
     roleId: 'admin'
+  },
+  {
+    id: 'u0',
+    login: 'mef',
+    lastName: 'Петров',
+    firstName: 'Петр',
+    email: 'mef@mosreg.ru',
+    position: 'Сотрудник МЭФ',
+    isLocked: false,
+    roleId: 'mef'
   },
   {
     id: 'u2',

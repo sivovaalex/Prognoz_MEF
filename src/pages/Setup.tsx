@@ -16,13 +16,15 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Pencil, Settings2 } from 'lucide-react';
+import { Plus, Pencil, Settings2, Settings } from 'lucide-react';
 
-export function Setup() {
+export function Setup({ block }: { block: string }) {
   const { state, dispatch } = useStore();
   const [editInd, setEditInd] = useState<Indicator | null>(null);
   const [isNew, setIsNew] = useState(false);
   const [editDir, setEditDir] = useState<{ num: string, name: string, cioId: string } | null>(null);
+  const [showSettings, setShowSettings] = useState(false);
+  const [settingsForm, setSettingsForm] = useState<('omsu'|'cio'|'mef')[]>([]);
   const [treeFilter, setTreeFilter] = useState<TreeFilter>(EMPTY_TREE_FILTER);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
 
@@ -63,6 +65,16 @@ export function Setup() {
     setEditDir(null);
   };
 
+  const openSettings = () => {
+    setSettingsForm(state.blockSettings[block]?.approvers || []);
+    setShowSettings(true);
+  };
+
+  const saveSettings = () => {
+    dispatch({ type: 'UPDATE_BLOCK_SETTINGS', block, approvers: settingsForm });
+    setShowSettings(false);
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -73,6 +85,7 @@ export function Setup() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={openSettings}><Settings className="h-4 w-4 mr-1" /> Настройки</Button>
           <Button variant="outline" onClick={openNewDir}><Plus className="h-4 w-4 mr-1" /> Добавить раздел показателя</Button>
           <Button onClick={openNew}><Plus className="h-4 w-4 mr-1" /> Добавить показатель</Button>
         </div>
@@ -260,6 +273,43 @@ export function Setup() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditDir(null)}>Отмена</Button>
             <Button onClick={saveDir}>Сохранить</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* Модалка настроек блока */}
+      <Dialog open={showSettings} onOpenChange={setShowSettings}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Настройки согласования</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Кто согласует</Label>
+              <div className="flex flex-col gap-2 mt-2">
+                {(['omsu', 'cio', 'mef'] as const).map(role => (
+                  <div key={role} className="flex items-center space-x-2">
+                    <input 
+                      type="checkbox"
+                      id={`role-${role}`} 
+                      className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      checked={settingsForm.includes(role)}
+                      onChange={(e) => {
+                        const c = e.target.checked;
+                        if (c) setSettingsForm([...settingsForm, role]);
+                        else setSettingsForm(settingsForm.filter(r => r !== role));
+                      }}
+                    />
+                    <label htmlFor={`role-${role}`} className="text-sm font-medium leading-none">
+                      {role === 'omsu' ? 'ОМСУ' : role === 'cio' ? 'ЦИО' : 'МЭФ'}
+                    </label>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowSettings(false)}>Отмена</Button>
+            <Button onClick={saveSettings}>Сохранить</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

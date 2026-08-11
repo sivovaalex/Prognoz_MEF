@@ -42,7 +42,9 @@ export type Action =
   | { type: 'SET_MODULE'; module: string }
   | { type: 'ADD_DICT_ITEM'; dict: 'cios' | 'omsus' | 'units'; item: any }
   | { type: 'UPDATE_DICT_ITEM'; dict: 'cios' | 'omsus' | 'units'; item: any }
-  | { type: 'TOGGLE_DICT_ITEM'; dict: 'cios' | 'omsus' | 'units'; id: string };
+  | { type: 'TOGGLE_DICT_ITEM'; dict: 'cios' | 'omsus' | 'units'; id: string }
+  | { type: 'UPDATE_BLOCK_SETTINGS'; block: string; approvers: ('omsu' | 'cio' | 'mef')[] }
+  | { type: 'CIO_TERR_SET_VALUE'; cioId: string; indId: string; munId: string; field: ValueFieldKey; value: number | null };
 
 function now(): string {
   const d = new Date();
@@ -266,6 +268,40 @@ function reducer(state: AppState, a: Action): AppState {
           x.id === a.id ? { ...x, isActive: !x.isActive } : x
         ),
       };
+    case 'UPDATE_BLOCK_SETTINGS':
+      return {
+        ...state,
+        blockSettings: {
+          ...state.blockSettings,
+          [a.block]: { approvers: a.approvers },
+        },
+      };
+    case 'CIO_TERR_SET_VALUE': {
+      const cur = state.cioTerritoryValues[a.cioId]?.[a.indId]?.[a.munId];
+      const base0 = cur ?? { ...emptyValueFields(), status: 'not_filled' as const, updatedAt: null };
+      const next = { ...base0, [a.field]: a.value, updatedAt: now(), comment: undefined };
+      if (a.field === 'v2026') {
+        if (typeof a.value === 'number') {
+          Object.assign(next, calcForecasts(a.value));
+        } else {
+          Object.assign(next, { cons2027: null, base2027: null, cons2028: null, base2028: null, cons2029: null, base2029: null });
+        }
+      }
+      next.status = hasAnyValue(next) ? 'draft' : 'not_filled';
+      return {
+        ...state,
+        cioTerritoryValues: {
+          ...state.cioTerritoryValues,
+          [a.cioId]: {
+            ...state.cioTerritoryValues[a.cioId],
+            [a.indId]: {
+              ...(state.cioTerritoryValues[a.cioId]?.[a.indId] ?? {}),
+              [a.munId]: next,
+            }
+          }
+        }
+      };
+    }
     default:
       return state;
   }
