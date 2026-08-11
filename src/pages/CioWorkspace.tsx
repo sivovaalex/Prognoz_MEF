@@ -418,11 +418,7 @@ function CioOwnIndicators({ myOwnVisible, myFillable, collapsed, toggleNode, par
                               <ValueTip value={v[f.key]} updatedAt={v.updatedAt} author={v.signedBy ?? 'Петров С.И.'} />
                             </span>
                           )}
-                          <div className="mt-1 text-[11px] whitespace-nowrap">
-                            <span className="text-muted-foreground">ср. ОМСУ: </span>
-                            <span className="font-medium text-blue-800">{avg !== null ? fmt(avg) : '—'}</span>
-                            <span className="text-muted-foreground"> · {count}</span>
-                          </div>
+
                         </td>
                       );
                     })}
