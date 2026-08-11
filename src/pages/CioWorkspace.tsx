@@ -1,7 +1,7 @@
 import { Fragment, useState } from 'react';
 import { useStore } from '@/lib/store';
 import { CURRENT_CIO } from '@/lib/data';
-import { VALUE_FIELDS, emptyValueFields, type ValueFieldKey } from '@/lib/types';
+import { VALUE_FIELDS, emptyValueFields } from '@/lib/types';
 import { EMPTY_TREE_FILTER, chevronParents, visibleTree, type TreeFilter } from '@/lib/indTree';
 import { IndToolbar, TreeToggle } from '@/components/IndToolbar';
 import { OmsuStatusBadge, CioStatusBadge } from '@/components/StatusBadge';
@@ -18,7 +18,6 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/dialog';
 import { CheckCircle2, Undo2, Send, Lock, Info, ChevronDown, ChevronRight } from 'lucide-react';
-import { fmt } from '@/lib/rating';
 
 export function CioWorkspace({ hideOmsuApprove = false }: { hideOmsuApprove?: boolean }) {
   const { state, dispatch } = useStore();
@@ -48,18 +47,6 @@ export function CioWorkspace({ hideOmsuApprove = false }: { hideOmsuApprove?: bo
     (acc, m) => acc + myFillable.filter((i) => state.omsuValues[m.id]?.[i.id]?.status === 'pending_cio').length,
     0,
   );
-
-  // Среднее значение по введённым показателям ОМСУ — по каждому показателю отрасли
-  // и по каждому заполняемому полю (отчётные годы, оценка, варианты прогнозов)
-  const avgByInd = (indId: string, field: ValueFieldKey) => {
-    const vals = state.omsus
-      .map((m) => state.omsuValues[m.id]?.[indId]?.[field])
-      .filter((x): x is number => x !== null && x !== undefined);
-    return {
-      avg: vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null,
-      count: vals.length,
-    };
-  };
 
   return (
     <div className="space-y-4">
@@ -261,7 +248,7 @@ export function CioWorkspace({ hideOmsuApprove = false }: { hideOmsuApprove?: bo
                   parents={parents}
                   treeFilter={treeFilter}
                   setTreeFilter={setTreeFilter}
-                  avgByInd={avgByInd}
+
                   cio={cio}
                   setSignTarget={setSignTarget}
                 />
@@ -288,7 +275,7 @@ export function CioWorkspace({ hideOmsuApprove = false }: { hideOmsuApprove?: bo
                 parents={parents}
                 treeFilter={treeFilter}
                 setTreeFilter={setTreeFilter}
-                avgByInd={avgByInd}
+
                 cio={cio}
                 setSignTarget={setSignTarget}
               />
@@ -340,7 +327,7 @@ export function CioWorkspace({ hideOmsuApprove = false }: { hideOmsuApprove?: bo
   );
 }
 
-function CioOwnIndicators({ myOwnVisible, myFillable, collapsed, toggleNode, parents, treeFilter, setTreeFilter, avgByInd, cio, setSignTarget }: any) {
+function CioOwnIndicators({ myOwnVisible, myFillable, collapsed, toggleNode, parents, treeFilter, setTreeFilter, cio, setSignTarget }: any) {
   const { state, dispatch } = useStore();
   return (
     <>
@@ -391,7 +378,7 @@ function CioOwnIndicators({ myOwnVisible, myFillable, collapsed, toggleNode, par
                       <div className="text-xs text-muted-foreground" style={{ paddingLeft: `${(ind.level - 1) * 16 + 20}px` }}>ед. изм.: {ind.unit} · формула: {ind.formula}</div>
                     </td>
                     {VALUE_FIELDS.map((f) => {
-                      const { avg, count } = avgByInd(ind.id, f.key);
+
                       return (
                         <td key={f.key} className={`p-1.5 text-center ${fieldTint(f.key)}`}>
                           {editable && f.key === 'v2026' ? (
