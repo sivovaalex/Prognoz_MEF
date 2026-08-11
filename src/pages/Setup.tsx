@@ -24,7 +24,7 @@ export function Setup({ block }: { block: string }) {
   const [isNew, setIsNew] = useState(false);
   const [editDir, setEditDir] = useState<{ num: string, name: string, cioId: string } | null>(null);
   const [showSettings, setShowSettings] = useState(false);
-  const [settingsForm, setSettingsForm] = useState<('omsu'|'cio'|'mef')[]>([]);
+  const [settingsForm, setSettingsForm] = useState<('omsu' | 'cio' | 'mef')[]>([]);
   const [treeFilter, setTreeFilter] = useState<TreeFilter>(EMPTY_TREE_FILTER);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
 
@@ -284,13 +284,13 @@ export function Setup({ block }: { block: string }) {
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label>Кто согласует</Label>
+              <Label>Участники процесса</Label>
               <div className="flex flex-col gap-2 mt-2">
                 {(['omsu', 'cio', 'mef'] as const).map(role => (
                   <div key={role} className="flex items-center space-x-2">
-                    <input 
+                    <input
                       type="checkbox"
-                      id={`role-${role}`} 
+                      id={`role-${role}`}
                       className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                       checked={settingsForm.includes(role)}
                       onChange={(e) => {
