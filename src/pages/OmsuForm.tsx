@@ -40,6 +40,7 @@ export function OmsuForm() {
   const isCurrentOmsu = munId === CURRENT_OMSU;
   const mun = state.omsus.find((m) => m.id === munId)!;
   const [signTarget, setSignTarget] = useState<string | null>(null);
+  const [cmpMunFilter, setCmpMunFilter] = useState<string>('all');
   // аккордеон: открыта только одна сфера
   const [openDir, setOpenDir] = useState<string | null>(state.directions[0]?.id ?? null);
   // показатель, по которому открыто модальное окно со значениями всех ОМСУ
@@ -315,6 +316,21 @@ export function OmsuForm() {
             </DialogTitle>
           </DialogHeader>
           {cmpInd && (
+            <div className="mb-4 mt-2 flex items-center gap-2">
+              <span className="text-sm font-medium text-slate-600">Фильтр по ОМСУ:</span>
+              <select 
+                className="w-[300px] text-sm p-1.5 border rounded border-slate-300"
+                value={cmpMunFilter}
+                onChange={e => setCmpMunFilter(e.target.value)}
+              >
+                <option value="all">Все ОМСУ</option>
+                {state.omsus.map(o => (
+                  <option key={o.id} value={o.id}>{o.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
+          {cmpInd && (
             <div className="overflow-x-auto">
               <table className="w-full text-sm border-collapse">
                 <thead>
@@ -342,7 +358,7 @@ export function OmsuForm() {
                       </tr>
                     );
                   })()}
-                  {state.omsus.map((m) => {
+                  {state.omsus.filter(m => cmpMunFilter === 'all' || m.id === cmpMunFilter).map((m) => {
                     const v = state.omsuValues[m.id]?.[cmpInd.id];
                     if (!v) return null;
                     const isCurrent = m.id === munId;

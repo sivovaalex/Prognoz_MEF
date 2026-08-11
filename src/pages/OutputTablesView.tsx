@@ -9,6 +9,7 @@ function OutputTableCio() {
   const { state } = useStore();
   const [selectedInd, setSelectedInd] = useState<string | null>(null);
   const [expandedDirs, setExpandedDirs] = useState<Record<string, boolean>>({});
+  const [munFilter, setMunFilter] = useState<string>('all');
 
   const toggleDir = (id: string) => {
     setExpandedDirs(prev => ({ ...prev, [id]: !prev[id] }));
@@ -24,7 +25,7 @@ function OutputTableCio() {
     return v.toLocaleString('ru-RU', { maximumFractionDigits: 5 });
   };
 
-  const activeOmsus = state.omsus.filter(o => o.isActive);
+  const activeOmsus = state.omsus.filter(o => o.isActive && (munFilter === 'all' || o.id === munFilter));
 
   return (
     <div className="flex flex-col h-full bg-white rounded border shadow-sm mt-4">
@@ -95,6 +96,19 @@ function OutputTableCio() {
                 <div className="text-sm text-slate-600">
                   Единица измерения: {activeInd.unit || '—'}
                 </div>
+              </div>
+              <div className="mb-4 flex items-center gap-2">
+                <span className="text-sm font-medium text-slate-600">Фильтр по ОМСУ:</span>
+                <select 
+                  className="w-[300px] text-sm p-1.5 border rounded border-slate-300"
+                  value={munFilter}
+                  onChange={e => setMunFilter(e.target.value)}
+                >
+                  <option value="all">Все ОМСУ</option>
+                  {state.omsus.map(o => (
+                    <option key={o.id} value={o.id}>{o.name}</option>
+                  ))}
+                </select>
               </div>
               <table className="w-full border-collapse min-w-[1000px]">
                 <thead>

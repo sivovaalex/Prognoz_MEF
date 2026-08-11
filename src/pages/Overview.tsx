@@ -31,7 +31,10 @@ export function Overview({ role }: { role: RoleId }) {
   };
 
   // Область видимости: ОМСУ — только своё ОМСУ; ЦИО — только показатели своей отрасли
-  const scopeMuns = role === 'omsu' ? state.omsus.filter((m) => m.id === CURRENT_OMSU) : state.omsus;
+  const [munFilter, setMunFilter] = useState<string>('all');
+  const scopeMuns = role === 'omsu' 
+    ? state.omsus.filter((m) => m.id === CURRENT_OMSU) 
+    : (munFilter === 'all' ? state.omsus : state.omsus.filter(m => m.id === munFilter));
   const scopeIndsRaw = role === 'cio' ? state.indicators.filter((i) => i.cioId === CURRENT_CIO) : state.indicators;
 
   // дерево показателей: сворачивание дочерних и фильтры
@@ -81,6 +84,8 @@ export function Overview({ role }: { role: RoleId }) {
             shown={scopeVisible.length}
             total={scopeIndsRaw.length}
             showStatusFilter
+            munId={role !== 'omsu' ? munFilter : undefined}
+            onMunChange={role !== 'omsu' ? setMunFilter : undefined}
           />
           <div className="rounded-md border border-blue-200 bg-blue-50 p-2.5 text-xs text-blue-900 flex gap-2 items-center">
             <Info className="h-4 w-4 shrink-0" />

@@ -262,6 +262,8 @@ export function CioWorkspace({ hideOmsuApprove = false }: { hideOmsuApprove?: bo
                   parents={parents}
                   treeFilter={treeFilter}
                   setTreeFilter={setTreeFilter}
+                  munFilter={munFilter}
+                  setMunFilter={setMunFilter}
                 />
               </TabsContent>
             </Tabs>
@@ -443,9 +445,12 @@ function CioOwnIndicators({ myOwnVisible, myFillable, collapsed, toggleNode, par
   );
 }
 
-function CioTerritoryIndicators({ myOwnVisible, myFillable, collapsed, toggleNode, parents, treeFilter, setTreeFilter }: any) {
+function CioTerritoryIndicators({ myOwnVisible, myFillable, collapsed, toggleNode, parents, treeFilter, setTreeFilter, munFilter, setMunFilter }: any) {
   const { state, dispatch } = useStore();
-  const activeOmsus = state.omsus.filter(o => o.isActive);
+  let activeOmsus = state.omsus.filter(o => o.isActive);
+  if (munFilter && munFilter !== 'all') {
+    activeOmsus = activeOmsus.filter(o => o.id === munFilter);
+  }
 
   return (
     <>
@@ -454,6 +459,8 @@ function CioTerritoryIndicators({ myOwnVisible, myFillable, collapsed, toggleNod
         onChange={setTreeFilter}
         shown={myOwnVisible.length}
         total={myFillable.length}
+        munId={munFilter}
+        onMunChange={setMunFilter}
       />
       <div className="rounded-md border border-blue-200 bg-blue-50 p-3 text-sm flex gap-2">
         <Info className="h-4 w-4 text-blue-700 mt-0.5 shrink-0" />
