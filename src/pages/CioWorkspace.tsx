@@ -482,25 +482,36 @@ function CioTerritoryIndicators({ myOwnVisible, myFillable, collapsed, toggleNod
             <thead>
               <tr className="border-b text-xs text-muted-foreground">
                 <th rowSpan={2} className="text-left p-2 align-middle min-w-[220px]">Территория</th>
-                <th colSpan={3} className="text-center p-1.5 border-l border-b bg-green-50/70">Отчёт</th>
+                <th colSpan={6} className="text-center p-1.5 border-l border-b bg-green-50/70">Отчёт</th>
                 <th colSpan={2} className="text-center p-1.5 border-l border-b bg-amber-50/70">Оценка</th>
-                <th colSpan={2} className="text-center p-1.5 border-l border-b bg-blue-50/70">2027 год</th>
-                <th colSpan={2} className="text-center p-1.5 border-l border-b bg-blue-50/70">2028 год</th>
-                <th colSpan={2} className="text-center p-1.5 border-l border-b bg-blue-50/70">2029 год</th>
+                <th colSpan={4} className="text-center p-1.5 border-l border-b bg-blue-50/70">2027 год</th>
+                <th colSpan={4} className="text-center p-1.5 border-l border-b bg-blue-50/70">2028 год</th>
+                <th colSpan={4} className="text-center p-1.5 border-l border-b bg-blue-50/70">2029 год</th>
               </tr>
               <tr className="border-b text-xs text-muted-foreground">
-                <th className="text-center p-1.5 font-medium whitespace-normal leading-tight min-w-[76px] border-l bg-green-50/70">2023</th>
+                <th className="text-center p-1.5 font-medium whitespace-normal leading-tight min-w-[76px] border-l bg-green-50/70">2023 (ОМСУ)</th>
+                <th className="text-center p-1.5 font-medium whitespace-normal leading-tight min-w-[76px] bg-green-50/70">2023</th>
+                <th className="text-center p-1.5 font-medium whitespace-normal leading-tight min-w-[76px] border-l bg-green-50/70">2024 (ОМСУ)</th>
                 <th className="text-center p-1.5 font-medium whitespace-normal leading-tight min-w-[76px] bg-green-50/70">2024</th>
+                <th className="text-center p-1.5 font-medium whitespace-normal leading-tight min-w-[76px] border-l bg-green-50/70">2025 (ОМСУ)</th>
                 <th className="text-center p-1.5 font-medium whitespace-normal leading-tight min-w-[76px] bg-green-50/70">2025</th>
                 
                 <th className="text-center p-1.5 font-medium whitespace-normal leading-tight min-w-[76px] border-l bg-amber-50/70">Оценка (ОМСУ)</th>
                 <th className="text-center p-1.5 font-medium whitespace-normal leading-tight min-w-[76px] bg-amber-50/70">2026</th>
                 
-                <th className="text-center p-1.5 font-medium whitespace-normal leading-tight min-w-[76px] border-l bg-blue-50/70">Баз.</th>
+                <th className="text-center p-1.5 font-medium whitespace-normal leading-tight min-w-[76px] border-l bg-blue-50/70">Баз. (ОМСУ)</th>
+                <th className="text-center p-1.5 font-medium whitespace-normal leading-tight min-w-[76px] bg-blue-50/70">Баз.</th>
+                <th className="text-center p-1.5 font-medium whitespace-normal leading-tight min-w-[76px] border-l bg-blue-50/70">Конс. (ОМСУ)</th>
                 <th className="text-center p-1.5 font-medium whitespace-normal leading-tight min-w-[76px] bg-blue-50/70">Конс.</th>
-                <th className="text-center p-1.5 font-medium whitespace-normal leading-tight min-w-[76px] border-l bg-blue-50/70">Баз.</th>
+                
+                <th className="text-center p-1.5 font-medium whitespace-normal leading-tight min-w-[76px] border-l bg-blue-50/70">Баз. (ОМСУ)</th>
+                <th className="text-center p-1.5 font-medium whitespace-normal leading-tight min-w-[76px] bg-blue-50/70">Баз.</th>
+                <th className="text-center p-1.5 font-medium whitespace-normal leading-tight min-w-[76px] border-l bg-blue-50/70">Конс. (ОМСУ)</th>
                 <th className="text-center p-1.5 font-medium whitespace-normal leading-tight min-w-[76px] bg-blue-50/70">Конс.</th>
-                <th className="text-center p-1.5 font-medium whitespace-normal leading-tight min-w-[76px] border-l bg-blue-50/70">Баз.</th>
+                
+                <th className="text-center p-1.5 font-medium whitespace-normal leading-tight min-w-[76px] border-l bg-blue-50/70">Баз. (ОМСУ)</th>
+                <th className="text-center p-1.5 font-medium whitespace-normal leading-tight min-w-[76px] bg-blue-50/70">Баз.</th>
+                <th className="text-center p-1.5 font-medium whitespace-normal leading-tight min-w-[76px] border-l bg-blue-50/70">Конс. (ОМСУ)</th>
                 <th className="text-center p-1.5 font-medium whitespace-normal leading-tight min-w-[76px] bg-blue-50/70">Конс.</th>
               </tr>
             </thead>
@@ -508,7 +519,7 @@ function CioTerritoryIndicators({ myOwnVisible, myFillable, collapsed, toggleNod
               {myOwnVisible.map((ind: any) => (
                 <Fragment key={ind.id}>
                   <tr className="border-b bg-slate-100">
-                    <td colSpan={1 + VALUE_FIELDS.length + 1} className="p-2 font-medium">
+                    <td colSpan={1 + VALUE_FIELDS.length * 2} className="p-2 font-medium">
                       <div className="flex items-center gap-1" style={{ paddingLeft: `${(ind.level - 1) * 16}px` }}>
                         <TreeToggle
                           hasChildren={parents.has(ind.id)}
@@ -525,49 +536,41 @@ function CioTerritoryIndicators({ myOwnVisible, myFillable, collapsed, toggleNod
                     return (
                       <tr key={omsu.id} className="border-b hover:bg-slate-50">
                         <td className="p-2 font-medium pl-6">{omsu.name}</td>
-                        {VALUE_FIELDS.map((f) => {
-                          if (f.group === 'report' || f.group === 'y2027' || f.group === 'y2028' || f.group === 'y2029') {
-                            return (
-                              <td key={f.key} className={`p-1.5 text-center ${fieldTint(f.key)}`}>
+                        {VALUE_FIELDS.map((f) => (
+                          <Fragment key={f.key}>
+                            {/* Столбец ОМСУ */}
+                            <td className={`p-1.5 text-center border-l ${f.key === 'v2026' ? 'bg-amber-50/30' : fieldTint(f.key)}`}>
+                              <div className="flex flex-col items-center justify-center gap-1">
                                 <ValueTip value={omsuV?.[f.key] ?? null} updatedAt={omsuV?.updatedAt ?? null} author={omsuV?.signedBy ?? 'ОМСУ'} />
-                              </td>
-                            );
-                          }
-                          
-                          if (f.key === 'v2026') {
-                            return (
-                              <Fragment key={f.key}>
-                                <td className={`p-1.5 text-center border-l bg-amber-50/30`}>
-                                  <div className="flex flex-col items-center justify-center gap-1">
-                                    <ValueTip value={omsuV?.v2026 ?? null} updatedAt={omsuV?.updatedAt ?? null} author={omsuV?.signedBy ?? 'ОМСУ'} />
-                                    {omsuV && <OmsuStatusBadge status={omsuV.status} />}
-                                  </div>
-                                </td>
-                                <td className={`p-1.5 text-center bg-amber-50/30`}>
-                                  <Input
-                                    type="number"
-                                    step="0.1"
-                                    className="h-8 w-[76px] text-center mx-auto bg-white px-1 font-medium border-amber-300"
-                                    placeholder="—"
-                                    value={v[f.key] ?? ''}
-                                    onChange={(e) =>
-                                      dispatch({
-                                        type: 'CIO_TERR_SET_VALUE',
-                                        cioId: CURRENT_CIO,
-                                        indId: ind.id,
-                                        munId: omsu.id,
-                                        field: f.key,
-                                        value: e.target.value === '' ? null : Number(e.target.value),
-                                      })
-                                    }
-                                  />
-                                </td>
-                              </Fragment>
-                            );
-                          }
-
-                          return null;
-                        })}
+                                {f.key === 'v2026' && omsuV && <OmsuStatusBadge status={omsuV.status} />}
+                              </div>
+                            </td>
+                            {/* Столбец ЦИО */}
+                            <td className={`p-1.5 text-center ${f.key === 'v2026' ? 'bg-amber-50/30' : fieldTint(f.key)}`}>
+                              {f.key === 'v2026' ? (
+                                <Input
+                                  type="number"
+                                  step="0.1"
+                                  className="h-8 w-[76px] text-center mx-auto bg-white px-1 font-medium border-amber-300"
+                                  placeholder="—"
+                                  value={v[f.key] ?? ''}
+                                  onChange={(e) =>
+                                    dispatch({
+                                      type: 'CIO_TERR_SET_VALUE',
+                                      cioId: CURRENT_CIO,
+                                      indId: ind.id,
+                                      munId: omsu.id,
+                                      field: f.key,
+                                      value: e.target.value === '' ? null : Number(e.target.value),
+                                    })
+                                  }
+                                />
+                              ) : (
+                                <ValueTip value={v[f.key] ?? omsuV?.[f.key] ?? null} updatedAt={v.updatedAt} author="ЦИО" />
+                              )}
+                            </td>
+                          </Fragment>
+                        ))}
                       </tr>
                     );
                   })}
