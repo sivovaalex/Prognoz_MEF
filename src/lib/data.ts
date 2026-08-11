@@ -342,9 +342,9 @@ function buildCioValues(indicators: Indicator[]): Record<string, Record<string, 
   for (const ind of fillable) {
     const [lo, hi] = RANGES[ind.id] ?? [100, 1000];
     const v = r2((lo + rand() * (hi - lo)) * 8.4); // областной уровень
-    
+
     const status: CioValue['status'] = rand() > 0.4 ? 'approved' : 'pending_mef';
-    
+
     // Оставляем несколько пустых для теста работы самого ЦИО
     if (ind.cioId === CURRENT_CIO && rand() > 0.7) {
       out[ind.id] = {
@@ -424,7 +424,7 @@ export const OMSU_STATUS_META: Record<OmsuValue['status'], { label: string; colo
   draft: { label: 'Черновик', color: '#0369a1', bg: '#e0f2fe' },
   pending_cio: { label: 'На согласовании у ЦИО', color: '#b45309', bg: '#fef3c7' },
   returned: { label: 'Возвращена на доработку', color: '#be123c', bg: '#ffe4e6' },
-  approved: { label: 'Согласована ЦИО', color: '#047857', bg: '#d1fae5' },
+  approved: { label: 'Согласовано ЦИО', color: '#047857', bg: '#d1fae5' },
 };
 
 export const CIO_STATUS_META: Record<CioValue['status'], { label: string; color: string; bg: string }> = {
