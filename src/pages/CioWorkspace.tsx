@@ -819,7 +819,7 @@ function CioOwnIndicatorsOld({ myOwnVisible, myFillable, collapsed, toggleNode, 
 
                       return (
                         <td key={f.key} className={`p-1.5 text-center ${fieldTint(f.key)}`}>
-                          {editable && f.key === 'v2026' ? (
+                          {editable && (f.key === 'v2026' || f.key === 'v2025') ? (
                             <div className="flex flex-col items-center justify-center gap-1">
                               <WithValueTip show={v[f.key] !== null} updatedAt={v.updatedAt} author={v.signedBy ?? 'Петров С.И.'}>
                                 <Input
@@ -839,7 +839,7 @@ function CioOwnIndicatorsOld({ myOwnVisible, myFillable, collapsed, toggleNode, 
                                   }
                                 />
                               </WithValueTip>
-                              {v.v2026 !== null && (
+                              {v[f.key] !== null && (
                                 <Button size="sm" variant="outline" className="h-6 text-[10px] px-2 mt-1 border-blue-200 hover:bg-blue-50" onClick={() => setSignTarget(ind.id)} title="Отправить в МЭФ">
                                   <Send className="w-3 h-3 mr-1" /> Отправить
                                 </Button>
@@ -850,7 +850,7 @@ function CioOwnIndicatorsOld({ myOwnVisible, myFillable, collapsed, toggleNode, 
                               <span className={f.key === 'v2026' ? 'font-medium' : ''}>
                                 <ValueTip value={v[f.key]} updatedAt={v.updatedAt} author={v.signedBy ?? 'Петров С.И.'} />
                               </span>
-                              {f.key === 'v2026' && v.status === 'pending_mef' && (
+                              {(f.key === 'v2026' || f.key === 'v2025') && v.status === 'pending_mef' && v[f.key] !== null && (
                                 <div className="flex flex-col items-center gap-1 mt-1">
                                   <span className="text-[10px] text-amber-600 leading-tight">На согласовании</span>
                                   <Button size="sm" variant="outline" className="h-6 text-[10px] px-2" onClick={() => dispatch({ type: 'CIO_RECALL_OWN', cioIndId: ind.id, cioId: CURRENT_CIO, actor: cio.short })}>
@@ -858,7 +858,7 @@ function CioOwnIndicatorsOld({ myOwnVisible, myFillable, collapsed, toggleNode, 
                                   </Button>
                                 </div>
                               )}
-                              {f.key === 'v2026' && v.status === 'approved' && (
+                              {(f.key === 'v2026' || f.key === 'v2025') && v.status === 'approved' && v[f.key] !== null && (
                                 <span className="text-[10px] text-green-600 flex items-center gap-0.5 mt-1"><Lock className="w-3 h-3"/> Согласовано</span>
                               )}
                             </div>
