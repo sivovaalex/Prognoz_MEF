@@ -29,6 +29,7 @@ export type CioStatus =
 export type MefStatus =
   | 'not_filled'
   | 'draft'
+  | 'sent'
   | 'approved';
 
 export interface Direction {

@@ -30,7 +30,11 @@ export type Action =
   | { type: 'CIO_SIGN_OWN'; cioIndId: string; cioId: string; actor: string }
   | { type: 'CIO_RECALL_OWN'; cioIndId: string; cioId: string; actor: string }
   | { type: 'MEF_SET_OWN'; cioIndId: string; cioId: string; field: ValueFieldKey; value: number | null }
+  | { type: 'MEF_SEND_OWN'; cioIndId: string; cioId: string }
+  | { type: 'MEF_RECALL_OWN'; cioIndId: string; cioId: string }
   | { type: 'MEF_TERR_SET_VALUE'; cioId: string; indId: string; munId: string; field: ValueFieldKey; value: number | null }
+  | { type: 'MEF_TERR_SEND_OWN'; cioId: string; indId: string; munId: string }
+  | { type: 'MEF_TERR_RECALL_OWN'; cioId: string; indId: string; munId: string }
   | { type: 'MEF_APPROVE'; cioIndId: string; cioId: string; actor: string }
   | { type: 'MEF_RETURN'; cioIndId: string; cioId: string; actor: string; comment: string }
   | { type: 'MEF_TERR_APPROVE'; cioId: string; indId: string; munId: string; actor: string }
@@ -236,6 +240,56 @@ function reducer(state: AppState, a: Action): AppState {
           [a.cioId]: {
             ...(state.mefTerritoryValues[a.cioId] || {}),
             [a.indId]: { ...(state.mefTerritoryValues[a.cioId]?.[a.indId] || {}), [a.munId]: next },
+          },
+        },
+      };
+    }
+    case 'MEF_SEND_OWN': {
+      const cur = state.mefValues[a.cioIndId]?.[a.cioId];
+      if (!cur) return state;
+      return {
+        ...state,
+        mefValues: {
+          ...state.mefValues,
+          [a.cioIndId]: { ...(state.mefValues[a.cioIndId] || {}), [a.cioId]: { ...cur, status: 'sent', updatedAt: now() } },
+        },
+      };
+    }
+    case 'MEF_RECALL_OWN': {
+      const cur = state.mefValues[a.cioIndId]?.[a.cioId];
+      if (!cur) return state;
+      return {
+        ...state,
+        mefValues: {
+          ...state.mefValues,
+          [a.cioIndId]: { ...(state.mefValues[a.cioIndId] || {}), [a.cioId]: { ...cur, status: 'draft', updatedAt: now() } },
+        },
+      };
+    }
+    case 'MEF_TERR_SEND_OWN': {
+      const cur = state.mefTerritoryValues[a.cioId]?.[a.indId]?.[a.munId];
+      if (!cur) return state;
+      return {
+        ...state,
+        mefTerritoryValues: {
+          ...state.mefTerritoryValues,
+          [a.cioId]: {
+            ...(state.mefTerritoryValues[a.cioId] || {}),
+            [a.indId]: { ...(state.mefTerritoryValues[a.cioId]?.[a.indId] || {}), [a.munId]: { ...cur, status: 'sent', updatedAt: now() } },
+          },
+        },
+      };
+    }
+    case 'MEF_TERR_RECALL_OWN': {
+      const cur = state.mefTerritoryValues[a.cioId]?.[a.indId]?.[a.munId];
+      if (!cur) return state;
+      return {
+        ...state,
+        mefTerritoryValues: {
+          ...state.mefTerritoryValues,
+          [a.cioId]: {
+            ...(state.mefTerritoryValues[a.cioId] || {}),
+            [a.indId]: { ...(state.mefTerritoryValues[a.cioId]?.[a.indId] || {}), [a.munId]: { ...cur, status: 'draft', updatedAt: now() } },
           },
         },
       };
