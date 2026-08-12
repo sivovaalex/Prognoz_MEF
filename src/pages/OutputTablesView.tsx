@@ -10,6 +10,7 @@ function OutputTableCio() {
   const [selectedInd, setSelectedInd] = useState<string | null>(null);
   const [expandedDirs, setExpandedDirs] = useState<Record<string, boolean>>({});
   const [munFilter, setMunFilter] = useState<string>('all');
+  const [year, setYear] = useState('2026');
 
   const toggleDir = (id: string) => {
     setExpandedDirs(prev => ({ ...prev, [id]: !prev[id] }));
@@ -97,18 +98,32 @@ function OutputTableCio() {
                   Единица измерения: {activeInd.unit || '—'}
                 </div>
               </div>
-              <div className="mb-4 flex items-center gap-2">
-                <span className="text-sm font-medium text-slate-600">Фильтр по ОМСУ:</span>
-                <select 
-                  className="w-[300px] text-sm p-1.5 border rounded border-slate-300"
-                  value={munFilter}
-                  onChange={e => setMunFilter(e.target.value)}
-                >
-                  <option value="all">Все ОМСУ</option>
-                  {state.omsus.map(o => (
-                    <option key={o.id} value={o.id}>{o.name}</option>
-                  ))}
-                </select>
+              <div className="mb-4 flex items-center gap-6">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-slate-600">Фильтр по ОМСУ:</span>
+                  <select 
+                    className="w-[300px] text-sm p-1.5 border rounded border-slate-300"
+                    value={munFilter}
+                    onChange={e => setMunFilter(e.target.value)}
+                  >
+                    <option value="all">Все ОМСУ</option>
+                    {state.omsus.map(o => (
+                      <option key={o.id} value={o.id}>{o.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-slate-600">Год оценки:</span>
+                  <select 
+                    className="w-[100px] text-sm p-1.5 border rounded border-slate-300"
+                    value={year}
+                    onChange={e => setYear(e.target.value)}
+                  >
+                    <option value="2024">2024</option>
+                    <option value="2025">2025</option>
+                    <option value="2026">2026</option>
+                  </select>
+                </div>
               </div>
               <table className="w-full border-collapse min-w-[1000px]">
                 <thead>
@@ -219,7 +234,7 @@ function OutputTableOmsu() {
           </div>
           
           <div className="space-y-2">
-            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Текущий год:</label>
+            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Год оценки:</label>
             <select 
               className="w-full text-sm p-1.5 border rounded border-slate-300"
               value={year}
