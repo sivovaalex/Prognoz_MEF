@@ -75,6 +75,7 @@ function CioWorkspaceNew() {
             setMunFilter={setMunFilter}
             cio={cio}
             setSignTarget={setSignTarget}
+            setReturnTarget={setReturnTarget}
           />
         </TabsContent>
         <TabsContent value="territory" className="space-y-4">
@@ -272,7 +273,7 @@ function CioOwnIndicators({ myOwnVisible, myFillable, collapsed, toggleNode, par
                                 <Send className="w-3 h-3 mr-1" /> Отправить
                               </Button>
                             )}
-                            {(f.key === 'v2026' || f.key === 'v2025') && v.status === 'pending_mef' && (
+                            {(f.key === 'v2026' || f.key === 'v2025') && v.status === 'pending_mef' && v[f.key] !== null && (
                               <div className="flex flex-col items-center gap-1 mt-1">
                                 <span className="text-[10px] text-amber-600 leading-tight">На согласовании</span>
                                 <Button size="sm" variant="outline" className="h-6 text-[10px] px-2" onClick={() => dispatch({ type: 'CIO_RECALL_OWN', cioIndId: ind.id, cioId: CURRENT_CIO, actor: cio.short })}>
@@ -280,7 +281,7 @@ function CioOwnIndicators({ myOwnVisible, myFillable, collapsed, toggleNode, par
                                 </Button>
                               </div>
                             )}
-                            {(f.key === 'v2026' || f.key === 'v2025') && v.status === 'approved' && (
+                            {(f.key === 'v2026' || f.key === 'v2025') && v.status === 'approved' && v[f.key] !== null && (
                               <span className="text-[10px] text-green-600 flex items-center gap-0.5 mt-1"><Lock className="w-3 h-3"/> Согласовано</span>
                             )}
                           </div>
@@ -422,7 +423,7 @@ function CioTerritoryIndicators({ myOwnVisible, myFillable, collapsed, toggleNod
                                     <Send className="w-3 h-3 mr-1" /> Отправить
                                   </Button>
                                 )}
-                                {(f.key === 'v2026' || f.key === 'v2025') && v.status === 'pending_mef' && (
+                                {(f.key === 'v2026' || f.key === 'v2025') && v.status === 'pending_mef' && v[f.key] !== null && (
                                   <div className="flex flex-col items-center gap-1 mt-1">
                                     <span className="text-[10px] text-amber-600 leading-tight">На согласовании</span>
                                     <Button size="sm" variant="outline" className="h-6 text-[10px] px-2" onClick={() => dispatch({ type: 'CIO_TERR_RECALL', cioId: CURRENT_CIO, indId: ind.id, munId: omsu.id, actor: cio.short })}>
@@ -430,7 +431,7 @@ function CioTerritoryIndicators({ myOwnVisible, myFillable, collapsed, toggleNod
                                     </Button>
                                   </div>
                                 )}
-                                {(f.key === 'v2026' || f.key === 'v2025') && v.status === 'approved' && (
+                                {(f.key === 'v2026' || f.key === 'v2025') && v.status === 'approved' && v[f.key] !== null && (
                                   <span className="text-[10px] text-green-600 flex items-center gap-0.5 mt-1"><Lock className="w-3 h-3"/> Согласовано</span>
                                 )}
                               </div>
