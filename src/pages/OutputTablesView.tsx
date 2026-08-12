@@ -114,15 +114,17 @@ function OutputTableCio() {
                 <thead>
                   <tr>
                     <th className={`${thCls} text-left w-64 sticky left-0 z-10`} rowSpan={2}>Муниципальные образования</th>
-                    <th className={thCls} colSpan={2}>Отчет</th>
-                    <th className={thCls} rowSpan={2}>Оценка<br/>2026</th>
+                    <th className={thCls}>2024</th>
+                    <th className={thCls}>2025</th>
+                    <th className={thCls}>2026</th>
                     <th className={thCls} colSpan={2}>2027</th>
                     <th className={thCls} colSpan={2}>2028</th>
                     <th className={thCls} colSpan={2}>2029</th>
                   </tr>
                   <tr>
-                    <th className={thCls}>2024</th>
-                    <th className={thCls}>2025</th>
+                    <th className={thCls}>Отчет</th>
+                    <th className={thCls}>Отчет</th>
+                    <th className={thCls}>Оценка</th>
                     <th className={thCls}>1 вариант<br/>(консервативный)</th>
                     <th className={thCls}>2 вариант<br/>(базовый)</th>
                     <th className={thCls}>1 вариант<br/>(консервативный)</th>
@@ -237,14 +239,16 @@ function OutputTableOmsu() {
               <tr>
                 <th className={`${thCls} text-left w-80`} rowSpan={2}>Показатели</th>
                 <th className={thCls} rowSpan={2}>Единицы<br/>измерения</th>
-                <th className={thCls} colSpan={2}>Отчет</th>
-                <th className={thCls} rowSpan={2}>Оценка<br/>2025</th>
+                <th className={thCls}>2023</th>
+                <th className={thCls}>2024</th>
+                <th className={thCls}>2025</th>
                 <th className={thCls} colSpan={2}>2026</th>
                 <th className={thCls} colSpan={2}>2027</th>
               </tr>
               <tr>
-                <th className={thCls}>2023</th>
-                <th className={thCls}>2024</th>
+                <th className={thCls}>Отчет</th>
+                <th className={thCls}>Отчет</th>
+                <th className={thCls}>Оценка</th>
                 <th className={thCls}>Прогноз вариант 1<br/>(консервативный)</th>
                 <th className={thCls}>Прогноз вариант 2<br/>(базовый)</th>
                 <th className={thCls}>Прогноз вариант 1<br/>(консервативный)</th>
