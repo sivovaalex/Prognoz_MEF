@@ -1,7 +1,7 @@
 import { emptyValueFields } from './types';
 import type {
   AppState, Cio, CioValue, Direction, Indicator,
-  Municipality, OmsuValue, Role,
+  Municipality, OmsuValue, Role, MefValue
 } from './types';
 
 // ─────────────────────────────────────────────────────────────
@@ -409,6 +409,30 @@ function buildCioValues(indicators: Indicator[]): Record<string, Record<string, 
   return out;
 }
 
+function buildMefValues(indicators: Indicator[]): Record<string, Record<string, MefValue>> {
+  const out: Record<string, Record<string, MefValue>> = {};
+  const fillable = indicators.filter(i => !i.isGroup);
+  for (const ind of fillable) {
+    out[ind.id] = {
+      [ind.cioId]: { ...emptyValueFields(), status: 'not_filled', updatedAt: null },
+    };
+  }
+  return out;
+}
+
+function buildMefTerritoryValues(indicators: Indicator[], omsus: Municipality[]): Record<string, Record<string, Record<string, MefValue>>> {
+  const out: Record<string, Record<string, Record<string, MefValue>>> = {};
+  const fillable = indicators.filter(i => !i.isGroup);
+  for (const ind of fillable) {
+    if (!out[ind.cioId]) out[ind.cioId] = {};
+    out[ind.cioId][ind.id] = {};
+    for (const m of omsus) {
+      out[ind.cioId][ind.id][m.id] = { ...emptyValueFields(), status: 'not_filled', updatedAt: null };
+    }
+  }
+  return out;
+}
+
 // ─────────────────────────────────────────────────────────────
 // Начальное состояние хранилища
 // ─────────────────────────────────────────────────────────────
@@ -442,7 +466,9 @@ export function buildInitialState(moduleId: string): AppState {
     },
     omsuValues: buildOmsuValues(indicators),
     cioValues: buildCioValues(indicators),
+    mefValues: buildMefValues(indicators),
     cioTerritoryValues: buildCioTerritoryValues(indicators, MUNICIPALITIES),
+    mefTerritoryValues: buildMefTerritoryValues(indicators, MUNICIPALITIES),
     campaign: {
       module: moduleId,
       name: moduleId === 'ukaz' ? 'Указ Президента РФ №607' : moduleId === 'rating' ? 'Рейтинг ОМСУ' : 'Муниципальный прогноз СЭР МО',

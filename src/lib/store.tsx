@@ -29,8 +29,12 @@ export type Action =
   | { type: 'CIO_SET_OWN'; cioIndId: string; cioId: string; field: ValueFieldKey; value: number | null }
   | { type: 'CIO_SIGN_OWN'; cioIndId: string; cioId: string; actor: string }
   | { type: 'CIO_RECALL_OWN'; cioIndId: string; cioId: string; actor: string }
+  | { type: 'MEF_SET_OWN'; cioIndId: string; cioId: string; field: ValueFieldKey; value: number | null }
+  | { type: 'MEF_TERR_SET_VALUE'; cioId: string; indId: string; munId: string; field: ValueFieldKey; value: number | null }
   | { type: 'MEF_APPROVE'; cioIndId: string; cioId: string; actor: string }
   | { type: 'MEF_RETURN'; cioIndId: string; cioId: string; actor: string; comment: string }
+  | { type: 'MEF_TERR_APPROVE'; cioId: string; indId: string; munId: string; actor: string }
+  | { type: 'MEF_TERR_RETURN'; cioId: string; indId: string; munId: string; actor: string; comment: string }
   | { type: 'CAMPAIGN_SCHEDULE'; startDate: string; deadlineOmsu: string; deadlineCio: string; deadlineMef: string }
   | { type: 'CAMPAIGN_LAUNCH' }
   | { type: 'CAMPAIGN_STOP' }
@@ -197,14 +201,58 @@ function reducer(state: AppState, a: Action): AppState {
         },
       };
     }
+    case 'MEF_SET_OWN': {
+      const cur = state.mefValues[a.cioIndId]?.[a.cioId] || { ...emptyValueFields(), status: 'not_filled', updatedAt: null };
+      const next = { ...cur, [a.field]: a.value, updatedAt: now(), status: 'draft' as const };
+      if (a.field === 'v2026') {
+        if (typeof a.value === 'number') {
+          Object.assign(next, calcForecasts(a.value));
+        } else {
+          Object.assign(next, { cons2027: null, base2027: null, cons2028: null, base2028: null, cons2029: null, base2029: null });
+        }
+      }
+      return {
+        ...state,
+        mefValues: {
+          ...state.mefValues,
+          [a.cioIndId]: { ...(state.mefValues[a.cioIndId] || {}), [a.cioId]: next },
+        },
+      };
+    }
+    case 'MEF_TERR_SET_VALUE': {
+      const cur = state.mefTerritoryValues[a.cioId]?.[a.indId]?.[a.munId] || { ...emptyValueFields(), status: 'not_filled', updatedAt: null };
+      const next = { ...cur, [a.field]: a.value, updatedAt: now(), status: 'draft' as const };
+      if (a.field === 'v2026') {
+        if (typeof a.value === 'number') {
+          Object.assign(next, calcForecasts(a.value));
+        } else {
+          Object.assign(next, { cons2027: null, base2027: null, cons2028: null, base2028: null, cons2029: null, base2029: null });
+        }
+      }
+      return {
+        ...state,
+        mefTerritoryValues: {
+          ...state.mefTerritoryValues,
+          [a.cioId]: {
+            ...(state.mefTerritoryValues[a.cioId] || {}),
+            [a.indId]: { ...(state.mefTerritoryValues[a.cioId]?.[a.indId] || {}), [a.munId]: next },
+          },
+        },
+      };
+    }
     case 'MEF_APPROVE': {
       const cur = state.cioValues[a.cioIndId]?.[a.cioId];
       if (!cur || cur.status !== 'pending_mef') return state;
+      const mefCur = state.mefValues[a.cioIndId]?.[a.cioId] || { ...emptyValueFields(), status: 'not_filled', updatedAt: null };
       return {
         ...state,
         cioValues: {
           ...state.cioValues,
           [a.cioIndId]: { ...state.cioValues[a.cioIndId], [a.cioId]: { ...cur, status: 'approved', updatedAt: now() } },
+        },
+        mefValues: {
+          ...state.mefValues,
+          [a.cioIndId]: { ...(state.mefValues[a.cioIndId] || {}), [a.cioId]: { ...mefCur, status: 'approved', updatedAt: now() } },
         },
         history: [...state.history, { at: now(), actor: `МЭФ (${a.actor})`, action: `Данные ЦИО согласованы` }],
       };
@@ -212,13 +260,64 @@ function reducer(state: AppState, a: Action): AppState {
     case 'MEF_RETURN': {
       const cur = state.cioValues[a.cioIndId]?.[a.cioId];
       if (!cur || cur.status !== 'pending_mef') return state;
+      const mefCur = state.mefValues[a.cioIndId]?.[a.cioId] || { ...emptyValueFields(), status: 'not_filled', updatedAt: null };
       return {
         ...state,
         cioValues: {
           ...state.cioValues,
           [a.cioIndId]: { ...state.cioValues[a.cioIndId], [a.cioId]: { ...cur, status: 'returned', updatedAt: now(), comment: a.comment } },
         },
+        mefValues: {
+          ...state.mefValues,
+          [a.cioIndId]: { ...(state.mefValues[a.cioIndId] || {}), [a.cioId]: { ...mefCur, status: 'not_filled', updatedAt: now() } },
+        },
         notifications: [...state.notifications, { id: ++notifId, at: now(), text: `Показатель ЦИО возвращён МЭФ на доработку: ${a.comment}`, forRoles: ['cio'] }],
+      };
+    }
+    case 'MEF_TERR_APPROVE': {
+      const cur = state.cioTerritoryValues[a.cioId]?.[a.indId]?.[a.munId];
+      if (!cur || cur.status !== 'pending_mef') return state;
+      const mefCur = state.mefTerritoryValues[a.cioId]?.[a.indId]?.[a.munId] || { ...emptyValueFields(), status: 'not_filled', updatedAt: null };
+      return {
+        ...state,
+        cioTerritoryValues: {
+          ...state.cioTerritoryValues,
+          [a.cioId]: {
+            ...state.cioTerritoryValues[a.cioId],
+            [a.indId]: { ...state.cioTerritoryValues[a.cioId]?.[a.indId], [a.munId]: { ...cur, status: 'approved', updatedAt: now() } },
+          },
+        },
+        mefTerritoryValues: {
+          ...state.mefTerritoryValues,
+          [a.cioId]: {
+            ...(state.mefTerritoryValues[a.cioId] || {}),
+            [a.indId]: { ...(state.mefTerritoryValues[a.cioId]?.[a.indId] || {}), [a.munId]: { ...mefCur, status: 'approved', updatedAt: now() } },
+          },
+        },
+        history: [...state.history, { at: now(), actor: `МЭФ (${a.actor})`, action: `Данные территории ЦИО согласованы` }],
+      };
+    }
+    case 'MEF_TERR_RETURN': {
+      const cur = state.cioTerritoryValues[a.cioId]?.[a.indId]?.[a.munId];
+      if (!cur || cur.status !== 'pending_mef') return state;
+      const mefCur = state.mefTerritoryValues[a.cioId]?.[a.indId]?.[a.munId] || { ...emptyValueFields(), status: 'not_filled', updatedAt: null };
+      return {
+        ...state,
+        cioTerritoryValues: {
+          ...state.cioTerritoryValues,
+          [a.cioId]: {
+            ...state.cioTerritoryValues[a.cioId],
+            [a.indId]: { ...state.cioTerritoryValues[a.cioId]?.[a.indId], [a.munId]: { ...cur, status: 'returned', updatedAt: now(), comment: a.comment } },
+          },
+        },
+        mefTerritoryValues: {
+          ...state.mefTerritoryValues,
+          [a.cioId]: {
+            ...(state.mefTerritoryValues[a.cioId] || {}),
+            [a.indId]: { ...(state.mefTerritoryValues[a.cioId]?.[a.indId] || {}), [a.munId]: { ...mefCur, status: 'not_filled', updatedAt: now() } },
+          },
+        },
+        notifications: [...state.notifications, { id: ++notifId, at: now(), text: `Территория возвращена МЭФ на доработку: ${a.comment}`, forRoles: ['cio'] }],
       };
     }
     case 'CAMPAIGN_SCHEDULE':

@@ -267,7 +267,7 @@ function Shell({ activeModule, onHome }: { activeModule: ModuleId, onHome: () =>
         {page === 'rating' && <RatingView />}
         {page === 'report' && <ReportView />}
         {page === 'output-tables' && <OutputTablesView />}
-        {page === 'mef-workspace' && <MefWorkspace />}
+        {page === 'mef-workspace' && <MefWorkspace key={block} block={block} />}
         {page === 'about' && <Description />}
         {page === 'users' && <UserManagement />}
         {page === 'dicts' && <DictsManagement />}

@@ -25,6 +25,12 @@ export type CioStatus =
   | 'approved'     // согласован МЭФ
   | 'returned';
 
+/** Статус значения МЭФ */
+export type MefStatus =
+  | 'not_filled'
+  | 'draft'
+  | 'approved';
+
 export interface Direction {
   id: string;
   name: string;
@@ -166,6 +172,12 @@ export interface CioValue extends IndicatorValues {
   signedBy?: string;
 }
 
+export interface MefValue extends IndicatorValues {
+  status: MefStatus;
+  updatedAt: string | null;
+  signedBy?: string;
+}
+
 export type CampaignStatus = 'draft' | 'scheduled' | 'collecting' | 'completed';
 
 export interface BlockSettings {
@@ -206,9 +218,14 @@ export interface AppState {
   omsus: Municipality[];
   units: Unit[];
   blockSettings: Record<string, BlockSettings>; // module_block -> BlockSettings
-  omsuValues: Record<string, Record<string, OmsuValue>>; // munId -> indId -> value
-  cioValues: Record<string, Record<string, CioValue>>;   // indId -> cioId -> собственное значение ЦИО по тому же показателю
-  cioTerritoryValues: Record<string, Record<string, Record<string, CioValue>>>; // cioId -> indId -> omsuId -> value
+  omsuValues: Record<string, Record<string, OmsuValue>>;  // данные ЦИО (инд -> цио)
+  cioValues: Record<string, Record<string, CioValue>>;
+  // данные МЭФ (инд -> цио)
+  mefValues: Record<string, Record<string, MefValue>>;
+  // данные ЦИО в разрезе ОМСУ (цио -> инд -> омсу)
+  cioTerritoryValues: Record<string, Record<string, Record<string, CioValue>>>;
+  // данные МЭФ в разрезе ОМСУ (цио -> инд -> омсу)
+  mefTerritoryValues: Record<string, Record<string, Record<string, MefValue>>>; // cioId -> indId -> omsuId -> value
   history: HistoryItem[];
   notifications: NotificationItem[];
   ratingMode: 'preview' | 'final';

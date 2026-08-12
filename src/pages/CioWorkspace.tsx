@@ -1,7 +1,7 @@
 import { Fragment, useState } from 'react';
 import { useStore } from '@/lib/store';
 import { CURRENT_CIO } from '@/lib/data';
-import { VALUE_FIELDS, emptyValueFields } from '@/lib/types';
+import { VALUE_FIELDS, VALUE_GROUPS, emptyValueFields } from '@/lib/types';
 import { EMPTY_TREE_FILTER, chevronParents, visibleTree, type TreeFilter } from '@/lib/indTree';
 import { IndToolbar, TreeToggle } from '@/components/IndToolbar';
 import { OmsuStatusBadge, CioStatusBadge } from '@/components/StatusBadge';
@@ -19,6 +19,14 @@ import {
 } from '@/components/ui/dialog';
 import { CheckCircle2, Undo2, Send, Lock, Info, ChevronDown, ChevronRight } from 'lucide-react';
 
+const GROUP_HEAD: Record<string, string> = {
+  report: 'bg-green-50/70',
+  estimate: 'bg-amber-50/70',
+  y2027: 'bg-blue-50/70',
+  y2028: 'bg-blue-50/70',
+  y2029: 'bg-blue-50/70',
+};
+
 function CioWorkspaceNew() {
   const { state, dispatch } = useStore();
   const cio = state.cios.find((c) => c.id === CURRENT_CIO)!;
@@ -34,6 +42,7 @@ function CioWorkspaceNew() {
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   // фильтр по ОМСУ на вкладке согласования
   const [munFilter, setMunFilter] = useState<string>('all');
+  const [showMef, setShowMef] = useState(false);
   const myOwnVisible = visibleTree(myFillable, collapsed, treeFilter);
   const parents = chevronParents(state.indicators);
   const toggleNode = (id: string) => setCollapsed((p) => ({ ...p, [id]: !p[id] }));
@@ -65,6 +74,8 @@ function CioWorkspaceNew() {
             munFilter={munFilter}
             setMunFilter={setMunFilter}
             cio={cio}
+            showMef={showMef}
+            setShowMef={setShowMef}
             setSignTarget={setSignTarget}
           />
         </TabsContent>
@@ -80,6 +91,8 @@ function CioWorkspaceNew() {
             munFilter={munFilter}
             setMunFilter={setMunFilter}
             cio={cio}
+            showMef={showMef}
+            setShowMef={setShowMef}
             setSignTarget={setSignTarget}
             setReturnTarget={setReturnTarget}
           />
@@ -129,10 +142,11 @@ function CioWorkspaceNew() {
   );
 }
 
-function CioOwnIndicators({ myOwnVisible, myFillable, collapsed, toggleNode, parents, treeFilter, setTreeFilter, cio, setSignTarget, munFilter, setMunFilter, setReturnTarget }: any) {
+function CioOwnIndicators({ myOwnVisible, myFillable, collapsed, toggleNode, parents, treeFilter, setTreeFilter, cio, setSignTarget, munFilter, setMunFilter,  showMef, setShowMef}: any) {
   const { state, dispatch } = useStore();
   return (
     <>
+      <div className="flex items-center gap-2 mt-2 mb-2"><label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={showMef} onChange={(e) => setShowMef(e.target.checked)} />Показать данные МЭФ</label></div>
       <div className="flex gap-4">
         <div className="flex-1">
           <IndToolbar
@@ -160,83 +174,69 @@ function CioOwnIndicators({ myOwnVisible, myFillable, collapsed, toggleNode, par
           <table className="w-full text-sm border-collapse">
             <thead>
               <tr className="border-b text-xs text-muted-foreground">
-                <th rowSpan={2} className="text-left p-2 align-middle min-w-[220px]">Показатель</th>
-                <th colSpan={6} className="text-center p-1.5 border-l border-b bg-green-50/70">Отчёт</th>
-                <th colSpan={2} className="text-center p-1.5 border-l border-b bg-amber-50/70">Оценка</th>
-                <th colSpan={4} className="text-center p-1.5 border-l border-b bg-blue-50/70">2027 год</th>
-                <th colSpan={4} className="text-center p-1.5 border-l border-b bg-blue-50/70">2028 год</th>
-                <th colSpan={4} className="text-center p-1.5 border-l border-b bg-blue-50/70">2029 год</th>
+                <th rowSpan={3} className="text-left p-2 align-middle min-w-[220px]">Показатель</th>
+                {VALUE_GROUPS.map((g) => (
+                  <th key={g.key} colSpan={g.span * (showMef ? 3 : 2)} className={`text-center p-1.5 border-l border-b ${GROUP_HEAD[g._bg]}`}>
+                    {g.label}
+                  </th>
+                ))}
               </tr>
               <tr className="border-b text-xs text-muted-foreground">
-                <th className="text-center p-1.5 font-medium whitespace-normal leading-tight min-w-[76px] border-l bg-green-50/70">2023 (ОМСУ)</th>
-                <th className="text-center p-1.5 font-medium whitespace-normal leading-tight min-w-[76px] bg-green-50/70">2023</th>
-                <th className="text-center p-1.5 font-medium whitespace-normal leading-tight min-w-[76px] border-l bg-green-50/70">2024 (ОМСУ)</th>
-                <th className="text-center p-1.5 font-medium whitespace-normal leading-tight min-w-[76px] bg-green-50/70">2024</th>
-                <th className="text-center p-1.5 font-medium whitespace-normal leading-tight min-w-[76px] border-l bg-green-50/70">2025 (ОМСУ)</th>
-                <th className="text-center p-1.5 font-medium whitespace-normal leading-tight min-w-[76px] bg-green-50/70">2025</th>
-                
-                <th className="text-center p-1.5 font-medium whitespace-normal leading-tight min-w-[76px] border-l bg-amber-50/70">Оценка (ОМСУ)</th>
-                <th className="text-center p-1.5 font-medium whitespace-normal leading-tight min-w-[76px] bg-amber-50/70">2026</th>
-                
-                <th className="text-center p-1.5 font-medium whitespace-normal leading-tight min-w-[76px] border-l bg-blue-50/70">Баз. (ОМСУ)</th>
-                <th className="text-center p-1.5 font-medium whitespace-normal leading-tight min-w-[76px] bg-blue-50/70">Баз.</th>
-                <th className="text-center p-1.5 font-medium whitespace-normal leading-tight min-w-[76px] border-l bg-blue-50/70">Конс. (ОМСУ)</th>
-                <th className="text-center p-1.5 font-medium whitespace-normal leading-tight min-w-[76px] bg-blue-50/70">Конс.</th>
-                
-                <th className="text-center p-1.5 font-medium whitespace-normal leading-tight min-w-[76px] border-l bg-blue-50/70">Баз. (ОМСУ)</th>
-                <th className="text-center p-1.5 font-medium whitespace-normal leading-tight min-w-[76px] bg-blue-50/70">Баз.</th>
-                <th className="text-center p-1.5 font-medium whitespace-normal leading-tight min-w-[76px] border-l bg-blue-50/70">Конс. (ОМСУ)</th>
-                <th className="text-center p-1.5 font-medium whitespace-normal leading-tight min-w-[76px] bg-blue-50/70">Конс.</th>
-                
-                <th className="text-center p-1.5 font-medium whitespace-normal leading-tight min-w-[76px] border-l bg-blue-50/70">Баз. (ОМСУ)</th>
-                <th className="text-center p-1.5 font-medium whitespace-normal leading-tight min-w-[76px] bg-blue-50/70">Баз.</th>
-                <th className="text-center p-1.5 font-medium whitespace-normal leading-tight min-w-[76px] border-l bg-blue-50/70">Конс. (ОМСУ)</th>
-                <th className="text-center p-1.5 font-medium whitespace-normal leading-tight min-w-[76px] bg-blue-50/70">Конс.</th>
+                {VALUE_FIELDS.map((f) => (
+                  <th key={f.key} colSpan={showMef ? 3 : 2} className={`text-center p-1.5 border-l border-b ${f.key === 'v2026' || f.key === 'v2025' ? 'bg-amber-50/70' : fieldTint(f.key)}`}>
+                    {f.label}
+                  </th>
+                ))}
+              </tr>
+              <tr className="border-b text-xs text-muted-foreground">
+                {VALUE_FIELDS.map((f) => (
+                  <Fragment key={f.key}>
+                    <th className={`text-center p-1.5 font-medium border-l ${f.key === 'v2026' || f.key === 'v2025' ? 'bg-amber-50/70' : fieldTint(f.key)}`}>ОМСУ</th>
+                    <th className={`text-center p-1.5 font-medium ${f.key === 'v2026' || f.key === 'v2025' ? 'bg-amber-50/70' : fieldTint(f.key)}`}>ЦИО</th>
+                    {showMef && <th className={`text-center p-1.5 font-medium ${f.key === 'v2026' || f.key === 'v2025' ? 'bg-amber-50/70' : fieldTint(f.key)}`}>МЭФ</th>}
+                  </Fragment>
+                ))}
               </tr>
             </thead>
             <tbody>
               {myOwnVisible.map((ind: any) => {
-                const v = state.cioValues[ind.id]?.[CURRENT_CIO] ?? { ...emptyValueFields(), status: 'not_filled' as const, updatedAt: null };
-                
-                const activeMun = munFilter === 'all' ? state.omsus.filter(o => o.isActive)[0]?.id : munFilter;
-                const omsuIndValue = state.omsuValues[activeMun]?.[ind.id];
+                if (ind.isGroup) {
+                  return (
+                    <tr key={ind.id} className="border-b bg-slate-50/80">
+                      <td colSpan={1 + VALUE_FIELDS.length * (showMef ? 3 : 2)} className="p-2 align-middle">
+                        <span className="flex items-center gap-1 font-semibold text-slate-700" style={{ paddingLeft: `${(ind.level - 1) * 18}px` }}>
+                          <TreeToggle hasChildren={parents.has(ind.id)} collapsed={!!collapsed[ind.id]} onToggle={() => toggleNode(ind.id)} />
+                          <span><span className="mr-1 text-slate-400">▸</span>{ind.num}. {ind.name}</span>
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                }
+
+                const v = state.cioValues[ind.id]?.[CURRENT_CIO] ?? { ...emptyValueFields(), status: 'not_filled', updatedAt: null };
+                const omsuV = state.omsuValues[munFilter === 'all' ? state.omsus.filter(o => o.isActive)[0]?.id || 'm1' : munFilter]?.[ind.id];
+                const mefV = state.mefValues[ind.id]?.[CURRENT_CIO];
 
                 return (
-                  <tr key={ind.id} className="border-b hover:bg-slate-50 align-top">
-                    <td className="p-2">
-                      <div className="font-medium flex items-center gap-1" style={{ paddingLeft: `${(ind.level - 1) * 16}px` }}>
-                        <TreeToggle
-                          hasChildren={parents.has(ind.id)}
-                          collapsed={!!collapsed[ind.id]}
-                          onToggle={() => toggleNode(ind.id)}
-                        />
-                        <span>{ind.num} {ind.name}</span>
+                  <tr key={ind.id} className={`border-b ${v.status === 'pending_mef' ? 'bg-amber-50/60' : 'hover:bg-slate-50'}`}>
+                    <td className="p-2 align-top">
+                      <div className="flex items-start gap-1" style={{ paddingLeft: `${(ind.level - 1) * 18}px` }}>
+                        <span className="mt-0.5 inline-flex shrink-0">
+                          <TreeToggle hasChildren={parents.has(ind.id)} collapsed={!!collapsed[ind.id]} onToggle={() => toggleNode(ind.id)} />
+                        </span>
+                        <div>
+                          <span className="font-medium">{ind.num} {ind.name} <span className="font-normal text-muted-foreground">({ind.unit})</span><br /></span>
+                        </div>
                       </div>
-                      <div className="text-xs text-muted-foreground" style={{ paddingLeft: `${(ind.level - 1) * 16 + 20}px` }}>ед. изм.: {ind.unit} · формула: {ind.formula}</div>
                     </td>
                     {VALUE_FIELDS.map((f) => (
                       <Fragment key={f.key}>
-                        {/* Столбец ОМСУ */}
-                        <td className={`p-1.5 text-center border-l ${(f.key === 'v2026' || f.key === 'v2025') ? 'bg-amber-50/30' : fieldTint(f.key)}`}>
-                          <div className="flex flex-col items-center justify-center gap-1">
-                            <div className={omsuIndValue?.[f.key] != null && v[f.key] != null && omsuIndValue[f.key] !== v[f.key] ? 'text-red-600 font-bold' : ''}>
-                              <ValueTip value={omsuIndValue?.[f.key] ?? null} updatedAt={omsuIndValue?.updatedAt ?? null} author={omsuIndValue?.signedBy ?? 'ОМСУ'} />
-                            </div>
-                            {(f.key === 'v2026' || f.key === 'v2025') && omsuIndValue && <OmsuStatusBadge status={omsuIndValue.status} />}
-                            {(f.key === 'v2026' || f.key === 'v2025') && omsuIndValue?.status === 'pending_cio' && (
-                              <div className="flex gap-1 mt-1">
-                                <Button size="icon-sm" variant="outline" className="h-6 w-6 text-green-600 hover:text-green-700" onClick={() => dispatch({ type: 'CIO_APPROVE', munId: activeMun, indId: ind.id, actor: cio.short })} title="Согласовать">
-                                  <CheckCircle2 className="h-3.5 w-3.5" />
-                                </Button>
-                                <Button size="icon-sm" variant="outline" className="h-6 w-6 text-red-500 hover:text-red-600" onClick={() => setReturnTarget({ munId: activeMun, indId: ind.id })} title="Вернуть">
-                                  <Undo2 className="h-3.5 w-3.5" />
-                                </Button>
-                              </div>
-                            )}
-                          </div>
+                        {/* ОМСУ */}
+                        <td className={`p-1.5 text-center border-l ${f.key === 'v2026' || f.key === 'v2025' ? 'bg-amber-50/30' : fieldTint(f.key)}`}>
+                          <ValueTip value={omsuV?.[f.key] ?? null} updatedAt={omsuV?.updatedAt ?? null} author={omsuV?.signedBy ?? 'ОМСУ'} />
                         </td>
-                        {/* Столбец ЦИО */}
-                        <td className={`p-1.5 text-center ${(f.key === 'v2026' || f.key === 'v2025') ? 'bg-amber-50/30' : fieldTint(f.key)}`}>
+                        {/* ЦИО */}
+                        <td className={`p-1.5 text-center ${f.key === 'v2026' || f.key === 'v2025' ? 'bg-amber-50/30' : fieldTint(f.key)}`}>
                           <div className="flex flex-col items-center justify-center gap-1">
                             {(f.key === 'v2026' || f.key === 'v2025') ? (
                               <Input
@@ -257,7 +257,7 @@ function CioOwnIndicators({ myOwnVisible, myFillable, collapsed, toggleNode, par
                                 }
                               />
                             ) : (
-                              <ValueTip value={v[f.key] ?? omsuIndValue?.[f.key] ?? null} updatedAt={v.updatedAt} author="ЦИО" />
+                              <ValueTip value={v[f.key] ?? omsuV?.[f.key] ?? null} updatedAt={v.updatedAt} author="ЦИО" />
                             )}
                             {(f.key === 'v2026' || f.key === 'v2025') && (v.status === 'not_filled' || v.status === 'draft' || v.status === 'returned') && v[f.key] !== null && (
                               <Button size="sm" variant="outline" className="h-6 text-[10px] px-2 mt-1 border-blue-200 hover:bg-blue-50" onClick={() => setSignTarget({ type: 'own', indId: ind.id })} title="Отправить в МЭФ">
@@ -277,6 +277,12 @@ function CioOwnIndicators({ myOwnVisible, myFillable, collapsed, toggleNode, par
                             )}
                           </div>
                         </td>
+                        {/* МЭФ */}
+                        {showMef && (
+                          <td className={`p-1.5 text-center ${f.key === 'v2026' || f.key === 'v2025' ? 'bg-amber-50/30' : fieldTint(f.key)}`}>
+                            <ValueTip value={mefV?.[f.key] ?? v[f.key]} updatedAt={mefV?.updatedAt} author="МЭФ" />
+                          </td>
+                        )}
                       </Fragment>
                     ))}
                   </tr>
@@ -290,7 +296,7 @@ function CioOwnIndicators({ myOwnVisible, myFillable, collapsed, toggleNode, par
   );
 }
 
-function CioTerritoryIndicators({ myOwnVisible, myFillable, collapsed, toggleNode, parents, treeFilter, setTreeFilter, munFilter, setMunFilter, cio, setSignTarget, setReturnTarget }: any) {
+function CioTerritoryIndicators({ myOwnVisible, myFillable, collapsed, toggleNode, parents, treeFilter, setTreeFilter, munFilter, setMunFilter, cio, setSignTarget, setReturnTarget , showMef, setShowMef}: any) {
   const { state, dispatch } = useStore();
   let activeOmsus = state.omsus.filter(o => o.isActive);
   if (munFilter && munFilter !== 'all') {
@@ -307,6 +313,7 @@ function CioTerritoryIndicators({ myOwnVisible, myFillable, collapsed, toggleNod
         munId={munFilter}
         onMunChange={setMunFilter}
       />
+      <div className="flex items-center gap-2 mt-2 mb-2"><label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={showMef} onChange={(e) => setShowMef(e.target.checked)} />Показать данные МЭФ</label></div>
       <div className="rounded-md border border-blue-200 bg-blue-50 p-3 text-sm flex gap-2">
         <Info className="h-4 w-4 text-blue-700 mt-0.5 shrink-0" />
         <span>ЦИО вносит данные в разрезе ОМСУ.</span>
@@ -316,45 +323,35 @@ function CioTerritoryIndicators({ myOwnVisible, myFillable, collapsed, toggleNod
           <table className="w-full text-sm border-collapse">
             <thead>
               <tr className="border-b text-xs text-muted-foreground">
-                <th rowSpan={2} className="text-left p-2 align-middle min-w-[220px]">Территория</th>
-                <th colSpan={6} className="text-center p-1.5 border-l border-b bg-green-50/70">Отчёт</th>
-                <th colSpan={2} className="text-center p-1.5 border-l border-b bg-amber-50/70">Оценка</th>
-                <th colSpan={4} className="text-center p-1.5 border-l border-b bg-blue-50/70">2027 год</th>
-                <th colSpan={4} className="text-center p-1.5 border-l border-b bg-blue-50/70">2028 год</th>
-                <th colSpan={4} className="text-center p-1.5 border-l border-b bg-blue-50/70">2029 год</th>
+                <th rowSpan={3} className="text-left p-2 align-middle min-w-[220px]">Показатель</th>
+                {VALUE_GROUPS.map((g) => (
+                  <th key={g.key} colSpan={g.span * (showMef ? 3 : 2)} className={`text-center p-1.5 border-l border-b ${GROUP_HEAD[g._bg]}`}>
+                    {g.label}
+                  </th>
+                ))}
               </tr>
               <tr className="border-b text-xs text-muted-foreground">
-                <th className="text-center p-1.5 font-medium whitespace-normal leading-tight min-w-[76px] border-l bg-green-50/70">2023 (ОМСУ)</th>
-                <th className="text-center p-1.5 font-medium whitespace-normal leading-tight min-w-[76px] bg-green-50/70">2023</th>
-                <th className="text-center p-1.5 font-medium whitespace-normal leading-tight min-w-[76px] border-l bg-green-50/70">2024 (ОМСУ)</th>
-                <th className="text-center p-1.5 font-medium whitespace-normal leading-tight min-w-[76px] bg-green-50/70">2024</th>
-                <th className="text-center p-1.5 font-medium whitespace-normal leading-tight min-w-[76px] border-l bg-green-50/70">2025 (ОМСУ)</th>
-                <th className="text-center p-1.5 font-medium whitespace-normal leading-tight min-w-[76px] bg-green-50/70">2025</th>
-                
-                <th className="text-center p-1.5 font-medium whitespace-normal leading-tight min-w-[76px] border-l bg-amber-50/70">Оценка (ОМСУ)</th>
-                <th className="text-center p-1.5 font-medium whitespace-normal leading-tight min-w-[76px] bg-amber-50/70">2026</th>
-                
-                <th className="text-center p-1.5 font-medium whitespace-normal leading-tight min-w-[76px] border-l bg-blue-50/70">Баз. (ОМСУ)</th>
-                <th className="text-center p-1.5 font-medium whitespace-normal leading-tight min-w-[76px] bg-blue-50/70">Баз.</th>
-                <th className="text-center p-1.5 font-medium whitespace-normal leading-tight min-w-[76px] border-l bg-blue-50/70">Конс. (ОМСУ)</th>
-                <th className="text-center p-1.5 font-medium whitespace-normal leading-tight min-w-[76px] bg-blue-50/70">Конс.</th>
-                
-                <th className="text-center p-1.5 font-medium whitespace-normal leading-tight min-w-[76px] border-l bg-blue-50/70">Баз. (ОМСУ)</th>
-                <th className="text-center p-1.5 font-medium whitespace-normal leading-tight min-w-[76px] bg-blue-50/70">Баз.</th>
-                <th className="text-center p-1.5 font-medium whitespace-normal leading-tight min-w-[76px] border-l bg-blue-50/70">Конс. (ОМСУ)</th>
-                <th className="text-center p-1.5 font-medium whitespace-normal leading-tight min-w-[76px] bg-blue-50/70">Конс.</th>
-                
-                <th className="text-center p-1.5 font-medium whitespace-normal leading-tight min-w-[76px] border-l bg-blue-50/70">Баз. (ОМСУ)</th>
-                <th className="text-center p-1.5 font-medium whitespace-normal leading-tight min-w-[76px] bg-blue-50/70">Баз.</th>
-                <th className="text-center p-1.5 font-medium whitespace-normal leading-tight min-w-[76px] border-l bg-blue-50/70">Конс. (ОМСУ)</th>
-                <th className="text-center p-1.5 font-medium whitespace-normal leading-tight min-w-[76px] bg-blue-50/70">Конс.</th>
+                {VALUE_FIELDS.map((f) => (
+                  <th key={f.key} colSpan={showMef ? 3 : 2} className={`text-center p-1.5 border-l border-b ${f.key === 'v2026' || f.key === 'v2025' ? 'bg-amber-50/70' : fieldTint(f.key)}`}>
+                    {f.label}
+                  </th>
+                ))}
+              </tr>
+              <tr className="border-b text-xs text-muted-foreground">
+                {VALUE_FIELDS.map((f) => (
+                  <Fragment key={f.key}>
+                    <th className={`text-center p-1.5 font-medium border-l ${f.key === 'v2026' || f.key === 'v2025' ? 'bg-amber-50/70' : fieldTint(f.key)}`}>ОМСУ</th>
+                    <th className={`text-center p-1.5 font-medium ${f.key === 'v2026' || f.key === 'v2025' ? 'bg-amber-50/70' : fieldTint(f.key)}`}>ЦИО</th>
+                    {showMef && <th className={`text-center p-1.5 font-medium ${f.key === 'v2026' || f.key === 'v2025' ? 'bg-amber-50/70' : fieldTint(f.key)}`}>МЭФ</th>}
+                  </Fragment>
+                ))}
               </tr>
             </thead>
             <tbody>
               {myOwnVisible.map((ind: any) => (
                 <Fragment key={ind.id}>
                   <tr className="border-b bg-slate-100">
-                    <td colSpan={1 + VALUE_FIELDS.length * 2} className="p-2 font-medium">
+                    <td colSpan={1 + VALUE_FIELDS.length * (showMef ? 3 : 2)} className="p-2 font-medium">
                       <div className="flex items-center gap-1" style={{ paddingLeft: `${(ind.level - 1) * 16}px` }}>
                         <TreeToggle
                           hasChildren={parents.has(ind.id)}
@@ -365,9 +362,10 @@ function CioTerritoryIndicators({ myOwnVisible, myFillable, collapsed, toggleNod
                       </div>
                     </td>
                   </tr>
-                  {!collapsed[ind.id] && activeOmsus.map((omsu) => {
+                  {!collapsed[ind.id] && activeOmsus.map((omsu: any) => {
                     const v = state.cioTerritoryValues[CURRENT_CIO]?.[ind.id]?.[omsu.id] ?? { ...emptyValueFields(), status: 'not_filled', updatedAt: null };
                     const omsuV = state.omsuValues[omsu.id]?.[ind.id];
+                    const mefV = state.mefTerritoryValues[CURRENT_CIO]?.[ind.id]?.[omsu.id];
                     return (
                       <tr key={omsu.id} className="border-b hover:bg-slate-50">
                         <td className="p-2 font-medium pl-6">{omsu.name}</td>
@@ -435,6 +433,12 @@ function CioTerritoryIndicators({ myOwnVisible, myFillable, collapsed, toggleNod
                                 )}
                               </div>
                             </td>
+                            {/* Столбец МЭФ */}
+                            {showMef && (
+                              <td className={`p-1.5 text-center ${f.key === 'v2026' || f.key === 'v2025' ? 'bg-amber-50/30' : fieldTint(f.key)}`}>
+                                <ValueTip value={mefV?.[f.key] ?? v[f.key]} updatedAt={mefV?.updatedAt} author="МЭФ" />
+                              </td>
+                            )}
                           </Fragment>
                         ))}
                       </tr>
@@ -790,7 +794,6 @@ function CioOwnIndicatorsOld({ myOwnVisible, myFillable, collapsed, toggleNode, 
                   <>
                     <th rowSpan={2} className="text-left p-2 align-middle border-l">Статус</th>
                     <th rowSpan={2} className="text-left p-2 align-middle">Комментарий МЭФ</th>
-                    <th rowSpan={2} className="text-right p-2 w-64 align-middle">Действия</th>
                   </>
                 )}
               />
@@ -817,28 +820,48 @@ function CioOwnIndicatorsOld({ myOwnVisible, myFillable, collapsed, toggleNode, 
                       return (
                         <td key={f.key} className={`p-1.5 text-center ${fieldTint(f.key)}`}>
                           {editable && f.key === 'v2026' ? (
-                            <WithValueTip show={v[f.key] !== null} updatedAt={v.updatedAt} author={v.signedBy ?? 'Петров С.И.'}>
-                              <Input
-                                type="number"
-                                step="0.1"
-                                className="h-8 w-[76px] text-center mx-auto bg-white px-1"
-                                placeholder="—"
-                                value={v[f.key] ?? ''}
-                                onChange={(e) =>
-                                  dispatch({
-                                    type: 'CIO_SET_OWN',
-                                    cioIndId: ind.id,
-                                    cioId: CURRENT_CIO,
-                                    field: f.key,
-                                    value: e.target.value === '' ? null : Number(e.target.value),
-                                  })
-                                }
-                              />
-                            </WithValueTip>
+                            <div className="flex flex-col items-center justify-center gap-1">
+                              <WithValueTip show={v[f.key] !== null} updatedAt={v.updatedAt} author={v.signedBy ?? 'Петров С.И.'}>
+                                <Input
+                                  type="number"
+                                  step="0.1"
+                                  className="h-8 w-[76px] text-center mx-auto bg-white px-1"
+                                  placeholder="—"
+                                  value={v[f.key] ?? ''}
+                                  onChange={(e) =>
+                                    dispatch({
+                                      type: 'CIO_SET_OWN',
+                                      cioIndId: ind.id,
+                                      cioId: CURRENT_CIO,
+                                      field: f.key,
+                                      value: e.target.value === '' ? null : Number(e.target.value),
+                                    })
+                                  }
+                                />
+                              </WithValueTip>
+                              {v.v2026 !== null && (
+                                <Button size="sm" variant="outline" className="h-6 text-[10px] px-2 mt-1 border-blue-200 hover:bg-blue-50" onClick={() => setSignTarget(ind.id)} title="Отправить в МЭФ">
+                                  <Send className="w-3 h-3 mr-1" /> Отправить
+                                </Button>
+                              )}
+                            </div>
                           ) : (
-                            <span className={f.key === 'v2026' ? 'font-medium' : ''}>
-                              <ValueTip value={v[f.key]} updatedAt={v.updatedAt} author={v.signedBy ?? 'Петров С.И.'} />
-                            </span>
+                            <div className="flex flex-col items-center justify-center gap-1">
+                              <span className={f.key === 'v2026' ? 'font-medium' : ''}>
+                                <ValueTip value={v[f.key]} updatedAt={v.updatedAt} author={v.signedBy ?? 'Петров С.И.'} />
+                              </span>
+                              {f.key === 'v2026' && v.status === 'pending_mef' && (
+                                <div className="flex flex-col items-center gap-1 mt-1">
+                                  <span className="text-[10px] text-amber-600 leading-tight">На согласовании</span>
+                                  <Button size="sm" variant="outline" className="h-6 text-[10px] px-2" onClick={() => dispatch({ type: 'CIO_RECALL_OWN', cioIndId: ind.id, cioId: CURRENT_CIO, actor: cio.short })}>
+                                    <Undo2 className="w-3 h-3 mr-1" /> Отозвать
+                                  </Button>
+                                </div>
+                              )}
+                              {f.key === 'v2026' && v.status === 'approved' && (
+                                <span className="text-[10px] text-green-600 flex items-center gap-0.5 mt-1"><Lock className="w-3 h-3"/> Согласовано</span>
+                              )}
+                            </div>
                           )}
 
                         </td>
@@ -846,27 +869,6 @@ function CioOwnIndicatorsOld({ myOwnVisible, myFillable, collapsed, toggleNode, 
                     })}
                     <td className="p-2"><CioStatusBadge status={v.status} /></td>
                     <td className="p-2 text-xs text-red-700">{v.comment ?? ''}</td>
-                    <td className="p-2 text-right whitespace-nowrap">
-                      {editable && v.v2026 !== null && (
-                        <Button size="sm" onClick={() => setSignTarget(ind.id)}>
-                          <Send className="h-3.5 w-3.5 mr-1" /> Отправить
-                        </Button>
-                      )}
-                      {v.status === 'pending_mef' && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => dispatch({ type: 'CIO_RECALL_OWN', cioIndId: ind.id, cioId: CURRENT_CIO, actor: cio.short })}
-                        >
-                          <Undo2 className="h-3.5 w-3.5 mr-1" /> Отозвать
-                        </Button>
-                      )}
-                      {v.status === 'approved' && (
-                        <span className="inline-flex items-center gap-1 text-xs text-green-700">
-                          <Lock className="h-3.5 w-3.5" /> согласовано МЭФ
-                        </span>
-                      )}
-                    </td>
                   </tr>
                 );
               })}
