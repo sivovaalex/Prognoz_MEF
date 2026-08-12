@@ -74,8 +74,6 @@ function CioWorkspaceNew() {
             munFilter={munFilter}
             setMunFilter={setMunFilter}
             cio={cio}
-            showMef={showMef}
-            setShowMef={setShowMef}
             setSignTarget={setSignTarget}
           />
         </TabsContent>
@@ -91,8 +89,6 @@ function CioWorkspaceNew() {
             munFilter={munFilter}
             setMunFilter={setMunFilter}
             cio={cio}
-            showMef={showMef}
-            setShowMef={setShowMef}
             setSignTarget={setSignTarget}
             setReturnTarget={setReturnTarget}
           />
@@ -142,11 +138,10 @@ function CioWorkspaceNew() {
   );
 }
 
-function CioOwnIndicators({ myOwnVisible, myFillable, collapsed, toggleNode, parents, treeFilter, setTreeFilter, cio, setSignTarget, munFilter, setMunFilter,  showMef, setShowMef}: any) {
+function CioOwnIndicators({ myOwnVisible, myFillable, collapsed, toggleNode, parents, treeFilter, setTreeFilter, cio, setSignTarget, munFilter, setMunFilter}: any) {
   const { state, dispatch } = useStore();
   return (
     <>
-      <div className="flex items-center gap-2 mt-2 mb-2"><label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={showMef} onChange={(e) => setShowMef(e.target.checked)} />Показать данные МЭФ</label></div>
       <div className="flex gap-4">
         <div className="flex-1">
           <IndToolbar
@@ -176,14 +171,14 @@ function CioOwnIndicators({ myOwnVisible, myFillable, collapsed, toggleNode, par
               <tr className="border-b text-xs text-muted-foreground">
                 <th rowSpan={3} className="text-left p-2 align-middle min-w-[220px]">Показатель</th>
                 {VALUE_GROUPS.map((g) => (
-                  <th key={g.key} colSpan={g.span * (showMef ? 3 : 2)} className={`text-center p-1.5 border-l border-b ${GROUP_HEAD[g._bg]}`}>
+                  <th key={g.key} colSpan={g.span * 2} className={`text-center p-1.5 border-l border-b ${GROUP_HEAD[g._bg]}`}>
                     {g.label}
                   </th>
                 ))}
               </tr>
               <tr className="border-b text-xs text-muted-foreground">
                 {VALUE_FIELDS.map((f) => (
-                  <th key={f.key} colSpan={showMef ? 3 : 2} className={`text-center p-1.5 border-l border-b ${f.key === 'v2026' || f.key === 'v2025' ? 'bg-amber-50/70' : fieldTint(f.key)}`}>
+                  <th key={f.key} colSpan={2} className={`text-center p-1.5 border-l border-b ${f.key === 'v2026' || f.key === 'v2025' ? 'bg-amber-50/70' : fieldTint(f.key)}`}>
                     {f.label}
                   </th>
                 ))}
@@ -193,7 +188,7 @@ function CioOwnIndicators({ myOwnVisible, myFillable, collapsed, toggleNode, par
                   <Fragment key={f.key}>
                     <th className={`text-center p-1.5 font-medium border-l ${f.key === 'v2026' || f.key === 'v2025' ? 'bg-amber-50/70' : fieldTint(f.key)}`}>ОМСУ</th>
                     <th className={`text-center p-1.5 font-medium ${f.key === 'v2026' || f.key === 'v2025' ? 'bg-amber-50/70' : fieldTint(f.key)}`}>ЦИО</th>
-                    {showMef && <th className={`text-center p-1.5 font-medium ${f.key === 'v2026' || f.key === 'v2025' ? 'bg-amber-50/70' : fieldTint(f.key)}`}>МЭФ</th>}
+                    
                   </Fragment>
                 ))}
               </tr>
@@ -203,7 +198,7 @@ function CioOwnIndicators({ myOwnVisible, myFillable, collapsed, toggleNode, par
                 if (ind.isGroup) {
                   return (
                     <tr key={ind.id} className="border-b bg-slate-50/80">
-                      <td colSpan={1 + VALUE_FIELDS.length * (showMef ? 3 : 2)} className="p-2 align-middle">
+                      <td colSpan={1 + VALUE_FIELDS.length * 2} className="p-2 align-middle">
                         <span className="flex items-center gap-1 font-semibold text-slate-700" style={{ paddingLeft: `${(ind.level - 1) * 18}px` }}>
                           <TreeToggle hasChildren={parents.has(ind.id)} collapsed={!!collapsed[ind.id]} onToggle={() => toggleNode(ind.id)} />
                           <span><span className="mr-1 text-slate-400">▸</span>{ind.num}. {ind.name}</span>
@@ -233,7 +228,20 @@ function CioOwnIndicators({ myOwnVisible, myFillable, collapsed, toggleNode, par
                       <Fragment key={f.key}>
                         {/* ОМСУ */}
                         <td className={`p-1.5 text-center border-l ${f.key === 'v2026' || f.key === 'v2025' ? 'bg-amber-50/30' : fieldTint(f.key)}`}>
-                          <ValueTip value={omsuV?.[f.key] ?? null} updatedAt={omsuV?.updatedAt ?? null} author={omsuV?.signedBy ?? 'ОМСУ'} />
+                          <div className="flex flex-col items-center justify-center gap-1">
+                            <ValueTip value={omsuV?.[f.key] ?? null} updatedAt={omsuV?.updatedAt ?? null} author={omsuV?.signedBy ?? 'ОМСУ'} />
+                            {(f.key === 'v2026' || f.key === 'v2025') && omsuV && <OmsuStatusBadge status={omsuV.status} />}
+                            {(f.key === 'v2026' || f.key === 'v2025') && omsuV?.status === 'pending_cio' && (
+                              <div className="flex gap-1 mt-1">
+                                <Button size="icon-sm" variant="outline" className="h-6 w-6 text-green-600 hover:text-green-700" onClick={() => dispatch({ type: 'CIO_APPROVE', munId: munFilter === 'all' ? state.omsus.filter(o => o.isActive)[0]?.id || 'm1' : munFilter, indId: ind.id, actor: cio.short })} title="Согласовать">
+                                  <CheckCircle2 className="h-3.5 w-3.5" />
+                                </Button>
+                                <Button size="icon-sm" variant="outline" className="h-6 w-6 text-red-500 hover:text-red-600" onClick={() => setReturnTarget({ munId: munFilter === 'all' ? state.omsus.filter(o => o.isActive)[0]?.id || 'm1' : munFilter, indId: ind.id })} title="Вернуть">
+                                  <Undo2 className="h-3.5 w-3.5" />
+                                </Button>
+                              </div>
+                            )}
+                          </div>
                         </td>
                         {/* ЦИО */}
                         <td className={`p-1.5 text-center ${f.key === 'v2026' || f.key === 'v2025' ? 'bg-amber-50/30' : fieldTint(f.key)}`}>
@@ -277,12 +285,7 @@ function CioOwnIndicators({ myOwnVisible, myFillable, collapsed, toggleNode, par
                             )}
                           </div>
                         </td>
-                        {/* МЭФ */}
-                        {showMef && (
-                          <td className={`p-1.5 text-center ${f.key === 'v2026' || f.key === 'v2025' ? 'bg-amber-50/30' : fieldTint(f.key)}`}>
-                            <ValueTip value={mefV?.[f.key] ?? v[f.key]} updatedAt={mefV?.updatedAt} author="МЭФ" />
-                          </td>
-                        )}
+                        
                       </Fragment>
                     ))}
                   </tr>
@@ -296,7 +299,7 @@ function CioOwnIndicators({ myOwnVisible, myFillable, collapsed, toggleNode, par
   );
 }
 
-function CioTerritoryIndicators({ myOwnVisible, myFillable, collapsed, toggleNode, parents, treeFilter, setTreeFilter, munFilter, setMunFilter, cio, setSignTarget, setReturnTarget , showMef, setShowMef}: any) {
+function CioTerritoryIndicators({ myOwnVisible, myFillable, collapsed, toggleNode, parents, treeFilter, setTreeFilter, munFilter, setMunFilter, cio, setSignTarget, setReturnTarget }: any) {
   const { state, dispatch } = useStore();
   let activeOmsus = state.omsus.filter(o => o.isActive);
   if (munFilter && munFilter !== 'all') {
@@ -313,7 +316,6 @@ function CioTerritoryIndicators({ myOwnVisible, myFillable, collapsed, toggleNod
         munId={munFilter}
         onMunChange={setMunFilter}
       />
-      <div className="flex items-center gap-2 mt-2 mb-2"><label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={showMef} onChange={(e) => setShowMef(e.target.checked)} />Показать данные МЭФ</label></div>
       <div className="rounded-md border border-blue-200 bg-blue-50 p-3 text-sm flex gap-2">
         <Info className="h-4 w-4 text-blue-700 mt-0.5 shrink-0" />
         <span>ЦИО вносит данные в разрезе ОМСУ.</span>
@@ -325,14 +327,14 @@ function CioTerritoryIndicators({ myOwnVisible, myFillable, collapsed, toggleNod
               <tr className="border-b text-xs text-muted-foreground">
                 <th rowSpan={3} className="text-left p-2 align-middle min-w-[220px]">Показатель</th>
                 {VALUE_GROUPS.map((g) => (
-                  <th key={g.key} colSpan={g.span * (showMef ? 3 : 2)} className={`text-center p-1.5 border-l border-b ${GROUP_HEAD[g._bg]}`}>
+                  <th key={g.key} colSpan={g.span * 2} className={`text-center p-1.5 border-l border-b ${GROUP_HEAD[g._bg]}`}>
                     {g.label}
                   </th>
                 ))}
               </tr>
               <tr className="border-b text-xs text-muted-foreground">
                 {VALUE_FIELDS.map((f) => (
-                  <th key={f.key} colSpan={showMef ? 3 : 2} className={`text-center p-1.5 border-l border-b ${f.key === 'v2026' || f.key === 'v2025' ? 'bg-amber-50/70' : fieldTint(f.key)}`}>
+                  <th key={f.key} colSpan={2} className={`text-center p-1.5 border-l border-b ${f.key === 'v2026' || f.key === 'v2025' ? 'bg-amber-50/70' : fieldTint(f.key)}`}>
                     {f.label}
                   </th>
                 ))}
@@ -342,7 +344,7 @@ function CioTerritoryIndicators({ myOwnVisible, myFillable, collapsed, toggleNod
                   <Fragment key={f.key}>
                     <th className={`text-center p-1.5 font-medium border-l ${f.key === 'v2026' || f.key === 'v2025' ? 'bg-amber-50/70' : fieldTint(f.key)}`}>ОМСУ</th>
                     <th className={`text-center p-1.5 font-medium ${f.key === 'v2026' || f.key === 'v2025' ? 'bg-amber-50/70' : fieldTint(f.key)}`}>ЦИО</th>
-                    {showMef && <th className={`text-center p-1.5 font-medium ${f.key === 'v2026' || f.key === 'v2025' ? 'bg-amber-50/70' : fieldTint(f.key)}`}>МЭФ</th>}
+                    
                   </Fragment>
                 ))}
               </tr>
@@ -351,7 +353,7 @@ function CioTerritoryIndicators({ myOwnVisible, myFillable, collapsed, toggleNod
               {myOwnVisible.map((ind: any) => (
                 <Fragment key={ind.id}>
                   <tr className="border-b bg-slate-100">
-                    <td colSpan={1 + VALUE_FIELDS.length * (showMef ? 3 : 2)} className="p-2 font-medium">
+                    <td colSpan={1 + VALUE_FIELDS.length * 2} className="p-2 font-medium">
                       <div className="flex items-center gap-1" style={{ paddingLeft: `${(ind.level - 1) * 16}px` }}>
                         <TreeToggle
                           hasChildren={parents.has(ind.id)}
@@ -686,8 +688,9 @@ function CioWorkspaceOld({ hideOmsuApprove = false }: { hideOmsuApprove?: boolea
                   setTreeFilter={setTreeFilter}
 
                   cio={cio}
-                  setSignTarget={setSignTarget}
-                />
+            setSignTarget={setSignTarget}
+            setReturnTarget={setReturnTarget}
+          />
               </TabsContent>
               <TabsContent value="territory" className="space-y-4">
                 <CioTerritoryIndicators 
@@ -715,8 +718,9 @@ function CioWorkspaceOld({ hideOmsuApprove = false }: { hideOmsuApprove?: boolea
                 setTreeFilter={setTreeFilter}
 
                 cio={cio}
-                setSignTarget={setSignTarget}
-              />
+            setSignTarget={setSignTarget}
+            setReturnTarget={setReturnTarget}
+          />
             </div>
           )}
         </TabsContent>
