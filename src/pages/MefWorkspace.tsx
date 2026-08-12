@@ -133,7 +133,7 @@ export function MefWorkspace() {
                             )}
                             <td className="p-2 font-medium border-l">{cioObj?.short || cioId}</td>
                             {VALUE_FIELDS.map((f) => (
-                              <td key={f.key} className={`p-1.5 text-center ${f.key === 'v2026' ? 'font-medium' : ''} ${fieldTint(f.key)}`}>
+                              <td key={f.key} className={`p-1.5 text-center ${(f.key === 'v2026' || f.key === 'v2025') ? 'font-medium' : ''} ${fieldTint(f.key)}`}>
                                 <ValueTip value={v[f.key]} updatedAt={v.updatedAt} author={v.signedBy ?? 'Ответственный'} />
                               </td>
                             ))}

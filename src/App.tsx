@@ -76,7 +76,7 @@ const NAV: Record<RoleId, { id: PageId; label: string }[]> = {
     { id: 'cio', label: 'Рабочее место ЦИО' },
   ],
   omsu: [
-    { id: 'omsu', label: 'Форма ОМСУ' },
+    { id: 'omsu', label: 'Рабочее место ОМСУ' },
   ],
 };
 
@@ -262,7 +262,7 @@ function Shell({ activeModule, onHome }: { activeModule: ModuleId, onHome: () =>
         {page === 'overview' && <Overview role={role} />}
         {page === 'setup' && <Setup block={block} />}
         {page === 'omsu' && <OmsuForm />}
-        {page === 'cio' && <CioWorkspace key={block} hideOmsuApprove={!state.blockSettings[block]?.approvers.includes('omsu')} />}
+        {page === 'cio' && <CioWorkspace key={block} hideOmsuApprove={!(state.blockSettings[block]?.approvers || []).includes('omsu')} />}
         {page === 'mef-manage' && <MefManage goRating={() => setPage('rating')} goReport={() => setPage('report')} />}
         {page === 'rating' && <RatingView />}
         {page === 'report' && <ReportView />}

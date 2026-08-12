@@ -16,13 +16,13 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Pencil, Settings2, Settings } from 'lucide-react';
+import { Plus, Pencil, Settings2, Settings, Trash2 } from 'lucide-react';
 
 export function Setup({ block }: { block: string }) {
   const { state, dispatch } = useStore();
   const [editInd, setEditInd] = useState<Indicator | null>(null);
   const [isNew, setIsNew] = useState(false);
-  const [editDir, setEditDir] = useState<{ num: string, name: string, cioId: string } | null>(null);
+  const [editDir, setEditDir] = useState<{ id?: string, num: string, name: string, cioIds: string[], actualFrom: string, actualTo?: string | null } | null>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [settingsForm, setSettingsForm] = useState<('omsu' | 'cio' | 'mef')[]>([]);
   const [treeFilter, setTreeFilter] = useState<TreeFilter>(EMPTY_TREE_FILTER);
@@ -47,27 +47,79 @@ export function Setup({ block }: { block: string }) {
       consCoeff: '',
       level: 1,
       parentId: null,
+      actualFrom: new Date().toISOString().split('T')[0],
     });
   };
 
   const openNewDir = () => {
-    setEditDir({ num: '', name: '', cioId: state.cios[0]?.id || '' });
+    setEditDir({ num: '', name: '', cioIds: [], actualFrom: new Date().toISOString().split('T')[0] });
   };
 
   const save = () => {
     if (!editInd || !editInd.name.trim()) return;
-    dispatch({ type: isNew ? 'ADD_INDICATOR' : 'UPDATE_INDICATOR', indicator: editInd });
+    if (isNew) {
+      dispatch({ type: 'ADD_INDICATOR', indicator: editInd });
+    } else {
+      const oldInd = state.indicators.find(i => i.id === editInd.id);
+      if (oldInd) {
+        dispatch({ type: 'UPDATE_INDICATOR', indicator: { ...oldInd, actualTo: editInd.actualFrom } });
+      }
+      dispatch({ type: 'ADD_INDICATOR', indicator: { ...editInd, id: 'i' + Date.now() } });
+    }
     setEditInd(null);
   };
 
   const saveDir = () => {
-    // В рамках прототипа просто закрываем окно (DIRECTIONS сейчас хранятся в константах)
+    if (!editDir) return;
+    const nameStr = editDir.num ? `${editDir.num}. ${editDir.name}` : editDir.name;
+    if (editDir.id) {
+      const oldDir = state.directions.find(d => d.id === editDir.id);
+      if (oldDir) {
+        dispatch({ type: 'UPDATE_DIRECTION', direction: { ...oldDir, actualTo: editDir.actualFrom } });
+      }
+      dispatch({ 
+        type: 'ADD_DIRECTION', 
+        direction: { 
+          id: 'd' + Date.now(), 
+          name: nameStr, 
+          cioIds: editDir.cioIds, 
+          actualFrom: editDir.actualFrom,
+          actualTo: null 
+        } 
+      });
+    } else {
+      dispatch({ 
+        type: 'ADD_DIRECTION', 
+        direction: { 
+          id: 'd' + Date.now(), 
+          name: nameStr, 
+          cioIds: editDir.cioIds, 
+          actualFrom: editDir.actualFrom,
+          actualTo: null
+        } 
+      });
+    }
     setEditDir(null);
   };
 
   const openSettings = () => {
     setSettingsForm(state.blockSettings[block]?.approvers || []);
     setShowSettings(true);
+  };
+
+  const [deleteConfirm, setDeleteConfirm] = useState<{ type: 'dir' | 'ind', id: string, name: string } | null>(null);
+
+  const deleteDir = (id: string, name: string) => {
+    const hasActiveInds = state.indicators.some(i => i.directionId === id && !i.actualTo);
+    if (hasActiveInds) {
+      alert("Нельзя удалить раздел, так как в нём есть активные показатели.");
+      return;
+    }
+    setDeleteConfirm({ type: 'dir', id, name });
+  };
+
+  const deleteInd = (id: string, name: string) => {
+    setDeleteConfirm({ type: 'ind', id, name });
   };
 
   const saveSettings = () => {
@@ -104,17 +156,22 @@ export function Setup({ block }: { block: string }) {
               shown={visible.length}
               total={state.indicators.length}
             />
-            {state.directions.map((d) => {
-              const inds = visible.filter((i) => i.directionId === d.id);
+            {state.directions.filter(d => !d.actualTo).map((d) => {
+              const inds = visible.filter((i) => i.directionId === d.id && !i.actualTo);
               if (!inds.length) return null;
               return (
                 <Card key={d.id}>
                   <CardHeader className="py-3">
                     <div className="flex items-center justify-between">
                       <CardTitle className="text-base">{d.name}</CardTitle>
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditDir({ num: d.name.split('.')[0] || '', name: d.name, cioId: state.cios[0]?.id || '' })}>
-                        <Pencil className="h-4 w-4" />
-                      </Button>
+                      <div className="flex gap-1">
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditDir({ id: d.id, num: d.name.split('.')[0] || '', name: d.name.replace(/^[0-9.]+\s*/, ''), cioIds: d.cioIds || [], actualFrom: d.actualFrom, actualTo: d.actualTo })}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:text-red-700" onClick={() => deleteDir(d.id, d.name)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                   </CardHeader>
                   <CardContent className="pt-0 overflow-x-auto">
@@ -152,9 +209,14 @@ export function Setup({ block }: { block: string }) {
                             <td className="p-2 text-xs text-muted-foreground font-mono">{ind.isGroup ? '—' : ind.formula}</td>
                             <td className="p-2 text-xs text-muted-foreground font-mono">{ind.isGroup ? '—' : (ind.consCoeff || '—')}</td>
                             <td className="p-2">
-                              <Button variant="ghost" size="icon" onClick={() => { setIsNew(false); setEditInd({ ...ind }); }}>
-                                <Pencil className="h-4 w-4" />
-                              </Button>
+                              <div className="flex gap-1">
+                                <Button variant="ghost" size="icon" onClick={() => { setIsNew(false); setEditInd({ ...ind }); }}>
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                                <Button variant="ghost" size="icon" className="text-red-500 hover:text-red-700" onClick={() => deleteInd(ind.id, ind.name)}>
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
                             </td>
                           </tr>
                         ))}
@@ -195,6 +257,24 @@ export function Setup({ block }: { block: string }) {
               </div>
 
               <div className="grid grid-cols-4 items-center gap-2">
+                <Label>ЦИО *</Label>
+                <Select value={editInd.cioId} onValueChange={(v) => setEditInd({ ...editInd, cioId: v })}>
+                  <SelectTrigger className="col-span-3"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {state.directions.find(d => d.id === editInd.directionId)?.cioIds?.map((cId) => {
+                      const c = state.cios.find(x => x.id === cId);
+                      return c ? <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem> : null;
+                    })}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="grid grid-cols-4 items-center gap-2">
+                <Label>Актуальность с *</Label>
+                <Input type="date" className="col-span-3" value={(editInd.actualFrom || '').split('T')[0]} onChange={(e) => setEditInd({ ...editInd, actualFrom: e.target.value })} />
+              </div>
+
+              <div className="grid grid-cols-4 items-center gap-2">
                 <Label>Родительский показатель</Label>
                 <Select value={editInd.parentId || 'none'} onValueChange={(v) => setEditInd({ ...editInd, parentId: v === 'none' ? null : v })}>
                   <SelectTrigger className="col-span-3"><SelectValue /></SelectTrigger>
@@ -225,14 +305,30 @@ export function Setup({ block }: { block: string }) {
                 </div>
               )}
 
-              <div className="grid grid-cols-4 items-center gap-2">
-                <Label>Формула баз. прогноза *</Label>
-                <Input className="col-span-3 font-mono text-xs" value={editInd.formula} onChange={(e) => setEditInd({ ...editInd, formula: e.target.value })} />
-              </div>
-
-              <div className="grid grid-cols-4 items-center gap-2">
-                <Label>Коэфф. консерв. прогноза *</Label>
-                <Input className="col-span-3 font-mono text-xs" value={editInd.consCoeff || ''} onChange={(e) => setEditInd({ ...editInd, consCoeff: e.target.value })} />
+              <div className="grid grid-cols-4 gap-2">
+                <Label className="mt-2">Формулы</Label>
+                <div className="col-span-3">
+                  <Tabs defaultValue="forecast">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-sm text-slate-600 font-medium">Период формулы:</span>
+                      <TabsList>
+                        <TabsTrigger value="forecast">Прогноз</TabsTrigger>
+                        <TabsTrigger value="report">Отчёт</TabsTrigger>
+                        <TabsTrigger value="estimate">Оценка</TabsTrigger>
+                      </TabsList>
+                    </div>
+                    <TabsContent value="forecast" className="space-y-2">
+                      <Input className="font-mono text-xs" placeholder="Базовый прогноз" value={editInd.formula || ''} onChange={(e) => setEditInd({ ...editInd, formula: e.target.value })} />
+                      <Input className="font-mono text-xs" placeholder="Консервативный прогноз" value={editInd.consCoeff || ''} onChange={(e) => setEditInd({ ...editInd, consCoeff: e.target.value })} />
+                    </TabsContent>
+                    <TabsContent value="report">
+                      <Input className="font-mono text-xs" placeholder="Формула отчёта" value={editInd.formulaReport || ''} onChange={(e) => setEditInd({ ...editInd, formulaReport: e.target.value })} />
+                    </TabsContent>
+                    <TabsContent value="estimate">
+                      <Input className="font-mono text-xs" placeholder="Формула оценки" value={editInd.formulaEstimate || ''} onChange={(e) => setEditInd({ ...editInd, formulaEstimate: e.target.value })} />
+                    </TabsContent>
+                  </Tabs>
+                </div>
               </div>
 
             </div>
@@ -261,12 +357,23 @@ export function Setup({ block }: { block: string }) {
               </div>
               <div className="grid grid-cols-4 items-center gap-2">
                 <Label>ЦИО *</Label>
-                <Select value={editDir.cioId} onValueChange={(v) => setEditDir({ ...editDir, cioId: v })}>
-                  <SelectTrigger className="col-span-3"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {state.cios.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+                <div className="col-span-3 max-h-32 overflow-y-auto border rounded p-2 text-sm bg-white">
+                  {state.cios.map(c => (
+                    <label key={c.id} className="flex items-center gap-2 py-1">
+                      <input 
+                        type="checkbox" 
+                        checked={editDir.cioIds.includes(c.id)}
+                        onChange={(e) => {
+                          const nextCios = e.target.checked 
+                            ? [...editDir.cioIds, c.id]
+                            : editDir.cioIds.filter(id => id !== c.id);
+                          setEditDir({ ...editDir, cioIds: nextCios });
+                        }}
+                      />
+                      <span>{c.name}</span>
+                    </label>
+                  ))}
+                </div>
               </div>
             </div>
           )}
@@ -308,8 +415,33 @@ export function Setup({ block }: { block: string }) {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowSettings(false)}>Отмена</Button>
-            <Button onClick={saveSettings}>Сохранить</Button>
+            <Button variant="outline" onClick={() => setShowSettings(false)}>Закрыть</Button>
+            <Button onClick={saveSettings}>Сохранить настройки</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Модалка подтверждения удаления */}
+      <Dialog open={!!deleteConfirm} onOpenChange={(v) => !v && setDeleteConfirm(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Удаление {deleteConfirm?.type === 'dir' ? 'раздела' : 'показателя'}</DialogTitle>
+          </DialogHeader>
+          <div className="py-4 text-sm text-slate-700">
+            Вы действительно хотите удалить {deleteConfirm?.type === 'dir' ? 'раздел' : 'показатель'} <strong>{deleteConfirm?.name}</strong>?
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteConfirm(null)}>Отмена</Button>
+            <Button variant="destructive" onClick={() => {
+              if (deleteConfirm?.type === 'dir') {
+                const d = state.directions.find(x => x.id === deleteConfirm.id);
+                if (d) dispatch({ type: 'UPDATE_DIRECTION', direction: { ...d, actualTo: new Date().toISOString() } });
+              } else if (deleteConfirm?.type === 'ind') {
+                const i = state.indicators.find(x => x.id === deleteConfirm.id);
+                if (i) dispatch({ type: 'UPDATE_INDICATOR', indicator: { ...i, actualTo: new Date().toISOString() } });
+              }
+              setDeleteConfirm(null);
+            }}>Удалить</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

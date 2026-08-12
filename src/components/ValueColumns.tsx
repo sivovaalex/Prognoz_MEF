@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react';
 import { VALUE_FIELDS, VALUE_GROUPS, type ValueFieldKey } from '@/lib/types';
 
-/** Фон заголовков по группам: Отчёт — зелёный, Оценка — янтарный, прогнозы — синий */
 const GROUP_HEAD: Record<string, string> = {
   report: 'bg-green-50/70',
   estimate: 'bg-amber-50/70',
@@ -28,7 +27,7 @@ export function ValueGroupHeader({ leading, trailing }: { leading: ReactNode; tr
       <tr className="border-b text-xs text-muted-foreground">
         {leading}
         {VALUE_GROUPS.map((g) => (
-          <th key={g.key} colSpan={g.span} className={`text-center p-1.5 border-l border-b ${GROUP_HEAD[g.key]}`}>
+          <th key={g.key} colSpan={g.span} className={`text-center p-1.5 border-l border-b ${GROUP_HEAD[g._bg]}`}>
             {g.label}
           </th>
         ))}
@@ -38,7 +37,7 @@ export function ValueGroupHeader({ leading, trailing }: { leading: ReactNode; tr
         {VALUE_FIELDS.map((f, i) => (
           <th
             key={f.key}
-            className={`text-center p-1.5 font-medium whitespace-normal leading-tight min-w-[76px] ${i === 0 ? 'border-l' : ''} ${GROUP_HEAD[f.group]}`}
+            className={`text-center p-1.5 font-medium whitespace-normal leading-tight min-w-[76px] ${i === 0 ? 'border-l' : ''} ${GROUP_HEAD[f._bg]}`}
           >
             {f.label}
           </th>

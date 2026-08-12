@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useReducer } from 'react';
 import { VALUE_FIELDS, emptyValueFields } from './types';
-import type { AppState, Indicator, RoleId, ValueFieldKey } from './types';
+import type { AppState, Indicator, Direction, RoleId, ValueFieldKey } from './types';
 import { buildInitialState } from './data';
 
 /** Заполнено ли хотя бы одно поле значения */
@@ -38,13 +38,17 @@ export type Action =
   | { type: 'PUBLISH_FINAL' }
   | { type: 'ADD_INDICATOR'; indicator: Indicator }
   | { type: 'UPDATE_INDICATOR'; indicator: Indicator }
+  | { type: 'ADD_DIRECTION'; direction: Direction }
+  | { type: 'UPDATE_DIRECTION'; direction: Direction }
   | { type: 'NOTIFY'; text: string; forRoles: RoleId[] }
   | { type: 'SET_MODULE'; module: string }
   | { type: 'ADD_DICT_ITEM'; dict: 'cios' | 'omsus' | 'units'; item: any }
   | { type: 'UPDATE_DICT_ITEM'; dict: 'cios' | 'omsus' | 'units'; item: any }
   | { type: 'TOGGLE_DICT_ITEM'; dict: 'cios' | 'omsus' | 'units'; id: string }
   | { type: 'UPDATE_BLOCK_SETTINGS'; block: string; approvers: ('omsu' | 'cio' | 'mef')[] }
-  | { type: 'CIO_TERR_SET_VALUE'; cioId: string; indId: string; munId: string; field: ValueFieldKey; value: number | null };
+  | { type: 'CIO_TERR_SET_VALUE'; cioId: string; indId: string; munId: string; field: ValueFieldKey; value: number | null }
+  | { type: 'CIO_TERR_SIGN'; cioId: string; indId: string; munId: string; actor: string }
+  | { type: 'CIO_TERR_RECALL'; cioId: string; indId: string; munId: string; actor: string };
 
 function now(): string {
   const d = new Date();
@@ -250,6 +254,10 @@ function reducer(state: AppState, a: Action): AppState {
       return { ...state, indicators: [...state.indicators, a.indicator] };
     case 'UPDATE_INDICATOR':
       return { ...state, indicators: state.indicators.map((i) => (i.id === a.indicator.id ? a.indicator : i)) };
+    case 'ADD_DIRECTION':
+      return { ...state, directions: [...state.directions, a.direction] };
+    case 'UPDATE_DIRECTION':
+      return { ...state, directions: state.directions.map((d) => (d.id === a.direction.id ? a.direction : d)) };
     case 'NOTIFY':
       return { ...state, notifications: [...state.notifications, { id: ++notifId, at: now(), text: a.text, forRoles: a.forRoles }] };
     case 'SET_MODULE':
@@ -300,6 +308,53 @@ function reducer(state: AppState, a: Action): AppState {
             }
           }
         }
+      };
+    }
+    case 'CIO_TERR_SIGN': {
+      const { cioId, indId, munId, actor } = action;
+      const cv = state.cioTerritoryValues[cioId]?.[indId]?.[munId];
+      if (!cv) return state;
+      return {
+        ...state,
+        cioTerritoryValues: {
+          ...state.cioTerritoryValues,
+          [cioId]: {
+            ...(state.cioTerritoryValues[cioId] || {}),
+            [indId]: {
+              ...(state.cioTerritoryValues[cioId]?.[indId] || {}),
+              [munId]: {
+                ...cv,
+                status: 'pending_mef',
+                signedBy: actor,
+                updatedAt: new Date().toISOString(),
+              }
+            }
+          }
+        },
+        history: [{ at: new Date().toISOString(), actor, action: `ЦИО подписал ЭЦП значение (Территория)` }, ...state.history]
+      };
+    }
+    case 'CIO_TERR_RECALL': {
+      const { cioId, indId, munId, actor } = action;
+      const cv = state.cioTerritoryValues[cioId]?.[indId]?.[munId];
+      if (!cv) return state;
+      return {
+        ...state,
+        cioTerritoryValues: {
+          ...state.cioTerritoryValues,
+          [cioId]: {
+            ...(state.cioTerritoryValues[cioId] || {}),
+            [indId]: {
+              ...(state.cioTerritoryValues[cioId]?.[indId] || {}),
+              [munId]: {
+                ...cv,
+                status: 'draft',
+                updatedAt: new Date().toISOString(),
+              }
+            }
+          }
+        },
+        history: [{ at: new Date().toISOString(), actor, action: `ЦИО отозвал значение (Территория)` }, ...state.history]
       };
     }
     default:

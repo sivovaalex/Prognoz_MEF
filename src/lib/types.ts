@@ -28,6 +28,9 @@ export type CioStatus =
 export interface Direction {
   id: string;
   name: string;
+  cioIds: string[];
+  actualFrom: string;
+  actualTo?: string | null;
 }
 
 export interface Cio {
@@ -58,11 +61,15 @@ export interface Indicator {
   unit: string;
   optimum: 'max' | 'min'; // что лучше: больше или меньше
   weight: number;
-  formula: string;        // формула базового прогноза
+  formula?: string;        // формула базового прогноза
   consCoeff?: string;     // коэффициент консервативного прогноза
+  formulaReport?: string;
+  formulaEstimate?: string;
   level: number;          // уровень в иерархии: 1 — верхний, 2+ — вложенные (по отступу в файле показателей)
   parentId: string | null;
   isGroup?: boolean;      // строка-группа (без единицы измерения): не заполняется и не участвует в рейтинге
+  actualFrom: string;
+  actualTo?: string | null;
 }
 
 /** Заполняемый показатель (не группа) */
@@ -70,27 +77,29 @@ export const isFillable = (i: Indicator): boolean => !i.isGroup;
 
 /** Набор заполняемых полей показателя: отчёт 2023–2025, оценка 2026, прогнозы 2027–2029 (2 варианта) */
 export const VALUE_FIELDS = [
-  { key: 'v2023', group: 'report', label: '2023' },
-  { key: 'v2024', group: 'report', label: '2024' },
-  { key: 'v2025', group: 'report', label: '2025' },
-  { key: 'v2026', group: 'estimate', label: '2026' },
-  { key: 'cons2027', group: 'y2027', label: 'Прогноз вариант 1 (консервативный)' },
-  { key: 'base2027', group: 'y2027', label: 'Прогноз вариант 2 (базовый)' },
-  { key: 'cons2028', group: 'y2028', label: 'Прогноз вариант 1 (консервативный)' },
-  { key: 'base2028', group: 'y2028', label: 'Прогноз вариант 2 (базовый)' },
-  { key: 'cons2029', group: 'y2029', label: 'Прогноз вариант 1 (консервативный)' },
-  { key: 'base2029', group: 'y2029', label: 'Прогноз вариант 2 (базовый)' },
+  { key: 'v2023', group: 'y2023', label: 'Отчёт', _bg: 'report' },
+  { key: 'v2024', group: 'y2024', label: 'Отчёт', _bg: 'report' },
+  { key: 'v2025', group: 'y2025', label: 'Отчёт', _bg: 'report' },
+  { key: 'v2026', group: 'y2026', label: 'Оценка', _bg: 'estimate' },
+  { key: 'cons2027', group: 'y2027', label: 'Прогноз вариант 1 (консервативный)', _bg: 'y2027' },
+  { key: 'base2027', group: 'y2027', label: 'Прогноз вариант 2 (базовый)', _bg: 'y2027' },
+  { key: 'cons2028', group: 'y2028', label: 'Прогноз вариант 1 (консервативный)', _bg: 'y2028' },
+  { key: 'base2028', group: 'y2028', label: 'Прогноз вариант 2 (базовый)', _bg: 'y2028' },
+  { key: 'cons2029', group: 'y2029', label: 'Прогноз вариант 1 (консервативный)', _bg: 'y2029' },
+  { key: 'base2029', group: 'y2029', label: 'Прогноз вариант 2 (базовый)', _bg: 'y2029' },
 ] as const;
 
 export type ValueFieldKey = (typeof VALUE_FIELDS)[number]['key'];
 
 /** Группы верхнего уровня шапки таблицы значений */
 export const VALUE_GROUPS = [
-  { key: 'report', label: 'Отчёт', span: 3 },
-  { key: 'estimate', label: 'Оценка', span: 1 },
-  { key: 'y2027', label: '2027', span: 2 },
-  { key: 'y2028', label: '2028', span: 2 },
-  { key: 'y2029', label: '2029', span: 2 },
+  { key: 'y2023', label: '2023', span: 1, _bg: 'report' },
+  { key: 'y2024', label: '2024', span: 1, _bg: 'report' },
+  { key: 'y2025', label: '2025', span: 1, _bg: 'report' },
+  { key: 'y2026', label: '2026', span: 1, _bg: 'estimate' },
+  { key: 'y2027', label: '2027', span: 2, _bg: 'y2027' },
+  { key: 'y2028', label: '2028', span: 2, _bg: 'y2028' },
+  { key: 'y2029', label: '2029', span: 2, _bg: 'y2029' },
 ] as const;
 
 /** Пустой набор значений показателя */

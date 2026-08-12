@@ -224,7 +224,7 @@ export function OmsuForm() {
                           <td className="p-2"><Badge variant="secondary">{state.cios.find((c) => c.id === ind.cioId)?.short}</Badge></td>
                           {VALUE_FIELDS.map((f) => (
                             <td key={f.key} className={`p-1.5 text-center ${fieldTint(f.key)}`}>
-                              {editable && f.key === 'v2026' ? (
+                              {editable && (f.key === 'v2026' || f.key === 'v2025') ? (
                                 <WithValueTip show={v[f.key] !== null} updatedAt={v.updatedAt} author={v.signedBy ?? 'Иванова А.П.'}>
                                   <Input
                                     type="number"
@@ -244,7 +244,7 @@ export function OmsuForm() {
                                   />
                                 </WithValueTip>
                               ) : (
-                                <span className={f.key === 'v2026' ? 'font-medium' : ''}>
+                                <span className={(f.key === 'v2026' || f.key === 'v2025') ? 'font-medium' : ''}>
                                   <ValueTip value={v[f.key]} updatedAt={v.updatedAt} author={v.signedBy ?? 'Иванова А.П.'} />
                                 </span>
                               )}
