@@ -17,7 +17,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/dialog';
-import { CheckCircle2, Undo2, Send, Lock, Info, ChevronDown, ChevronRight, FileSignature } from 'lucide-react';
+import { CheckCircle2, Undo2, Send, Lock, Info, ChevronDown, ChevronRight } from 'lucide-react';
 
 function CioWorkspaceNew() {
   const { state, dispatch } = useStore();
@@ -33,7 +33,7 @@ function CioWorkspaceNew() {
   const [treeFilter, setTreeFilter] = useState<TreeFilter>(EMPTY_TREE_FILTER);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   // фильтр по ОМСУ на вкладке согласования
-  const [munFilter, setMunFilter] = useState<string>(state.omsus.filter(o => o.isActive)[0]?.id || 'all');
+  const [munFilter, setMunFilter] = useState<string>('all');
   const myOwnVisible = visibleTree(myFillable, collapsed, treeFilter);
   const parents = chevronParents(state.indicators);
   const toggleNode = (id: string) => setCollapsed((p) => ({ ...p, [id]: !p[id] }));
@@ -141,18 +141,10 @@ function CioOwnIndicators({ myOwnVisible, myFillable, collapsed, toggleNode, par
             shown={myOwnVisible.length}
             total={myFillable.length}
             hideCioFilter
+            munId={munFilter === 'all' ? state.omsus.filter(o => o.isActive)[0]?.id : munFilter}
+            onMunChange={setMunFilter}
+            allowAllMuns={false}
           />
-        </div>
-        <div className="w-64 shrink-0 flex items-center">
-          <select 
-            className="w-full text-sm border rounded p-1.5"
-            value={munFilter === 'all' ? state.omsus.filter(o => o.isActive)[0]?.id : munFilter}
-            onChange={(e) => setMunFilter(e.target.value)}
-          >
-            {state.omsus.filter(o => o.isActive).map(m => (
-              <option key={m.id} value={m.id}>{m.name}</option>
-            ))}
-          </select>
         </div>
       </div>
       <div className="rounded-md border border-blue-200 bg-blue-50 p-3 text-sm flex gap-2">
@@ -205,7 +197,6 @@ function CioOwnIndicators({ myOwnVisible, myFillable, collapsed, toggleNode, par
             <tbody>
               {myOwnVisible.map((ind: any) => {
                 const v = state.cioValues[ind.id]?.[CURRENT_CIO] ?? { ...emptyValueFields(), status: 'not_filled' as const, updatedAt: null };
-                const editable = v.status === 'not_filled' || v.status === 'draft' || v.status === 'returned';
                 
                 const activeMun = munFilter === 'all' ? state.omsus.filter(o => o.isActive)[0]?.id : munFilter;
                 const omsuIndValue = state.omsuValues[activeMun]?.[ind.id];
@@ -888,8 +879,7 @@ function CioOwnIndicatorsOld({ myOwnVisible, myFillable, collapsed, toggleNode, 
 }
 
 
-export function CioWorkspace({ hideOmsuApprove = false }: { hideOmsuApprove?: boolean }) {
-  const { state } = useStore();
-  const isNewLogic = ['mun', 'ind', 'ukaz'].includes(state.campaign.module);
+export function CioWorkspace({ block, hideOmsuApprove = false }: { block: string; hideOmsuApprove?: boolean }) {
+  const isNewLogic = ['mun', 'rating_main', 'ukaz_main'].includes(block);
   return isNewLogic ? <CioWorkspaceNew /> : <CioWorkspaceOld hideOmsuApprove={hideOmsuApprove} />;
 }

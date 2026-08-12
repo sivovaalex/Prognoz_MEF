@@ -314,6 +314,28 @@ function buildOmsuValues(indicators: Indicator[]): Record<string, Record<string,
             comment: 'Уточните значение на 2026 год: расходится с оперативной статотчётностью за 1 полугодие',
           },
           i4: { status: 'draft', updatedAt: '26.07.2026 16:31' },
+          u1: { status: 'pending_cio', updatedAt: '25.07.2026 09:42' },
+          u2: { status: 'returned', updatedAt: '26.07.2026 14:05' },
+          u3: { status: 'draft', updatedAt: '26.07.2026 16:31' },
+          r1: { status: 'pending_cio', updatedAt: '25.07.2026 09:42' },
+          r2: { status: 'approved', updatedAt: '24.07.2026 11:20' },
+          i55: { status: 'pending_cio', updatedAt: '25.07.2026 09:42' },
+          i56: { status: 'approved', updatedAt: '24.07.2026 11:20' },
+          i41: { status: 'returned', updatedAt: '26.07.2026 14:05' },
+          i35: { status: 'approved', updatedAt: '24.07.2026 11:20' },
+          i36: { status: 'pending_cio', updatedAt: '25.07.2026 09:42' },
+          i37: { status: 'draft', updatedAt: '26.07.2026 16:31' },
+          i38: { status: 'approved', updatedAt: '24.07.2026 11:20' },
+          i39: { status: 'returned', updatedAt: '26.07.2026 14:05' },
+          i40: { status: 'pending_cio', updatedAt: '25.07.2026 09:42' },
+          i42: { status: 'draft', updatedAt: '26.07.2026 16:31' },
+          i43: { status: 'approved', updatedAt: '24.07.2026 11:20' },
+          i44: { status: 'pending_cio', updatedAt: '25.07.2026 09:42' },
+          i45: { status: 'draft', updatedAt: '26.07.2026 16:31' },
+          i46: { status: 'approved', updatedAt: '24.07.2026 11:20' },
+          i47: { status: 'returned', updatedAt: '26.07.2026 14:05' },
+          i53: { status: 'pending_cio', updatedAt: '25.07.2026 09:42' },
+          i54: { status: 'approved', updatedAt: '24.07.2026 11:20' },
         };
         const d = demo[ind.id];
         out[m.id][ind.id] = {
@@ -331,6 +353,33 @@ function buildOmsuValues(indicators: Indicator[]): Record<string, Record<string,
           updatedAt: status === 'not_filled' ? null : `${20 + ((mi + ii) % 6)}.07.2026 ${9 + (ii % 8)}:${10 + mi}`,
         };
       }
+    }
+  }
+  return out;
+}
+
+
+function buildCioTerritoryValues(indicators: Indicator[], omsus: Municipality[]): Record<string, Record<string, Record<string, CioValue>>> {
+  const out: Record<string, Record<string, Record<string, CioValue>>> = {};
+  const rand = seedRand(1234);
+  const fillable = indicators.filter(i => !i.isGroup);
+  for (const ind of fillable) {
+    if (!out[ind.cioId]) out[ind.cioId] = {};
+    out[ind.cioId][ind.id] = {};
+    for (const m of omsus) {
+      let s: CioValue['status'] = rand() > 0.5 ? 'approved' : 'pending_mef';
+      const [lo, hi] = RANGES[ind.id] ?? [100, 1000];
+      const v = r2((lo + rand() * (hi - lo)));
+      
+      const r = rand();
+      if (r > 0.8) s = 'not_filled';
+      else if (r > 0.7) s = 'draft';
+
+      out[ind.cioId][ind.id][m.id] = {
+        ...(s === 'not_filled' ? emptyValueFields() : makeFields(v)),
+        status: s,
+        updatedAt: s === 'not_filled' ? null : '23.07.2026 15:30',
+      };
     }
   }
   return out;
@@ -377,7 +426,7 @@ export function buildInitialState(moduleId: string): AppState {
 
   const units = Array.from(new Set(indicators.map(i => i.unit).filter(Boolean)));
 
-  return {
+  const state: AppState = {
     indicators,
     directions,
     cios: CIOS.map(c => ({ ...c, isActive: true })),
@@ -393,7 +442,7 @@ export function buildInitialState(moduleId: string): AppState {
     },
     omsuValues: buildOmsuValues(indicators),
     cioValues: buildCioValues(indicators),
-    cioTerritoryValues: {},
+    cioTerritoryValues: buildCioTerritoryValues(indicators, MUNICIPALITIES),
     campaign: {
       module: moduleId,
       name: moduleId === 'ukaz' ? 'Указ Президента РФ №607' : moduleId === 'rating' ? 'Рейтинг ОМСУ' : 'Муниципальный прогноз СЭР МО',
@@ -418,6 +467,22 @@ export function buildInitialState(moduleId: string): AppState {
     ratingMode: 'preview',
     finalPublished: false,
   };
+
+  // Синхронизируем исторические данные (2023, 2024), чтобы они совпадали у ЦИО и ОМСУ
+  for (const indId in state.cioValues) {
+    for (const cioId in state.cioValues[indId]) {
+      const cv = state.cioValues[indId][cioId];
+      if (cv.status === 'not_filled') continue;
+      for (const munId in state.omsuValues) {
+        if (state.omsuValues[munId][indId] && state.omsuValues[munId][indId].status !== 'not_filled') {
+          state.omsuValues[munId][indId].v2023 = cv.v2023;
+          state.omsuValues[munId][indId].v2024 = cv.v2024;
+        }
+      }
+    }
+  }
+
+  return state;
 }
 
 export const OMSU_STATUS_META: Record<OmsuValue['status'], { label: string; color: string; bg: string }> = {
@@ -502,7 +567,7 @@ export const UKAZ_INDICATORS: Indicator[] = [
     name: 'Число субъектов малого и среднего предпринимательства в расчете на 10 тыс. человек населения.',
     unit: 'ед.',
     directionId: 'd_ukaz',
-    cioId: 'cio1',
+    cioId: 'c2',
     formula: 'X / Y * 10000',
     optimum: 'max',
     weight: 1,
@@ -514,7 +579,7 @@ export const UKAZ_INDICATORS: Indicator[] = [
     name: 'Доля среднесписочной численности работников малых и средних предприятий в среднесписочной численности работников всех предприятий.',
     unit: '%',
     directionId: 'd_ukaz',
-    cioId: 'cio1',
+    cioId: 'c2',
     formula: 'X / Y * 100',
     optimum: 'max',
     weight: 1,
@@ -526,7 +591,7 @@ export const UKAZ_INDICATORS: Indicator[] = [
     name: 'Доля протяженности автомобильных дорог общего пользования местного значения, не отвечающих нормативным требованиям.',
     unit: '%',
     directionId: 'd_ukaz',
-    cioId: 'cio2',
+    cioId: 'c1',
     formula: 'X / Y * 100',
     optimum: 'max',
     weight: 1,
@@ -538,7 +603,7 @@ export const UKAZ_INDICATORS: Indicator[] = [
     name: 'Доля населения, проживающего в населенных пунктах, не имеющих регулярного автобусного и (или) железнодорожного сообщения с административным центром.',
     unit: '%',
     directionId: 'd_ukaz',
-    cioId: 'cio2',
+    cioId: 'c1',
     formula: 'X / Y * 100',
     optimum: 'max',
     weight: 1,
@@ -634,7 +699,7 @@ export const UKAZ_INDICATORS: Indicator[] = [
     name: 'Удовлетворенность населения деятельностью органов местного самоуправления (процент от числа опрошенных).',
     unit: '%',
     directionId: 'd_ukaz',
-    cioId: 'cio1',
+    cioId: 'c2',
     formula: 'X',
     optimum: 'max',
     weight: 1,
@@ -665,7 +730,7 @@ export const RATING_INDICATORS: Indicator[] = [
     name: 'Доверие к власти',
     unit: '%',
     directionId: 'd_rating',
-    cioId: 'cio1',
+    cioId: 'c2',
     formula: 'X / Y * 100',
     optimum: 'max',
     weight: 1,
@@ -677,7 +742,7 @@ export const RATING_INDICATORS: Indicator[] = [
     name: 'Качество дорог',
     unit: '%',
     directionId: 'd_rating',
-    cioId: 'cio2',
+    cioId: 'c1',
     formula: 'X / Y * 100',
     optimum: 'max',
     weight: 1,

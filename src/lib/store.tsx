@@ -311,7 +311,7 @@ function reducer(state: AppState, a: Action): AppState {
       };
     }
     case 'CIO_TERR_SIGN': {
-      const { cioId, indId, munId, actor } = action;
+      const { cioId, indId, munId, actor } = a;
       const cv = state.cioTerritoryValues[cioId]?.[indId]?.[munId];
       if (!cv) return state;
       return {
@@ -335,7 +335,7 @@ function reducer(state: AppState, a: Action): AppState {
       };
     }
     case 'CIO_TERR_RECALL': {
-      const { cioId, indId, munId, actor } = action;
+      const { cioId, indId, munId, actor } = a;
       const cv = state.cioTerritoryValues[cioId]?.[indId]?.[munId];
       if (!cv) return state;
       return {
