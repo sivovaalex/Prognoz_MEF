@@ -271,7 +271,7 @@ export function Setup({ block }: { block: string }) {
 
               <div className="grid grid-cols-4 items-center gap-2">
                 <Label>Актуальность с *</Label>
-                <Input type="date" className="col-span-3" value={(editInd.actualFrom || '').split('T')[0]} onChange={(e) => setEditInd({ ...editInd, actualFrom: e.target.value })} />
+                <Input type="number" min="2000" max="2100" className="col-span-3" value={(editInd.actualFrom || '').substring(0, 4)} onChange={(e) => setEditInd({ ...editInd, actualFrom: `${e.target.value}-01-01T00:00:00.000Z` })} placeholder="2024" />
               </div>
 
               <div className="grid grid-cols-4 items-center gap-2">
@@ -374,6 +374,10 @@ export function Setup({ block }: { block: string }) {
                     </label>
                   ))}
                 </div>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-2">
+                <Label>Актуальность с *</Label>
+                <Input type="number" min="2000" max="2100" className="col-span-3" value={(editDir.actualFrom || '').substring(0, 4)} onChange={(e) => setEditDir({ ...editDir, actualFrom: `${e.target.value}-01-01T00:00:00.000Z` })} placeholder="2024" />
               </div>
             </div>
           )}

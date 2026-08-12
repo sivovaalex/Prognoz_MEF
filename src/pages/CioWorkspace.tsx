@@ -42,7 +42,7 @@ function CioWorkspaceNew() {
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   // фильтр по ОМСУ на вкладке согласования
   const [munFilter, setMunFilter] = useState<string>('all');
-  const [showMef, setShowMef] = useState(false);
+
   const myOwnVisible = visibleTree(myFillable, collapsed, treeFilter);
   const parents = chevronParents(state.indicators);
   const toggleNode = (id: string) => setCollapsed((p) => ({ ...p, [id]: !p[id] }));
@@ -138,7 +138,7 @@ function CioWorkspaceNew() {
   );
 }
 
-function CioOwnIndicators({ myOwnVisible, myFillable, collapsed, toggleNode, parents, treeFilter, setTreeFilter, cio, setSignTarget, munFilter, setMunFilter}: any) {
+function CioOwnIndicators({ myOwnVisible, myFillable, collapsed, toggleNode, parents, treeFilter, setTreeFilter, cio, setSignTarget, munFilter, setMunFilter, setReturnTarget}: any) {
   const { state, dispatch } = useStore();
   return (
     <>
@@ -210,7 +210,7 @@ function CioOwnIndicators({ myOwnVisible, myFillable, collapsed, toggleNode, par
 
                 const v = state.cioValues[ind.id]?.[CURRENT_CIO] ?? { ...emptyValueFields(), status: 'not_filled', updatedAt: null };
                 const omsuV = state.omsuValues[munFilter === 'all' ? state.omsus.filter(o => o.isActive)[0]?.id || 'm1' : munFilter]?.[ind.id];
-                const mefV = state.mefValues[ind.id]?.[CURRENT_CIO];
+
 
                 return (
                   <tr key={ind.id} className={`border-b ${v.status === 'pending_mef' ? 'bg-amber-50/60' : 'hover:bg-slate-50'}`}>
@@ -367,7 +367,7 @@ function CioTerritoryIndicators({ myOwnVisible, myFillable, collapsed, toggleNod
                   {!collapsed[ind.id] && activeOmsus.map((omsu: any) => {
                     const v = state.cioTerritoryValues[CURRENT_CIO]?.[ind.id]?.[omsu.id] ?? { ...emptyValueFields(), status: 'not_filled', updatedAt: null };
                     const omsuV = state.omsuValues[omsu.id]?.[ind.id];
-                    const mefV = state.mefTerritoryValues[CURRENT_CIO]?.[ind.id]?.[omsu.id];
+
                     return (
                       <tr key={omsu.id} className="border-b hover:bg-slate-50">
                         <td className="p-2 font-medium pl-6">{omsu.name}</td>
@@ -435,12 +435,7 @@ function CioTerritoryIndicators({ myOwnVisible, myFillable, collapsed, toggleNod
                                 )}
                               </div>
                             </td>
-                            {/* Столбец МЭФ */}
-                            {showMef && (
-                              <td className={`p-1.5 text-center ${f.key === 'v2026' || f.key === 'v2025' ? 'bg-amber-50/30' : fieldTint(f.key)}`}>
-                                <ValueTip value={mefV?.[f.key] ?? v[f.key]} updatedAt={mefV?.updatedAt} author="МЭФ" />
-                              </td>
-                            )}
+
                           </Fragment>
                         ))}
                       </tr>
