@@ -409,25 +409,47 @@ function buildCioValues(indicators: Indicator[]): Record<string, Record<string, 
   return out;
 }
 
-function buildMefValues(indicators: Indicator[]): Record<string, Record<string, MefValue>> {
+function buildMefValues(indicators: Indicator[], cioValues: Record<string, Record<string, CioValue>>): Record<string, Record<string, MefValue>> {
   const out: Record<string, Record<string, MefValue>> = {};
   const fillable = indicators.filter(i => !i.isGroup);
+  let c = 0;
   for (const ind of fillable) {
-    out[ind.id] = {
-      [ind.cioId]: { ...emptyValueFields(), status: 'not_filled', updatedAt: null },
-    };
+    const cv = cioValues[ind.id]?.[ind.cioId];
+    if (cv && cv.status === 'approved') {
+      const mefV = { ...cv, status: 'approved' as const, updatedAt: '24.07.2026 12:00' };
+      if (c < 2) {
+        mefV.v2026 = Number((mefV.v2026 * 1.1).toFixed(2));
+        Object.assign(mefV, makeFields(mefV.v2026));
+      }
+      out[ind.id] = { [ind.cioId]: mefV };
+      c++;
+    } else {
+      out[ind.id] = { [ind.cioId]: { ...emptyValueFields(), status: 'not_filled', updatedAt: null } };
+    }
   }
   return out;
 }
 
-function buildMefTerritoryValues(indicators: Indicator[], omsus: Municipality[]): Record<string, Record<string, Record<string, MefValue>>> {
+function buildMefTerritoryValues(indicators: Indicator[], omsus: Municipality[], cioTerritoryValues: Record<string, Record<string, Record<string, CioValue>>>): Record<string, Record<string, Record<string, MefValue>>> {
   const out: Record<string, Record<string, Record<string, MefValue>>> = {};
   const fillable = indicators.filter(i => !i.isGroup);
+  let c = 0;
   for (const ind of fillable) {
     if (!out[ind.cioId]) out[ind.cioId] = {};
     out[ind.cioId][ind.id] = {};
     for (const m of omsus) {
-      out[ind.cioId][ind.id][m.id] = { ...emptyValueFields(), status: 'not_filled', updatedAt: null };
+      const cv = cioTerritoryValues[ind.cioId]?.[ind.id]?.[m.id];
+      if (cv && cv.status === 'approved') {
+        const mefV = { ...cv, status: 'approved' as const, updatedAt: '24.07.2026 12:00' };
+        if (c < 2) {
+          mefV.v2026 = Number((mefV.v2026 * 1.1).toFixed(2));
+          Object.assign(mefV, makeFields(mefV.v2026));
+        }
+        out[ind.cioId][ind.id][m.id] = mefV;
+        c++;
+      } else {
+        out[ind.cioId][ind.id][m.id] = { ...emptyValueFields(), status: 'not_filled', updatedAt: null };
+      }
     }
   }
   return out;
@@ -450,25 +472,31 @@ export function buildInitialState(moduleId: string): AppState {
 
   const units = Array.from(new Set(indicators.map(i => i.unit).filter(Boolean)));
 
-  const state: AppState = {
-    indicators,
-    directions,
-    cios: CIOS.map(c => ({ ...c, isActive: true })),
-    omsus: MUNICIPALITIES.map(m => ({ ...m, isActive: true })),
-    units: units.map((u, i) => ({ id: `u${i + 1}`, name: u, isActive: true })),
-    blockSettings: {
-      mun: { approvers: ['omsu', 'cio', 'mef'] },
-      obl: { approvers: ['cio', 'mef'] },
-      rating_main: { approvers: ['omsu', 'cio', 'mef'] },
-      ukaz_main: { approvers: ['omsu', 'cio', 'mef'] },
-      form2p: { approvers: ['cio', 'mef'] },
-      long_term: { approvers: ['cio', 'mef'] },
-    },
-    omsuValues: buildOmsuValues(indicators),
-    cioValues: buildCioValues(indicators),
-    mefValues: buildMefValues(indicators),
-    cioTerritoryValues: buildCioTerritoryValues(indicators, MUNICIPALITIES),
-    mefTerritoryValues: buildMefTerritoryValues(indicators, MUNICIPALITIES),
+    const cioValues = buildCioValues(indicators);
+    const cioTerritoryValues = buildCioTerritoryValues(indicators, MUNICIPALITIES);
+    const omsuValues = buildOmsuValues(indicators);
+    const mefValues = buildMefValues(indicators, cioValues);
+    const mefTerritoryValues = buildMefTerritoryValues(indicators, MUNICIPALITIES, cioTerritoryValues);
+
+    const state: AppState = {
+      indicators,
+      directions,
+      cios: CIOS.map(c => ({ ...c, isActive: true })),
+      omsus: MUNICIPALITIES.map(m => ({ ...m, isActive: true })),
+      units: units.map((u, i) => ({ id: `u${i + 1}`, name: u, isActive: true })),
+      blockSettings: {
+        mun: { approvers: ['omsu', 'cio', 'mef'] },
+        obl: { approvers: ['cio', 'mef'] },
+        rating_main: { approvers: ['omsu', 'cio', 'mef'] },
+        ukaz_main: { approvers: ['omsu', 'cio', 'mef'] },
+        form2p: { approvers: ['cio', 'mef'] },
+        long_term: { approvers: ['cio', 'mef'] },
+      },
+      omsuValues,
+      cioValues,
+      mefValues,
+      cioTerritoryValues,
+      mefTerritoryValues,
     campaign: {
       module: moduleId,
       name: moduleId === 'ukaz' ? 'Указ Президента РФ №607' : moduleId === 'rating' ? 'Рейтинг ОМСУ' : 'Муниципальный прогноз СЭР МО',

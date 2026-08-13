@@ -298,6 +298,11 @@ function reducer(state: AppState, a: Action): AppState {
       const cur = state.cioValues[a.cioIndId]?.[a.cioId];
       if (!cur || cur.status !== 'pending_mef') return state;
       const mefCur = state.mefValues[a.cioIndId]?.[a.cioId] || { ...emptyValueFields(), status: 'not_filled', updatedAt: null };
+      const nextMef = { ...mefCur, status: 'approved' as const, updatedAt: now() };
+      const fields = ['v2023', 'v2024', 'v2025', 'v2026', 'cons2027', 'base2027', 'cons2028', 'base2028', 'cons2029', 'base2029'] as const;
+      fields.forEach(f => {
+        if (nextMef[f] == null && cur[f] != null) (nextMef as any)[f] = cur[f];
+      });
       return {
         ...state,
         cioValues: {
@@ -306,14 +311,14 @@ function reducer(state: AppState, a: Action): AppState {
         },
         mefValues: {
           ...state.mefValues,
-          [a.cioIndId]: { ...(state.mefValues[a.cioIndId] || {}), [a.cioId]: { ...mefCur, status: 'approved', updatedAt: now() } },
+          [a.cioIndId]: { ...(state.mefValues[a.cioIndId] || {}), [a.cioId]: nextMef },
         },
         history: [...state.history, { at: now(), actor: `МЭФ (${a.actor})`, action: `Данные ЦИО согласованы` }],
       };
     }
     case 'MEF_RETURN': {
       const cur = state.cioValues[a.cioIndId]?.[a.cioId];
-      if (!cur || cur.status !== 'pending_mef') return state;
+      if (!cur || (cur.status !== 'pending_mef' && cur.status !== 'approved')) return state;
       const mefCur = state.mefValues[a.cioIndId]?.[a.cioId] || { ...emptyValueFields(), status: 'not_filled', updatedAt: null };
       return {
         ...state,
@@ -332,6 +337,11 @@ function reducer(state: AppState, a: Action): AppState {
       const cur = state.cioTerritoryValues[a.cioId]?.[a.indId]?.[a.munId];
       if (!cur || cur.status !== 'pending_mef') return state;
       const mefCur = state.mefTerritoryValues[a.cioId]?.[a.indId]?.[a.munId] || { ...emptyValueFields(), status: 'not_filled', updatedAt: null };
+      const nextMef = { ...mefCur, status: 'approved' as const, updatedAt: now() };
+      const fields = ['v2023', 'v2024', 'v2025', 'v2026', 'cons2027', 'base2027', 'cons2028', 'base2028', 'cons2029', 'base2029'] as const;
+      fields.forEach(f => {
+        if (nextMef[f] == null && cur[f] != null) (nextMef as any)[f] = cur[f];
+      });
       return {
         ...state,
         cioTerritoryValues: {
@@ -345,7 +355,7 @@ function reducer(state: AppState, a: Action): AppState {
           ...state.mefTerritoryValues,
           [a.cioId]: {
             ...(state.mefTerritoryValues[a.cioId] || {}),
-            [a.indId]: { ...(state.mefTerritoryValues[a.cioId]?.[a.indId] || {}), [a.munId]: { ...mefCur, status: 'approved', updatedAt: now() } },
+            [a.indId]: { ...(state.mefTerritoryValues[a.cioId]?.[a.indId] || {}), [a.munId]: nextMef },
           },
         },
         history: [...state.history, { at: now(), actor: `МЭФ (${a.actor})`, action: `Данные территории ЦИО согласованы` }],
@@ -353,7 +363,7 @@ function reducer(state: AppState, a: Action): AppState {
     }
     case 'MEF_TERR_RETURN': {
       const cur = state.cioTerritoryValues[a.cioId]?.[a.indId]?.[a.munId];
-      if (!cur || cur.status !== 'pending_mef') return state;
+      if (!cur || (cur.status !== 'pending_mef' && cur.status !== 'approved')) return state;
       const mefCur = state.mefTerritoryValues[a.cioId]?.[a.indId]?.[a.munId] || { ...emptyValueFields(), status: 'not_filled', updatedAt: null };
       return {
         ...state,

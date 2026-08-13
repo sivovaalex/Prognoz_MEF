@@ -193,7 +193,9 @@ function MefIndicators({ visible, fillable, collapsed, toggleNode, parents, tree
                                   </td>
                                 )}
                                 <td className={`p-1.5 text-center ${!showOmsu ? 'border-l' : ''} ${f.key === 'v2026' || f.key === 'v2025' ? 'bg-amber-50/30' : fieldTint(f.key)}`}>
-                                  <ValueTip value={v[f.key]} updatedAt={v.updatedAt} author={v.signedBy ?? 'Ответственный'} />
+                                  <div className={mefV[f.key] !== null && v[f.key] !== null && mefV[f.key] !== v[f.key] ? 'text-red-600 font-bold' : ''}>
+                                    <ValueTip value={v[f.key]} updatedAt={v.updatedAt} author={v.signedBy ?? 'Ответственный'} />
+                                  </div>
                                   {(f.key === 'v2026' || f.key === 'v2025') && (
                                     <div className="mt-1 flex flex-col items-center gap-1">
                                       <CioStatusBadge status={v.status} />
@@ -202,6 +204,13 @@ function MefIndicators({ visible, fillable, collapsed, toggleNode, parents, tree
                                           <Button size="icon-sm" variant="outline" className="h-6 w-6 text-green-600 hover:text-green-700" onClick={() => dispatch({ type: 'MEF_APPROVE', cioIndId: ind.id, cioId, actor: 'МЭФ' })} title="Согласовать">
                                             <CheckCircle2 className="h-3.5 w-3.5" />
                                           </Button>
+                                          <Button size="icon-sm" variant="outline" className="h-6 w-6 text-red-500 hover:text-red-600" onClick={() => { setReturnTarget({ cioId, indId: ind.id }); setComment(''); }} title="Вернуть">
+                                            <Undo2 className="h-3.5 w-3.5" />
+                                          </Button>
+                                        </div>
+                                      )}
+                                      {v.status === 'approved' && (
+                                        <div className="flex gap-1 mt-1">
                                           <Button size="icon-sm" variant="outline" className="h-6 w-6 text-red-500 hover:text-red-600" onClick={() => { setReturnTarget({ cioId, indId: ind.id }); setComment(''); }} title="Вернуть">
                                             <Undo2 className="h-3.5 w-3.5" />
                                           </Button>
@@ -224,18 +233,26 @@ function MefIndicators({ visible, fillable, collapsed, toggleNode, parents, tree
                                       />
 
                                       {v.status !== 'approved' && mefV[f.key] !== null && mefV.status === 'draft' && (
-                                        <Button size="sm" variant="outline" className="h-6 text-[10px] px-2 mt-1 text-blue-600 hover:text-blue-700" onClick={() => dispatch({ type: 'MEF_SEND_OWN', cioIndId: ind.id, cioId })} title="Отправить">
-                                          <Send className="h-3 w-3 mr-1" /> Отправить
+                                        <Button size="sm" variant="outline" className="h-6 text-[10px] px-2 mt-1 text-blue-600 hover:text-blue-700" onClick={() => dispatch({ type: 'MEF_SEND_OWN', cioIndId: ind.id, cioId })} title="Сохранить">
+                                          <Send className="h-3 w-3 mr-1" /> Сохранить
                                         </Button>
                                       )}
                                       {v.status !== 'approved' && mefV.status === 'sent' && (
                                         <div className="flex flex-col items-center gap-1 mt-1">
                                           <span className="text-[10px] text-amber-600 leading-tight">Отправлено</span>
                                           <Button size="sm" variant="outline" className="h-6 text-[10px] px-2 text-red-500 hover:text-red-600" onClick={() => dispatch({ type: 'MEF_RECALL_OWN', cioIndId: ind.id, cioId })} title="Отозвать">
-                                            <Undo2 className="h-3 w-3 mr-1" /> Вернуть
+                                            <Undo2 className="h-3 w-3 mr-1" /> Отозвать
                                           </Button>
                                         </div>
-                                      )}                                      {v.status === 'approved' && <span className="text-[10px] text-green-600 flex items-center gap-0.5 mt-1"><Lock className="w-3 h-3"/> Согласовано</span>}
+                                      )}
+                                      {v.status === 'approved' && (
+                                        <div className="flex flex-col items-center gap-1 mt-1">
+                                          <span className="text-[10px] text-green-600 flex items-center gap-0.5"><Lock className="w-3 h-3"/> Сохранено</span>
+                                          <Button size="sm" variant="outline" className="h-6 text-[10px] px-2 text-red-500 hover:text-red-600" onClick={() => dispatch({ type: 'MEF_RECALL_OWN', cioIndId: ind.id, cioId })} title="Отозвать">
+                                            <Undo2 className="h-3 w-3 mr-1" /> Отозвать
+                                          </Button>
+                                        </div>
+                                      )}
                                     </div>
                                   ) : (
                                     <ValueTip value={mefV[f.key] ?? v[f.key]} updatedAt={mefV.updatedAt} author="МЭФ" />
@@ -352,7 +369,9 @@ function MefTerritoryIndicators({ visible, fillable, collapsed, toggleNode, pare
                               </td>
                             )}
                             <td className={`p-1.5 text-center ${!showOmsu ? 'border-l' : ''} ${f.key === 'v2026' || f.key === 'v2025' ? 'bg-amber-50/30' : fieldTint(f.key)}`}>
-                              <ValueTip value={safeV[f.key]} updatedAt={safeV.updatedAt} author={safeV.signedBy ?? 'Ответственный'} />
+                              <div className={mefV[f.key] !== null && safeV[f.key] !== null && mefV[f.key] !== safeV[f.key] ? 'text-red-600 font-bold' : ''}>
+                                <ValueTip value={safeV[f.key]} updatedAt={safeV.updatedAt} author={safeV.signedBy ?? 'Ответственный'} />
+                              </div>
                               {(f.key === 'v2026' || f.key === 'v2025') && (
                                 <div className="mt-1 flex flex-col items-center gap-1">
                                   <CioStatusBadge status={safeV.status} />
@@ -361,6 +380,13 @@ function MefTerritoryIndicators({ visible, fillable, collapsed, toggleNode, pare
                                       <Button size="icon-sm" variant="outline" className="h-6 w-6 text-green-600 hover:text-green-700" onClick={() => dispatch({ type: 'MEF_TERR_APPROVE', indId: ind.id, cioId, munId: omsu.id, actor: 'МЭФ' })} title="Согласовать">
                                         <CheckCircle2 className="h-3.5 w-3.5" />
                                       </Button>
+                                      <Button size="icon-sm" variant="outline" className="h-6 w-6 text-red-500 hover:text-red-600" onClick={() => { setReturnTarget({ cioId, indId: ind.id, munId: omsu.id }); setComment(''); }} title="Вернуть">
+                                        <Undo2 className="h-3.5 w-3.5" />
+                                      </Button>
+                                    </div>
+                                  )}
+                                  {safeV.status === 'approved' && (
+                                    <div className="flex gap-1 mt-1">
                                       <Button size="icon-sm" variant="outline" className="h-6 w-6 text-red-500 hover:text-red-600" onClick={() => { setReturnTarget({ cioId, indId: ind.id, munId: omsu.id }); setComment(''); }} title="Вернуть">
                                         <Undo2 className="h-3.5 w-3.5" />
                                       </Button>
@@ -382,19 +408,26 @@ function MefTerritoryIndicators({ visible, fillable, collapsed, toggleNode, pare
                                     onChange={(e) => dispatch({ type: 'MEF_TERR_SET_VALUE', indId: ind.id, cioId, munId: omsu.id, field: f.key, value: e.target.value === '' ? null : Number(e.target.value) })}
                                   />
                                   {safeV.status !== 'approved' && mefV[f.key] !== null && mefV.status === 'draft' && (
-                                    <Button size="sm" variant="outline" className="h-6 text-[10px] px-2 mt-1 text-blue-600 hover:text-blue-700" onClick={() => dispatch({ type: 'MEF_TERR_SEND_OWN', indId: ind.id, cioId, munId: omsu.id })} title="Отправить">
-                                      <Send className="h-3 w-3 mr-1" /> Отправить
+                                    <Button size="sm" variant="outline" className="h-6 text-[10px] px-2 mt-1 text-blue-600 hover:text-blue-700" onClick={() => dispatch({ type: 'MEF_TERR_SEND_OWN', indId: ind.id, cioId, munId: omsu.id })} title="Сохранить">
+                                      <Send className="h-3 w-3 mr-1" /> Сохранить
                                     </Button>
                                   )}
                                   {safeV.status !== 'approved' && mefV.status === 'sent' && (
                                     <div className="flex flex-col items-center gap-1 mt-1">
                                       <span className="text-[10px] text-amber-600 leading-tight">Отправлено</span>
                                       <Button size="sm" variant="outline" className="h-6 text-[10px] px-2 text-red-500 hover:text-red-600" onClick={() => dispatch({ type: 'MEF_TERR_RECALL_OWN', indId: ind.id, cioId, munId: omsu.id })} title="Отозвать">
-                                        <Undo2 className="h-3 w-3 mr-1" /> Вернуть
+                                        <Undo2 className="h-3 w-3 mr-1" /> Отозвать
                                       </Button>
                                     </div>
                                   )}
-                                  {safeV.status === 'approved' && <span className="text-[10px] text-green-600 flex items-center gap-0.5 mt-1"><Lock className="w-3 h-3"/> Согласовано</span>}
+                                  {safeV.status === 'approved' && (
+                                    <div className="flex flex-col items-center gap-1 mt-1">
+                                      <span className="text-[10px] text-green-600 flex items-center gap-0.5"><Lock className="w-3 h-3"/> Сохранено</span>
+                                      <Button size="sm" variant="outline" className="h-6 text-[10px] px-2 text-red-500 hover:text-red-600" onClick={() => dispatch({ type: 'MEF_TERR_RECALL_OWN', indId: ind.id, cioId, munId: omsu.id })} title="Отозвать">
+                                        <Undo2 className="h-3 w-3 mr-1" /> Отозвать
+                                      </Button>
+                                    </div>
+                                  )}
                                 </div>
                               ) : (
                                 <ValueTip value={mefV[f.key] ?? safeV[f.key]} updatedAt={mefV.updatedAt} author="МЭФ" />
@@ -531,7 +564,9 @@ function MefWorkspaceOld() {
                             {VALUE_FIELDS.map((f) => (
                               <Fragment key={f.key}>
                                 <td className={`p-1.5 text-center border-l ${f.key === 'v2026' || f.key === 'v2025' ? 'bg-amber-50/30' : fieldTint(f.key)}`}>
-                                  <ValueTip value={v[f.key]} updatedAt={v.updatedAt} author={v.signedBy ?? 'Ответственный'} />
+                                  <div className={mefV[f.key] !== null && v[f.key] !== null && mefV[f.key] !== v[f.key] ? 'text-red-600 font-bold' : ''}>
+                                    <ValueTip value={v[f.key]} updatedAt={v.updatedAt} author={v.signedBy ?? 'Ответственный'} />
+                                  </div>
                                   {(f.key === 'v2026' || f.key === 'v2025') && (
                                     <div className="mt-1 flex flex-col items-center gap-1">
                                       <CioStatusBadge status={v.status} />
@@ -558,19 +593,30 @@ function MefWorkspaceOld() {
                                         placeholder="—"
                                         value={mefV[f.key] ?? ''}
                                         disabled={v.status === 'approved'}
-                                        onChange={(e) => dispatch({ type: 'MEF_SET_OWN', cioIndId: ind.id, cioId, field: f.key, value: e.target.value === '' ? null : Number(e.target.value) })}
+                                        onChange={(e) => dispatch({ type: 'MEF_TERR_SET_VALUE', indId: ind.id, cioId, munId: m.id, field: f.key, value: e.target.value === '' ? null : Number(e.target.value) })}
                                       />
 
-                                      {v.status !== 'approved' && (
-                                        <div className="flex gap-1 mt-1">
-                                          <Button size="sm" variant="outline" className="h-6 text-[10px] px-2 text-blue-600 hover:text-blue-700" title="Отправить">
-                                            <Send className="h-3 w-3 mr-1" /> Отправить
-                                          </Button>
-                                          <Button size="sm" variant="outline" className="h-6 text-[10px] px-2 text-red-500 hover:text-red-600" onClick={() => dispatch({ type: 'MEF_SET_OWN', cioIndId: ind.id, cioId, field: f.key, value: null })} title="Вернуть">
-                                            <Undo2 className="h-3 w-3 mr-1" /> Вернуть
+                                      {v.status !== 'approved' && mefV[f.key] !== null && mefV.status === 'draft' && (
+                                        <Button size="sm" variant="outline" className="h-6 text-[10px] px-2 mt-1 text-blue-600 hover:text-blue-700" onClick={() => dispatch({ type: 'MEF_TERR_SEND_OWN', indId: ind.id, cioId, munId: m.id })} title="Сохранить">
+                                          <Send className="h-3 w-3 mr-1" /> Сохранить
+                                        </Button>
+                                      )}
+                                      {v.status !== 'approved' && mefV.status === 'sent' && (
+                                        <div className="flex flex-col items-center gap-1 mt-1">
+                                          <span className="text-[10px] text-amber-600 leading-tight">Отправлено</span>
+                                          <Button size="sm" variant="outline" className="h-6 text-[10px] px-2 text-red-500 hover:text-red-600" onClick={() => dispatch({ type: 'MEF_TERR_RECALL_OWN', indId: ind.id, cioId, munId: m.id })} title="Отозвать">
+                                            <Undo2 className="h-3 w-3 mr-1" /> Отозвать
                                           </Button>
                                         </div>
-                                      )}                                      {v.status === 'approved' && <span className="text-[10px] text-green-600 flex items-center gap-0.5 mt-1"><Lock className="w-3 h-3"/> Согласовано</span>}
+                                      )}
+                                      {v.status === 'approved' && (
+                                        <div className="flex flex-col items-center gap-1 mt-1">
+                                          <span className="text-[10px] text-green-600 flex items-center gap-0.5"><Lock className="w-3 h-3"/> Сохранено</span>
+                                          <Button size="sm" variant="outline" className="h-6 text-[10px] px-2 text-red-500 hover:text-red-600" onClick={() => dispatch({ type: 'MEF_TERR_RECALL_OWN', indId: ind.id, cioId, munId: m.id })} title="Отозвать">
+                                            <Undo2 className="h-3 w-3 mr-1" /> Отозвать
+                                          </Button>
+                                        </div>
+                                      )}
                                     </div>
                                   ) : (
                                     <ValueTip value={mefV[f.key] ?? v[f.key]} updatedAt={mefV.updatedAt} author="МЭФ" />

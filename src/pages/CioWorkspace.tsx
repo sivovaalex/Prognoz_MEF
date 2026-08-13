@@ -282,7 +282,7 @@ function CioOwnIndicators({ myOwnVisible, myFillable, collapsed, toggleNode, par
                               </div>
                             )}
                             {(f.key === 'v2026' || f.key === 'v2025') && v.status === 'approved' && v[f.key] !== null && (
-                              <span className="text-[10px] text-green-600 flex items-center gap-0.5 mt-1"><Lock className="w-3 h-3"/> Согласовано</span>
+                              <span className="text-[10px] text-green-600 flex items-center gap-0.5 mt-1"><Lock className="w-3 h-3"/> Согласовано МЭФ</span>
                             )}
                           </div>
                         </td>
@@ -432,7 +432,7 @@ function CioTerritoryIndicators({ myOwnVisible, myFillable, collapsed, toggleNod
                                   </div>
                                 )}
                                 {(f.key === 'v2026' || f.key === 'v2025') && v.status === 'approved' && v[f.key] !== null && (
-                                  <span className="text-[10px] text-green-600 flex items-center gap-0.5 mt-1"><Lock className="w-3 h-3"/> Согласовано</span>
+                                  <span className="text-[10px] text-green-600 flex items-center gap-0.5 mt-1"><Lock className="w-3 h-3"/> Согласовано МЭФ</span>
                                 )}
                               </div>
                             </td>

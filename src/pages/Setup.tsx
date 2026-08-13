@@ -16,7 +16,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Pencil, Settings2, Settings, Trash2 } from 'lucide-react';
+import { Plus, Pencil, Settings2, Settings, PowerOff } from 'lucide-react';
 
 export function Setup({ block }: { block: string }) {
   const { state, dispatch } = useStore();
@@ -31,6 +31,7 @@ export function Setup({ block }: { block: string }) {
   const visible = visibleTree(state.indicators, collapsed, treeFilter);
   const parents = chevronParents(state.indicators);
   const toggleNode = (id: string) => setCollapsed((p) => ({ ...p, [id]: !p[id] }));
+  const uniqueUnits = Array.from(new Set(state.indicators.map((i) => i.unit).filter((u) => typeof u === 'string' && u.trim().length > 0))).sort();
 
   const openNew = () => {
     setIsNew(true);
@@ -168,8 +169,8 @@ export function Setup({ block }: { block: string }) {
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditDir({ id: d.id, num: d.name.split('.')[0] || '', name: d.name.replace(/^[0-9.]+\s*/, ''), cioIds: d.cioIds || [], actualFrom: d.actualFrom, actualTo: d.actualTo })}>
                           <Pencil className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:text-red-700" onClick={() => deleteDir(d.id, d.name)}>
-                          <Trash2 className="h-4 w-4" />
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:text-red-700" onClick={() => deleteDir(d.id, d.name)} title="Деактивировать">
+                          <PowerOff className="h-4 w-4" />
                         </Button>
                       </div>
                     </div>
@@ -213,8 +214,8 @@ export function Setup({ block }: { block: string }) {
                                 <Button variant="ghost" size="icon" onClick={() => { setIsNew(false); setEditInd({ ...ind }); }}>
                                   <Pencil className="h-4 w-4" />
                                 </Button>
-                                <Button variant="ghost" size="icon" className="text-red-500 hover:text-red-700" onClick={() => deleteInd(ind.id, ind.name)}>
-                                  <Trash2 className="h-4 w-4" />
+                                <Button variant="ghost" size="icon" className="text-red-500 hover:text-red-700" onClick={() => deleteInd(ind.id, ind.name)} title="Деактивировать">
+                                  <PowerOff className="h-4 w-4" />
                                 </Button>
                               </div>
                             </td>
@@ -289,7 +290,16 @@ export function Setup({ block }: { block: string }) {
 
               <div className="grid grid-cols-4 items-center gap-2">
                 <Label>Ед. изм.</Label>
-                <Input className="col-span-3" value={editInd.unit} onChange={(e) => setEditInd({ ...editInd, unit: e.target.value })} />
+                <Select value={editInd.unit || undefined} onValueChange={(v) => setEditInd({ ...editInd, unit: v })}>
+                  <SelectTrigger className="col-span-3">
+                    <SelectValue placeholder="Выберите единицу измерения" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {uniqueUnits.map(u => (
+                      <SelectItem key={u} value={u}>{u}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               {state.campaign.name === 'Рейтинг ОМСУ' && (
@@ -402,10 +412,10 @@ export function Setup({ block }: { block: string }) {
       <Dialog open={!!deleteConfirm} onOpenChange={(v) => !v && setDeleteConfirm(null)}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Удаление {deleteConfirm?.type === 'dir' ? 'раздела' : 'показателя'}</DialogTitle>
+            <DialogTitle>Деактивация {deleteConfirm?.type === 'dir' ? 'раздела' : 'показателя'}</DialogTitle>
           </DialogHeader>
           <div className="py-4 text-sm text-slate-700">
-            Вы действительно хотите удалить {deleteConfirm?.type === 'dir' ? 'раздел' : 'показатель'} <strong>{deleteConfirm?.name}</strong>?
+            Вы действительно хотите деактивировать {deleteConfirm?.type === 'dir' ? 'раздел' : 'показатель'} <strong>{deleteConfirm?.name}</strong>?
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteConfirm(null)}>Отмена</Button>
@@ -418,7 +428,7 @@ export function Setup({ block }: { block: string }) {
                 if (i) dispatch({ type: 'UPDATE_INDICATOR', indicator: { ...i, actualTo: new Date().toISOString() } });
               }
               setDeleteConfirm(null);
-            }}>Удалить</Button>
+            }}>Деактивировать</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
