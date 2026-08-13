@@ -230,13 +230,22 @@ function CioOwnIndicators({ myOwnVisible, myFillable, collapsed, toggleNode, par
                         {/* ОМСУ */}
                         <td className={`p-1.5 text-center border-l ${f.key === 'v2026' || f.key === 'v2025' ? 'bg-amber-50/30' : fieldTint(f.key)}`}>
                           <div className="flex flex-col items-center justify-center gap-1">
-                            <ValueTip value={omsuV?.[f.key] ?? null} updatedAt={omsuV?.updatedAt ?? null} author={omsuV?.signedBy ?? 'ОМСУ'} />
+                            <div className={omsuV?.[f.key] != null && v[f.key] != null && omsuV[f.key] !== v[f.key] ? 'text-red-600 font-bold' : ''}>
+                              <ValueTip value={omsuV?.[f.key] ?? null} updatedAt={omsuV?.updatedAt ?? null} author={omsuV?.signedBy ?? 'ОМСУ'} />
+                            </div>
                             {(f.key === 'v2026' || f.key === 'v2025') && omsuV && <OmsuStatusBadge status={omsuV.status} />}
                             {(f.key === 'v2026' || f.key === 'v2025') && omsuV?.status === 'pending_cio' && (
                               <div className="flex gap-1 mt-1">
                                 <Button size="icon-sm" variant="outline" className="h-6 w-6 text-green-600 hover:text-green-700" onClick={() => dispatch({ type: 'CIO_APPROVE', munId: munFilter === 'all' ? state.omsus.filter(o => o.isActive)[0]?.id || 'm1' : munFilter, indId: ind.id, actor: cio.short })} title="Согласовать">
                                   <CheckCircle2 className="h-3.5 w-3.5" />
                                 </Button>
+                                <Button size="icon-sm" variant="outline" className="h-6 w-6 text-red-500 hover:text-red-600" onClick={() => setReturnTarget({ munId: munFilter === 'all' ? state.omsus.filter(o => o.isActive)[0]?.id || 'm1' : munFilter, indId: ind.id })} title="Вернуть">
+                                  <Undo2 className="h-3.5 w-3.5" />
+                                </Button>
+                              </div>
+                            )}
+                            {(f.key === 'v2026' || f.key === 'v2025') && omsuV?.status === 'approved' && (
+                              <div className="flex gap-1 mt-1">
                                 <Button size="icon-sm" variant="outline" className="h-6 w-6 text-red-500 hover:text-red-600" onClick={() => setReturnTarget({ munId: munFilter === 'all' ? state.omsus.filter(o => o.isActive)[0]?.id || 'm1' : munFilter, indId: ind.id })} title="Вернуть">
                                   <Undo2 className="h-3.5 w-3.5" />
                                 </Button>
@@ -386,6 +395,13 @@ function CioTerritoryIndicators({ myOwnVisible, myFillable, collapsed, toggleNod
                                     <Button size="icon-sm" variant="outline" className="h-6 w-6 text-green-600 hover:text-green-700" onClick={() => dispatch({ type: 'CIO_APPROVE', munId: omsu.id, indId: ind.id, actor: cio.short })} title="Согласовать">
                                       <CheckCircle2 className="h-3.5 w-3.5" />
                                     </Button>
+                                    <Button size="icon-sm" variant="outline" className="h-6 w-6 text-red-500 hover:text-red-600" onClick={() => setReturnTarget({ munId: omsu.id, indId: ind.id })} title="Вернуть">
+                                      <Undo2 className="h-3.5 w-3.5" />
+                                    </Button>
+                                  </div>
+                                )}
+                                {(f.key === 'v2026' || f.key === 'v2025') && omsuV?.status === 'approved' && (
+                                  <div className="flex gap-1 mt-1">
                                     <Button size="icon-sm" variant="outline" className="h-6 w-6 text-red-500 hover:text-red-600" onClick={() => setReturnTarget({ munId: omsu.id, indId: ind.id })} title="Вернуть">
                                       <Undo2 className="h-3.5 w-3.5" />
                                     </Button>
