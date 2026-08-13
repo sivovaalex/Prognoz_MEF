@@ -156,8 +156,8 @@ export function Setup({ block }: { block: string }) {
               shown={visible.length}
               total={state.indicators.length}
             />
-            {state.directions.filter(d => !d.actualTo).map((d) => {
-              const inds = visible.filter((i) => i.directionId === d.id && !i.actualTo);
+            {state.directions.filter(d => d.actualFrom <= (treeFilter.actualDate || '9999-99-99') && (!d.actualTo || d.actualTo > (treeFilter.actualDate || ''))).map((d) => {
+              const inds = visible.filter((i) => i.directionId === d.id && i.actualFrom <= (treeFilter.actualDate || '9999-99-99') && (!i.actualTo || i.actualTo > (treeFilter.actualDate || '')));
               if (!inds.length) return null;
               return (
                 <Card key={d.id}>
@@ -271,7 +271,7 @@ export function Setup({ block }: { block: string }) {
 
               <div className="grid grid-cols-4 items-center gap-2">
                 <Label>Актуальность с *</Label>
-                <Input type="number" min="2000" max="2100" className="col-span-3" value={(editInd.actualFrom || '').substring(0, 4)} onChange={(e) => setEditInd({ ...editInd, actualFrom: `${e.target.value}-01-01T00:00:00.000Z` })} placeholder="2024" />
+                <Input type="date" className="col-span-3" value={(editInd.actualFrom || '').substring(0, 10)} onChange={(e) => setEditInd({ ...editInd, actualFrom: `${e.target.value}T00:00:00.000Z` })} />
               </div>
 
               <div className="grid grid-cols-4 items-center gap-2">
@@ -305,29 +305,25 @@ export function Setup({ block }: { block: string }) {
                 </div>
               )}
 
-              <div className="grid grid-cols-4 gap-2">
-                <Label className="mt-2">Формулы</Label>
-                <div className="col-span-3">
-                  <Tabs defaultValue="forecast">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="text-sm text-slate-600 font-medium">Период формулы:</span>
-                      <TabsList>
-                        <TabsTrigger value="forecast">Прогноз</TabsTrigger>
-                        <TabsTrigger value="report">Отчёт</TabsTrigger>
-                        <TabsTrigger value="estimate">Оценка</TabsTrigger>
-                      </TabsList>
-                    </div>
-                    <TabsContent value="forecast" className="space-y-2">
-                      <Input className="font-mono text-xs" placeholder="Базовый прогноз" value={editInd.formula || ''} onChange={(e) => setEditInd({ ...editInd, formula: e.target.value })} />
-                      <Input className="font-mono text-xs" placeholder="Консервативный прогноз" value={editInd.consCoeff || ''} onChange={(e) => setEditInd({ ...editInd, consCoeff: e.target.value })} />
-                    </TabsContent>
-                    <TabsContent value="report">
-                      <Input className="font-mono text-xs" placeholder="Формула отчёта" value={editInd.formulaReport || ''} onChange={(e) => setEditInd({ ...editInd, formulaReport: e.target.value })} />
-                    </TabsContent>
-                    <TabsContent value="estimate">
-                      <Input className="font-mono text-xs" placeholder="Формула оценки" value={editInd.formulaEstimate || ''} onChange={(e) => setEditInd({ ...editInd, formulaEstimate: e.target.value })} />
-                    </TabsContent>
-                  </Tabs>
+              <div className="grid grid-cols-4 gap-2 border-t pt-3 mt-1">
+                <Label className="mt-2 text-sm font-semibold">Формулы</Label>
+                <div className="col-span-3 space-y-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Базовый прогноз</Label>
+                    <Input className="font-mono text-xs" value={editInd.formula || ''} onChange={(e) => setEditInd({ ...editInd, formula: e.target.value })} />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Коэффициент консервативного прогноза</Label>
+                    <Input className="font-mono text-xs" value={editInd.consCoeff || ''} onChange={(e) => setEditInd({ ...editInd, consCoeff: e.target.value })} />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Формула отчёта</Label>
+                    <Input className="font-mono text-xs" value={editInd.formulaReport || ''} onChange={(e) => setEditInd({ ...editInd, formulaReport: e.target.value })} />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Формула оценки</Label>
+                    <Input className="font-mono text-xs" value={editInd.formulaEstimate || ''} onChange={(e) => setEditInd({ ...editInd, formulaEstimate: e.target.value })} />
+                  </div>
                 </div>
               </div>
 
@@ -355,30 +351,7 @@ export function Setup({ block }: { block: string }) {
                 <Label>Название *</Label>
                 <Input className="col-span-3" value={editDir.name} onChange={(e) => setEditDir({ ...editDir, name: e.target.value })} />
               </div>
-              <div className="grid grid-cols-4 items-center gap-2">
-                <Label>ЦИО *</Label>
-                <div className="col-span-3 max-h-32 overflow-y-auto border rounded p-2 text-sm bg-white">
-                  {state.cios.map(c => (
-                    <label key={c.id} className="flex items-center gap-2 py-1">
-                      <input 
-                        type="checkbox" 
-                        checked={editDir.cioIds.includes(c.id)}
-                        onChange={(e) => {
-                          const nextCios = e.target.checked 
-                            ? [...editDir.cioIds, c.id]
-                            : editDir.cioIds.filter(id => id !== c.id);
-                          setEditDir({ ...editDir, cioIds: nextCios });
-                        }}
-                      />
-                      <span>{c.name}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-              <div className="grid grid-cols-4 items-center gap-2">
-                <Label>Актуальность с *</Label>
-                <Input type="number" min="2000" max="2100" className="col-span-3" value={(editDir.actualFrom || '').substring(0, 4)} onChange={(e) => setEditDir({ ...editDir, actualFrom: `${e.target.value}-01-01T00:00:00.000Z` })} placeholder="2024" />
-              </div>
+
             </div>
           )}
           <DialogFooter>

@@ -22,9 +22,15 @@ export interface TreeFilter {
   query: string;   // поиск по наименованию
   cioId: string;   // 'all' или id ответственного ЦИО
   status?: string; // статус
+  actualDate?: string; // дата актуальности
 }
 
-export const EMPTY_TREE_FILTER: TreeFilter = { query: '', cioId: 'all', status: 'all' };
+export const EMPTY_TREE_FILTER: TreeFilter = { 
+  query: '', 
+  cioId: 'all', 
+  status: 'all',
+  actualDate: new Date().toISOString().split('T')[0]
+};
 
 export const isTreeFilterActive = (f: TreeFilter): boolean =>
   f.query.trim() !== '' || f.cioId !== 'all' || (f.status !== undefined && f.status !== 'all');

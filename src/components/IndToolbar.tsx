@@ -106,6 +106,18 @@ export function IndToolbar({ filter, onChange, shown, total, hideCioFilter, munI
           </SelectContent>
         </Select>
       )}
+
+      {filter.actualDate !== undefined && (
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium text-slate-600">Дата актуальности:</span>
+          <Input 
+            type="date"
+            className="h-9 w-[150px]"
+            value={filter.actualDate}
+            onChange={(e) => onChange({ ...filter, actualDate: e.target.value })}
+          />
+        </div>
+      )}
       {munId !== undefined && onMunChange && (
         <Select value={munId} onValueChange={onMunChange}>
           <SelectTrigger className="h-9 w-[240px]">
