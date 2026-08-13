@@ -25,7 +25,7 @@ export function Setup({ block }: { block: string }) {
   const [editDir, setEditDir] = useState<{ id?: string, num: string, name: string, cioIds: string[], actualFrom: string, actualTo?: string | null } | null>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [settingsForm, setSettingsForm] = useState<('omsu' | 'cio' | 'mef')[]>([]);
-  const [treeFilter, setTreeFilter] = useState<TreeFilter>(EMPTY_TREE_FILTER);
+  const [treeFilter, setTreeFilter] = useState<TreeFilter>({ ...EMPTY_TREE_FILTER, actualDate: new Date().toISOString().split('T')[0] });
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
 
   const visible = visibleTree(state.indicators, collapsed, treeFilter);

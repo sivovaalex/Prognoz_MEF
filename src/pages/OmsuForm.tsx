@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, Fragment } from 'react';
 import { useStore } from '@/lib/store';
 import { CURRENT_OMSU } from '@/lib/data';
 import { VALUE_FIELDS } from '@/lib/types';
@@ -90,9 +90,6 @@ export function OmsuForm() {
         onChange={setTreeFilter}
         shown={visible.length}
         total={state.indicators.length}
-        munId={munId}
-        onMunChange={setMunId}
-        allowAllMuns={false}
       />
 
       {state.directions.map((d) => {
@@ -141,13 +138,6 @@ export function OmsuForm() {
                           <th rowSpan={2} className="text-left p-2 align-middle">ЦИО</th>
                         </>
                       )}
-                      trailing={(
-                        <>
-                          <th rowSpan={2} className="text-left p-2 align-middle border-l">Статус</th>
-                          <th rowSpan={2} className="text-left p-2 align-middle">Комментарий / подпись</th>
-                          <th rowSpan={2} className="text-right p-2 w-56 align-middle">Действия</th>
-                        </>
-                      )}
                     />
                   </thead>
                   <tbody>
@@ -156,7 +146,7 @@ export function OmsuForm() {
                         return (
                           <tr key={ind.id} className="border-b bg-slate-50/80">
                             <td className="p-2 text-muted-foreground whitespace-nowrap align-middle">{ind.num}</td>
-                            <td colSpan={3 + VALUE_FIELDS.length + 2} className="p-2 align-middle">
+                            <td colSpan={2 + VALUE_FIELDS.length} className="p-2 align-middle">
                               <span
                                 className="flex items-center gap-1 font-semibold text-slate-700"
                                 style={{ paddingLeft: `${(ind.level - 1) * 18}px` }}
@@ -178,7 +168,8 @@ export function OmsuForm() {
                       const v = values[ind.id];
                       const editable = isCurrentOmsu && (v.status === 'not_filled' || v.status === 'draft' || v.status === 'returned');
                       return (
-                        <tr key={ind.id} className="border-b hover:bg-slate-50 align-top">
+                        <Fragment key={ind.id}>
+                          <tr className="border-b hover:bg-slate-50 align-top">
                           <td className="p-2 text-muted-foreground whitespace-nowrap">{ind.num}</td>
                           <td className="p-2">
                             <div className="flex items-start gap-1.5" style={{ paddingLeft: `${(ind.level - 1) * 18}px` }}>
@@ -224,68 +215,58 @@ export function OmsuForm() {
                           <td className="p-2"><Badge variant="secondary">{state.cios.find((c) => c.id === ind.cioId)?.short}</Badge></td>
                           {VALUE_FIELDS.map((f) => (
                             <td key={f.key} className={`p-1.5 text-center ${fieldTint(f.key)}`}>
-                              {editable && (f.key === 'v2026' || f.key === 'v2025') ? (
-                                <WithValueTip show={v[f.key] !== null} updatedAt={v.updatedAt} author={v.signedBy ?? 'Иванова А.П.'}>
-                                  <Input
-                                    type="number"
-                                    step="0.01"
-                                    className="h-8 w-[76px] text-center mx-auto px-1"
-                                    placeholder="—"
-                                    value={v[f.key] ?? ''}
-                                    onChange={(e) =>
-                                      dispatch({
-                                        type: 'OMSU_SET_VALUE',
-                                        munId,
-                                        indId: ind.id,
-                                        field: f.key,
-                                        value: e.target.value === '' ? null : Number(e.target.value),
-                                      })
-                                    }
-                                  />
-                                </WithValueTip>
-                              ) : (
-                                <span className={(f.key === 'v2026' || f.key === 'v2025') ? 'font-medium' : ''}>
-                                  <ValueTip value={v[f.key]} updatedAt={v.updatedAt} author={v.signedBy ?? 'Иванова А.П.'} />
-                                </span>
-                              )}
+                              <div className="flex flex-col items-center justify-center gap-1">
+                                {editable && (f.key === 'v2026' || f.key === 'v2025') ? (
+                                  <WithValueTip show={v[f.key] !== null} updatedAt={v.updatedAt} author={v.signedBy ?? 'Иванова А.П.'}>
+                                    <Input
+                                      type="number"
+                                      step="0.01"
+                                      className="h-8 w-[76px] text-center mx-auto px-1 bg-white"
+                                      placeholder="—"
+                                      value={v[f.key] ?? ''}
+                                      onChange={(e) =>
+                                        dispatch({
+                                          type: 'OMSU_SET_VALUE',
+                                          munId,
+                                          indId: ind.id,
+                                          field: f.key,
+                                          value: e.target.value === '' ? null : Number(e.target.value),
+                                        })
+                                      }
+                                    />
+                                  </WithValueTip>
+                                ) : (
+                                  <span className={(f.key === 'v2026' || f.key === 'v2025') ? 'font-medium' : ''}>
+                                    <ValueTip value={v[f.key]} updatedAt={v.updatedAt} author={v.signedBy ?? 'Иванова А.П.'} />
+                                  </span>
+                                )}
+                                {(f.key === 'v2026' || f.key === 'v2025') && editable && v[f.key] !== null && (
+                                  <Button size="sm" variant="outline" className="h-6 text-[10px] px-2 mt-1 border-blue-200 hover:bg-blue-50" onClick={() => setSignTarget(ind.id)} title="Отправить в ЦИО">
+                                    <Send className="w-3 h-3 mr-1" /> Отправить
+                                  </Button>
+                                )}
+                                {(f.key === 'v2026' || f.key === 'v2025') && v.status === 'pending_cio' && isCurrentOmsu && v[f.key] !== null && (
+                                  <div className="flex flex-col items-center gap-1 mt-1">
+                                    <span className="text-[10px] text-amber-600 leading-tight">На согласовании ЦИО</span>
+                                    <Button size="sm" variant="outline" className="h-6 text-[10px] px-2" onClick={() => dispatch({ type: 'OMSU_RECALL', munId, indId: ind.id, actor: mun.name })}>
+                                      <Undo2 className="w-3 h-3 mr-1" /> Отозвать
+                                    </Button>
+                                  </div>
+                                )}
+                                {(f.key === 'v2026' || f.key === 'v2025') && v.status === 'approved' && v[f.key] !== null && (
+                                  <span className="text-[10px] text-green-600 flex items-center gap-0.5 mt-1"><Lock className="w-3 h-3"/> Согласовано ЦИО</span>
+                                )}
+                                {(f.key === 'v2026' || f.key === 'v2025') && v.status === 'returned' && v.comment && v[f.key] !== null && (
+                                  <div className="flex flex-col items-center mt-1 max-w-[120px]">
+                                    <span className="text-[10px] text-red-600 font-semibold leading-tight text-center">Возвращена на доработку</span>
+                                    <span className="text-[9px] text-red-700 leading-tight text-center break-words w-full">{v.comment}</span>
+                                  </div>
+                                )}
+                              </div>
                             </td>
                           ))}
-                          <td className="p-2"><OmsuStatusBadge status={v.status} /></td>
-                          <td className="p-2 text-xs">
-                            {v.comment && (
-                              <div className="flex gap-1 text-red-700">
-                                <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-                                <span>{v.comment}</span>
-                              </div>
-                            )}
-                            {v.signedBy && v.status !== 'draft' && (
-                              <div className="text-muted-foreground mt-0.5">ЭЦП: {v.signedBy}</div>
-                            )}
-                          </td>
-                          <td className="p-2 text-right whitespace-nowrap">
-                            {editable && v.v2026 !== null && (
-                              <Button size="sm" variant="default" onClick={() => setSignTarget(ind.id)}>
-                                <Send className="h-3.5 w-3.5 mr-1" />
-                                Отправить
-                              </Button>
-                            )}
-                            {v.status === 'pending_cio' && isCurrentOmsu && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => dispatch({ type: 'OMSU_RECALL', munId, indId: ind.id, actor: mun.name })}
-                              >
-                                <Undo2 className="h-3.5 w-3.5 mr-1" />
-                                Отозвать на изменение
-                              </Button>
-                            )}
-                            {v.status === 'approved' && (
-                              <span className="inline-flex items-center gap-1 text-xs text-green-700">
-                                <Lock className="h-3.5 w-3.5" /> заблокировано
-                              </span>
-                            )}
-                          </td>
                         </tr>
+                        </Fragment>
                       );
                     })}
                   </tbody>
@@ -336,7 +317,6 @@ export function OmsuForm() {
                 <thead>
                   <ValueGroupHeader
                     leading={<th rowSpan={2} className="text-left p-2 align-middle min-w-[140px]">Участник</th>}
-                    trailing={<th rowSpan={2} className="text-left p-2 align-middle border-l">Статус</th>}
                   />
                 </thead>
                 <tbody>
@@ -354,7 +334,6 @@ export function OmsuForm() {
                             <ValueTip value={cv?.[f.key] ?? null} updatedAt={cv?.updatedAt ?? null} author={cv?.signedBy ?? 'Петров С.И.'} />
                           </td>
                         ))}
-                        <td className="p-2">{cv ? <CioStatusBadge status={cv.status} /> : <span className="text-xs text-muted-foreground">нет данных</span>}</td>
                       </tr>
                     );
                   })()}
@@ -373,7 +352,6 @@ export function OmsuForm() {
                             <ValueTip value={v[f.key]} updatedAt={v.updatedAt} author={v.signedBy ?? 'Иванова А.П.'} />
                           </td>
                         ))}
-                        <td className="p-2"><OmsuStatusBadge status={v.status} /></td>
                       </tr>
                     );
                   })}

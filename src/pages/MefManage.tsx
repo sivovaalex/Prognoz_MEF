@@ -18,6 +18,7 @@ export function MefManage({ goRating, goReport }: { goRating: () => void; goRepo
   const stats = approvalStats(state);
   const complete = allApproved(state);
   const [reportModalOpen, setReportModalOpen] = useState(false);
+  const [historyModalOpen, setHistoryModalOpen] = useState(false);
   const [reportIntent, setReportIntent] = useState<'pre' | 'final'>('final');
   const [reportType, setReportType] = useState('ind');
   const [period, setPeriod] = useState('2024');
@@ -38,15 +39,18 @@ export function MefManage({ goRating, goReport }: { goRating: () => void; goRepo
 
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
-          <CardHeader><CardTitle className="text-base">Параметры сбора</CardTitle></CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-base">Параметры сбора</CardTitle>
+            <Button variant="outline" size="sm" onClick={() => setHistoryModalOpen(true)}>Историчность сборов</Button>
+          </CardHeader>
           <CardContent className="space-y-3 text-sm">
             <div className="grid grid-cols-2 items-center gap-2">
               <Label>Дата запуска сбора</Label>
-              <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+              <Input type="datetime-local" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
             </div>
             <div className="grid grid-cols-2 items-center gap-2">
               <Label>Дата окончания сбора</Label>
-              <Input type="date" value={dlMef} onChange={(e) => setDlMef(e.target.value)} />
+              <Input type="datetime-local" value={dlMef} onChange={(e) => setDlMef(e.target.value)} />
             </div>
             <div className="flex gap-2 pt-2">
               <Button
@@ -195,6 +199,55 @@ export function MefManage({ goRating, goReport }: { goRating: () => void; goRepo
                 goRating();
               }
             }}>Сформировать</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={historyModalOpen} onOpenChange={setHistoryModalOpen}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Историчность сборов</DialogTitle>
+          </DialogHeader>
+          <div className="py-4 overflow-x-auto">
+            <table className="w-full text-sm border-collapse">
+              <thead>
+                <tr className="border-b text-xs text-muted-foreground">
+                  <th className="text-left p-2">Дата и время запуска</th>
+                  <th className="text-left p-2">Период</th>
+                  <th className="text-left p-2">Статус</th>
+                  <th className="text-left p-2">Инициатор</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr className="border-b hover:bg-slate-50">
+                  <td className="p-2">2023-01-15 10:00</td>
+                  <td className="p-2">2023 год</td>
+                  <td className="p-2"><Badge variant="outline" className="text-green-700 border-green-300">Завершён</Badge></td>
+                  <td className="p-2">Система</td>
+                </tr>
+                <tr className="border-b hover:bg-slate-50">
+                  <td className="p-2">2024-02-10 09:30</td>
+                  <td className="p-2">1 квартал 2024</td>
+                  <td className="p-2"><Badge variant="outline" className="text-green-700 border-green-300">Завершён</Badge></td>
+                  <td className="p-2">МЭФ</td>
+                </tr>
+                {state.campaign.status !== 'setup' && (
+                  <tr className="border-b hover:bg-slate-50">
+                    <td className="p-2">{state.campaign.launchedAt || '2024-07-20 10:00'}</td>
+                    <td className="p-2">{state.campaign.period}</td>
+                    <td className="p-2">
+                      <Badge variant="outline" className="text-amber-700 border-amber-300">
+                        {state.campaign.status === 'collecting' ? 'В процессе' : 'Завершён'}
+                      </Badge>
+                    </td>
+                    <td className="p-2">МЭФ</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setHistoryModalOpen(false)}>Закрыть</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

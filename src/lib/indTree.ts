@@ -29,7 +29,6 @@ export const EMPTY_TREE_FILTER: TreeFilter = {
   query: '', 
   cioId: 'all', 
   status: 'all',
-  actualDate: new Date().toISOString().split('T')[0]
 };
 
 export const isTreeFilterActive = (f: TreeFilter): boolean =>
