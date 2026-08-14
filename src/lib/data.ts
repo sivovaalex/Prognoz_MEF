@@ -417,7 +417,7 @@ function buildMefValues(indicators: Indicator[], cioValues: Record<string, Recor
     const cv = cioValues[ind.id]?.[ind.cioId];
     if (cv && cv.status === 'approved') {
       const mefV = { ...cv, status: 'approved' as const, updatedAt: '24.07.2026 12:00' };
-      if (c < 2) {
+      if (c < 2 && mefV.v2026 !== null) {
         mefV.v2026 = Number((mefV.v2026 * 1.1).toFixed(2));
         Object.assign(mefV, makeFields(mefV.v2026));
       }
@@ -441,7 +441,7 @@ function buildMefTerritoryValues(indicators: Indicator[], omsus: Municipality[],
       const cv = cioTerritoryValues[ind.cioId]?.[ind.id]?.[m.id];
       if (cv && cv.status === 'approved') {
         const mefV = { ...cv, status: 'approved' as const, updatedAt: '24.07.2026 12:00' };
-        if (c < 2) {
+        if (c < 2 && mefV.v2026 !== null) {
           mefV.v2026 = Number((mefV.v2026 * 1.1).toFixed(2));
           Object.assign(mefV, makeFields(mefV.v2026));
         }

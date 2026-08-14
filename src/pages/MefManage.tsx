@@ -231,7 +231,7 @@ export function MefManage({ goRating, goReport }: { goRating: () => void; goRepo
                   <td className="p-2"><Badge variant="outline" className="text-green-700 border-green-300">Завершён</Badge></td>
                   <td className="p-2">МЭФ</td>
                 </tr>
-                {state.campaign.status !== 'setup' && (
+                {state.campaign.status !== 'draft' && (
                   <tr className="border-b hover:bg-slate-50">
                     <td className="p-2">{state.campaign.launchedAt || '2024-07-20 10:00'}</td>
                     <td className="p-2">{state.campaign.period}</td>

@@ -4,7 +4,6 @@ import { CURRENT_OMSU } from '@/lib/data';
 import { VALUE_FIELDS } from '@/lib/types';
 import { EMPTY_TREE_FILTER, chevronParents, visibleTree, type TreeFilter } from '@/lib/indTree';
 import { IndToolbar, TreeToggle } from '@/components/IndToolbar';
-import { OmsuStatusBadge, CioStatusBadge } from '@/components/StatusBadge';
 import { ValueGroupHeader, fieldTint } from '@/components/ValueColumns';
 import { ValueTip, WithValueTip } from '@/components/ValueTip';
 import { SignDialog } from '@/components/SignDialog';
@@ -18,7 +17,7 @@ import {
 import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { Send, Undo2, Lock, AlertTriangle, Info, ChevronDown, Users } from 'lucide-react';
+import { Send, Undo2, Lock, Info, ChevronDown, Users } from 'lucide-react';
 
 /** Сводка статусов по набору показателей сферы */
 function dirStats(inds: { id: string }[], values: Record<string, { status: string } | undefined>) {
@@ -36,7 +35,7 @@ function dirStats(inds: { id: string }[], values: Record<string, { status: strin
 
 export function OmsuForm() {
   const { state, dispatch } = useStore();
-  const [munId, setMunId] = useState<string>(CURRENT_OMSU);
+  const munId = CURRENT_OMSU;
   const isCurrentOmsu = munId === CURRENT_OMSU;
   const mun = state.omsus.find((m) => m.id === munId)!;
   const [signTarget, setSignTarget] = useState<string | null>(null);
