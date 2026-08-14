@@ -319,7 +319,7 @@ export function Setup({ block }: { block: string }) {
                 <Label className="mt-2 text-sm font-semibold">Формулы</Label>
                 <div className="col-span-3 space-y-3">
                   <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">Базовый прогноз</Label>
+                    <Label className="text-xs text-muted-foreground">Формула базового прогноза</Label>
                     <Input className="font-mono text-xs" value={editInd.formula || ''} onChange={(e) => setEditInd({ ...editInd, formula: e.target.value })} />
                   </div>
                   <div className="space-y-1">
