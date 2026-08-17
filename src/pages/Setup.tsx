@@ -23,7 +23,7 @@ const currentQuarter = Math.floor(new Date().getMonth() / 3) + 1;
 
 const repOptions: { value: string, label: string }[] = [];
 for (let y = currentYear - 10; y <= currentYear; y++) {
-  const prefix = y === currentYear ? 'Текущий год' : `Текущий год - ${currentYear - y} год`;
+  const prefix = y === currentYear ? '[Текущий год]' : `[Текущий год - ${currentYear - y} год]`;
   repOptions.push({ value: `y${y}`, label: `${prefix} (${y} год)` });
   for (let q = 1; q <= 4; q++) {
     if (y === currentYear && q > currentQuarter) break;
@@ -34,7 +34,7 @@ repOptions.reverse(); // Показываем свежие сверху
 
 const estOptions: { value: string, label: string }[] = [{ value: 'none', label: 'Нет' }];
 for (let y = currentYear - 1; y <= currentYear + 1; y++) {
-  const prefix = y === currentYear ? 'Текущий год' : y < currentYear ? 'Прошлый год' : 'Следующий год';
+  const prefix = y === currentYear ? '[Текущий год]' : y < currentYear ? '[Прошлый год]' : '[Следующий год]';
   estOptions.push({ value: `y${y}`, label: `${prefix} (${y} год)` });
   for (let q = 1; q <= 4; q++) {
     estOptions.push({ value: `q${q}_${y}`, label: `${prefix} ${q} квартал (${q} квартал ${y} года)` });
@@ -43,7 +43,7 @@ for (let y = currentYear - 1; y <= currentYear + 1; y++) {
 
 const forOptions: { value: string, label: string }[] = [];
 for (let y = currentYear; y <= currentYear + 15; y++) {
-  const prefix = y === currentYear ? 'Текущий год' : `Текущий год + ${y - currentYear} год`;
+  const prefix = y === currentYear ? '[Текущий год]' : `[Текущий год + ${y - currentYear} год]`;
   forOptions.push({ value: `y${y}`, label: `${prefix} (${y} год)` });
   for (let q = 1; q <= 4; q++) {
     forOptions.push({ value: `q${q}_${y}`, label: `${prefix} ${q} квартал (${q} квартал ${y} года)` });
