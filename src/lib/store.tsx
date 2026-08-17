@@ -53,7 +53,7 @@ export type Action =
   | { type: 'ADD_DICT_ITEM'; dict: 'cios' | 'omsus' | 'units'; item: any }
   | { type: 'UPDATE_DICT_ITEM'; dict: 'cios' | 'omsus' | 'units'; item: any }
   | { type: 'TOGGLE_DICT_ITEM'; dict: 'cios' | 'omsus' | 'units'; id: string }
-  | { type: 'UPDATE_BLOCK_SETTINGS'; block: string; approvers: ('omsu' | 'cio' | 'mef')[] }
+  | { type: 'UPDATE_BLOCK_SETTINGS'; block: string; approvers: ('omsu' | 'cio' | 'mef')[]; reportingPeriods: string[]; estimatedPeriods: string[]; forecastPeriods: string[]; hasNote: boolean; }
   | { type: 'CIO_TERR_SET_VALUE'; cioId: string; indId: string; munId: string; field: ValueFieldKey; value: number | null }
   | { type: 'CIO_TERR_SIGN'; cioId: string; indId: string; munId: string; actor: string }
   | { type: 'CIO_TERR_RECALL'; cioId: string; indId: string; munId: string; actor: string };
@@ -444,7 +444,13 @@ function reducer(state: AppState, a: Action): AppState {
         ...state,
         blockSettings: {
           ...state.blockSettings,
-          [a.block]: { approvers: a.approvers },
+          [a.block]: { 
+            approvers: a.approvers,
+            reportingPeriods: a.reportingPeriods,
+            estimatedPeriods: a.estimatedPeriods,
+            forecastPeriods: a.forecastPeriods,
+            hasNote: a.hasNote
+          },
         },
       };
     case 'CIO_TERR_SET_VALUE': {

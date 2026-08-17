@@ -183,6 +183,10 @@ export type CampaignStatus = 'draft' | 'scheduled' | 'collecting' | 'completed';
 
 export interface BlockSettings {
   approvers: ('omsu' | 'cio' | 'mef')[];
+  reportingPeriods: string[];
+  estimatedPeriods: string[];
+  forecastPeriods: string[];
+  hasNote: boolean;
 }
 
 
