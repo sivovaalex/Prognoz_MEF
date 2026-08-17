@@ -114,26 +114,26 @@ export function Setup({ block }: { block: string }) {
       if (oldDir) {
         dispatch({ type: 'UPDATE_DIRECTION', direction: { ...oldDir, actualTo: editDir.actualFrom } });
       }
-      dispatch({ 
-        type: 'ADD_DIRECTION', 
-        direction: { 
-          id: 'd' + Date.now(), 
-          name: nameStr, 
-          cioIds: editDir.cioIds, 
-          actualFrom: editDir.actualFrom,
-          actualTo: null 
-        } 
-      });
-    } else {
-      dispatch({ 
-        type: 'ADD_DIRECTION', 
-        direction: { 
-          id: 'd' + Date.now(), 
-          name: nameStr, 
-          cioIds: editDir.cioIds, 
+      dispatch({
+        type: 'ADD_DIRECTION',
+        direction: {
+          id: 'd' + Date.now(),
+          name: nameStr,
+          cioIds: editDir.cioIds,
           actualFrom: editDir.actualFrom,
           actualTo: null
-        } 
+        }
+      });
+    } else {
+      dispatch({
+        type: 'ADD_DIRECTION',
+        direction: {
+          id: 'd' + Date.now(),
+          name: nameStr,
+          cioIds: editDir.cioIds,
+          actualFrom: editDir.actualFrom,
+          actualTo: null
+        }
       });
     }
     setEditDir(null);
@@ -165,9 +165,9 @@ export function Setup({ block }: { block: string }) {
   };
 
   const saveSettings = () => {
-    dispatch({ 
-      type: 'UPDATE_BLOCK_SETTINGS', 
-      block, 
+    dispatch({
+      type: 'UPDATE_BLOCK_SETTINGS',
+      block,
       approvers: settingsForm,
       reportingPeriods: settingsRep,
       estimatedPeriods: [settingsEst],
@@ -187,7 +187,7 @@ export function Setup({ block }: { block: string }) {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={openSettings}><Settings className="h-4 w-4 mr-1" /> Настройки</Button>
+          <Button variant="outline" onClick={openSettings}><Settings className="h-4 w-4 mr-1" /> Настройки формы сбора</Button>
           <Button variant="outline" onClick={openNewDir}><Plus className="h-4 w-4 mr-1" /> Добавить раздел показателя</Button>
           <Button onClick={openNew}><Plus className="h-4 w-4 mr-1" /> Добавить показатель</Button>
         </div>
@@ -423,7 +423,7 @@ export function Setup({ block }: { block: string }) {
       <Dialog open={showSettings} onOpenChange={setShowSettings}>
         <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Настройки</DialogTitle>
+            <DialogTitle>Настройки формы сбора</DialogTitle>
           </DialogHeader>
           <div className="flex flex-col gap-6 py-4">
             <div className="space-y-2">
@@ -452,8 +452,8 @@ export function Setup({ block }: { block: string }) {
 
             <div className="space-y-2">
               <Label>Отчётные периоды</Label>
-              <select 
-                multiple 
+              <select
+                multiple
                 className="w-full h-32 p-2 text-xs border rounded-md"
                 value={settingsRep}
                 onChange={(e) => setSettingsRep(Array.from(e.target.selectedOptions).map(o => o.value))}
@@ -475,8 +475,8 @@ export function Setup({ block }: { block: string }) {
 
             <div className="space-y-2">
               <Label>Прогнозные периоды</Label>
-              <select 
-                multiple 
+              <select
+                multiple
                 className="w-full h-32 p-2 text-xs border rounded-md"
                 value={settingsFor}
                 onChange={(e) => setSettingsFor(Array.from(e.target.selectedOptions).map(o => o.value))}
