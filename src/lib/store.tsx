@@ -2,6 +2,7 @@ import React, { createContext, useContext, useReducer } from 'react';
 import { VALUE_FIELDS, emptyValueFields } from './types';
 import type { AppState, Indicator, Direction, RoleId, ValueFieldKey } from './types';
 import { buildInitialState } from './data';
+import { isDescendant, isIndActive, renumberAll, subtreeIds } from './indTree';
 
 /** Заполнено ли хотя бы одно поле значения */
 function hasAnyValue(v: Record<ValueFieldKey, number | null>): boolean {
@@ -44,8 +45,9 @@ export type Action =
   | { type: 'CAMPAIGN_STOP' }
   | { type: 'SET_RATING_MODE'; mode: 'preview' | 'final' }
   | { type: 'PUBLISH_FINAL' }
-  | { type: 'ADD_INDICATOR'; indicator: Indicator }
+  | { type: 'ADD_INDICATOR'; indicator: Indicator; afterId?: string }
   | { type: 'UPDATE_INDICATOR'; indicator: Indicator }
+  | { type: 'MOVE_INDICATOR'; id: string; newParentId: string | null; index: number }
   | { type: 'ADD_DIRECTION'; direction: Direction }
   | { type: 'UPDATE_DIRECTION'; direction: Direction }
   | { type: 'NOTIFY'; text: string; forRoles: RoleId[] }
@@ -413,10 +415,66 @@ function reducer(state: AppState, a: Action): AppState {
         campaign: { ...state.campaign, status: 'completed' },
         history: [...state.history, { at: now(), actor: 'Куратор МЭФ', action: 'Сформирован и опубликован итоговый сводный рейтинг' }],
       };
-    case 'ADD_INDICATOR':
-      return { ...state, indicators: [...state.indicators, a.indicator] };
-    case 'UPDATE_INDICATOR':
-      return { ...state, indicators: state.indicators.map((i) => (i.id === a.indicator.id ? a.indicator : i)) };
+    case 'ADD_INDICATOR': {
+      const date = new Date().toISOString().split('T')[0];
+      let next: Indicator[];
+      if (a.afterId) {
+        const idx = state.indicators.findIndex((i) => i.id === a.afterId);
+        next = idx >= 0
+          ? [...state.indicators.slice(0, idx + 1), a.indicator, ...state.indicators.slice(idx + 1)]
+          : [...state.indicators, a.indicator];
+      } else {
+        next = [...state.indicators, a.indicator];
+      }
+      return { ...state, indicators: renumberAll(next, state.directions, date) };
+    }
+    case 'UPDATE_INDICATOR': {
+      const date = new Date().toISOString().split('T')[0];
+      return {
+        ...state,
+        indicators: renumberAll(
+          state.indicators.map((i) => (i.id === a.indicator.id ? a.indicator : i)),
+          state.directions,
+          date,
+        ),
+      };
+    }
+    case 'MOVE_INDICATOR': {
+      const date = new Date().toISOString().split('T')[0];
+      const moving = state.indicators.find((i) => i.id === a.id);
+      if (!moving || moving.id === a.newParentId) return state;
+      // нельзя переместить показатель внутрь своего собственного поддерева
+      if (a.newParentId && isDescendant(state.indicators, a.id, a.newParentId)) return state;
+      const subtree = subtreeIds(state.indicators, a.id);
+      const rest = state.indicators.filter((i) => !subtree.has(i.id));
+      const isTop = a.newParentId === null;
+      const children = rest.filter((i) =>
+        isIndActive(i, date) &&
+        (isTop
+          ? i.parentId === null && i.directionId === moving.directionId
+          : i.parentId === a.newParentId),
+      );
+      let insertAt: number;
+      if (children.length === 0) {
+        if (isTop) {
+          const tops = rest.filter((i) => i.parentId === null && i.directionId === moving.directionId);
+          insertAt = tops.length ? rest.indexOf(tops[tops.length - 1]) + 1 : rest.length;
+        } else {
+          const p = rest.find((i) => i.id === a.newParentId);
+          insertAt = p ? rest.indexOf(p) + 1 : rest.length;
+        }
+      } else if (a.index >= children.length) {
+        insertAt = rest.indexOf(children[children.length - 1]) + 1;
+      } else {
+        insertAt = rest.indexOf(children[Math.max(0, a.index)]);
+      }
+      const next = [
+        ...rest.slice(0, insertAt),
+        ...state.indicators.filter((i) => subtree.has(i.id)),
+        ...rest.slice(insertAt),
+      ];
+      return { ...state, indicators: renumberAll(next, state.directions, date) };
+    }
     case 'ADD_DIRECTION':
       return { ...state, directions: [...state.directions, a.direction] };
     case 'UPDATE_DIRECTION':

@@ -51,6 +51,7 @@ export interface Municipality {
   id: string;
   name: string;
   isActive?: boolean;
+  isZato?: boolean; // ЗАТО (закрытое административно-территориальное образование)
 }
 
 export interface Unit {
@@ -77,6 +78,11 @@ export interface Indicator {
   isGroup?: boolean;      // строка-группа (без единицы измерения): не заполняется и не участвует в рейтинге
   actualFrom: string;
   actualTo?: string | null;
+  // ── Параметры рейтинга ─────────────────────────────────────────────
+  closed?: boolean;            // закрыт от ввода и согласования
+  zato?: boolean;              // показатель для ОМСУ-ЗАТО (виден только ОМСУ с ЗАТО=1)
+  closedForOmsuIds?: string[]; // ОМСУ, которым закрыт ввод показателя (ячейки заблокированы)
+  calcException?: string;      // исключения расчёта: доп. правило присвоения баллов или мест
 }
 
 /** Заполняемый показатель (не группа) */

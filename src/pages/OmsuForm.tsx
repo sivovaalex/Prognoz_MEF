@@ -47,12 +47,20 @@ export function OmsuForm() {
   // дерево показателей: сворачивание дочерних и фильтры
   const [treeFilter, setTreeFilter] = useState<TreeFilter>(EMPTY_TREE_FILTER);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
-  const visible = visibleTree(state.indicators, collapsed, treeFilter);
+  // ЗАТО: показатели с флагом zato видны только ОМСУ с отметкой ЗАТО
+  // (ОМСУ-ЗАТО видит и обычные показатели)
+  const myIndicators = state.indicators.filter((i) => !i.zato || mun.isZato);
+  const visible = visibleTree(myIndicators, collapsed, treeFilter);
   const parents = chevronParents(state.indicators);
   const toggleNode = (id: string) => setCollapsed((p) => ({ ...p, [id]: !p[id] }));
 
+  // Закрытый показатель: общий (closed) или индивидуальный для данного ОМСУ (closedForOmsuIds) —
+  // ввод значений и отправка на согласование ЦИО заблокированы
+  const isClosedForMe = (ind: { closed?: boolean; closedForOmsuIds?: string[] }) =>
+    !!ind.closed || (Array.isArray(ind.closedForOmsuIds) && ind.closedForOmsuIds.includes(munId));
+
   const values = state.omsuValues[munId];
-  const fillable = state.indicators.filter((i) => !i.isGroup);
+  const fillable = myIndicators.filter((i) => !i.isGroup);
   const total = fillable.length;
   const approved = fillable.filter((i) => values[i.id]?.status === 'approved').length;
   const pending = fillable.filter((i) => values[i.id]?.status === 'pending_cio').length;
@@ -94,7 +102,7 @@ export function OmsuForm() {
       {state.directions.map((d) => {
         const inds = visible.filter((i) => i.directionId === d.id);
         if (!inds.length) return null;
-        const st = dirStats(state.indicators.filter((i) => i.directionId === d.id && !i.isGroup), values);
+        const st = dirStats(myIndicators.filter((i) => i.directionId === d.id && !i.isGroup), values);
         const open = openDir === d.id;
         return (
           <Card key={d.id}>
@@ -165,7 +173,8 @@ export function OmsuForm() {
                         );
                       }
                       const v = values[ind.id];
-                      const editable = isCurrentOmsu && (v.status === 'not_filled' || v.status === 'draft' || v.status === 'returned');
+                      const closedForMe = isClosedForMe(ind);
+                      const editable = !closedForMe && isCurrentOmsu && (v.status === 'not_filled' || v.status === 'draft' || v.status === 'returned');
                       return (
                         <Fragment key={ind.id}>
                           <tr className="border-b hover:bg-slate-50 align-top">
@@ -200,6 +209,14 @@ export function OmsuForm() {
                                 </Tooltip>
                               </TooltipProvider>
                               <div className="font-medium">{ind.name}</div>
+                              {closedForMe && (
+                                <span
+                                  title="Показатель закрыт для ввода и согласования"
+                                  className="text-[10px] px-1.5 py-0.5 rounded border border-slate-300 bg-slate-100 text-slate-500 whitespace-nowrap"
+                                >
+                                  Закрыт
+                                </span>
+                              )}
                               <Button
                                 size="sm"
                                 variant="ghost"

@@ -62,6 +62,7 @@ export function DictsTab({ activeDict }: { activeDict: 'cios' | 'omsus' | 'units
                 <th className="p-3 font-medium w-32 text-center">Активность</th>
                 <th className="p-3 font-medium">Наименование</th>
                 {activeDict === 'cios' && <th className="p-3 font-medium">Краткое наименование</th>}
+                {activeDict === 'omsus' && <th className="p-3 font-medium w-24 text-center">ЗАТО</th>}
                 <th className="p-3 font-medium w-24 text-center">Действия</th>
               </tr>
             </thead>
@@ -80,6 +81,15 @@ export function DictsTab({ activeDict }: { activeDict: 'cios' | 'omsus' | 'units
                   </td>
                   <td className="p-3 font-medium text-slate-700">{item.name}</td>
                   {activeDict === 'cios' && <td className="p-3 text-slate-600">{item.short}</td>}
+                  {activeDict === 'omsus' && (
+                    <td className="p-3 text-center">
+                      {item.isZato ? (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded border border-amber-300 bg-amber-50 text-amber-700 font-medium">Да</span>
+                      ) : (
+                        <span className="text-slate-400">Нет</span>
+                      )}
+                    </td>
+                  )}
                   <td className="p-3 text-center">
                     <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-blue-600" onClick={() => setEditingItem(item)}>
                       <Pencil className="h-4 w-4" />
@@ -89,7 +99,7 @@ export function DictsTab({ activeDict }: { activeDict: 'cios' | 'omsus' | 'units
               ))}
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="p-8 text-center text-slate-400">Записи не найдены</td>
+                  <td colSpan={activeDict === 'omsus' ? 6 : 5} className="p-8 text-center text-slate-400">Записи не найдены</td>
                 </tr>
               )}
             </tbody>
@@ -118,6 +128,20 @@ export function DictsTab({ activeDict }: { activeDict: 'cios' | 'omsus' | 'units
                     value={editingItem.short || ''} 
                     onChange={e => setEditingItem({ ...editingItem, short: e.target.value })} 
                   />
+                </div>
+              )}
+              {activeDict === 'omsus' && (
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="dict-omsu-zato"
+                    className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    checked={!!editingItem.isZato}
+                    onChange={e => setEditingItem({ ...editingItem, isZato: e.target.checked })}
+                  />
+                  <Label htmlFor="dict-omsu-zato" className="font-normal">
+                    ЗАТО (закрытое административно-территориальное образование)
+                  </Label>
                 </div>
               )}
             </div>

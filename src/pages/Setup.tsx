@@ -2,7 +2,9 @@ import { useState } from 'react';
 import { useStore } from '@/lib/store';
 
 import type { Indicator } from '@/lib/types';
-import { EMPTY_TREE_FILTER, chevronParents, visibleTree, type TreeFilter } from '@/lib/indTree';
+import {
+  EMPTY_TREE_FILTER, autoIndicatorNum, chevronParents, isDescendant, isIndActive, visibleTree, type TreeFilter,
+} from '@/lib/indTree';
 import { IndToolbar, TreeToggle } from '@/components/IndToolbar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -63,6 +65,10 @@ export function Setup({ block }: { block: string }) {
   const [settingsNote, setSettingsNote] = useState<boolean>(false);
   const [treeFilter, setTreeFilter] = useState<TreeFilter>({ ...EMPTY_TREE_FILTER, actualDate: new Date().toISOString().split('T')[0] });
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  // Drag-and-drop: перестановка показателей с автоматической перенумерацией
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [dropHint, setDropHint] = useState<{ targetId: string; before: boolean } | null>(null);
+  const [topDropDir, setTopDropDir] = useState<string | null>(null);
 
   const visible = visibleTree(state.indicators, collapsed, treeFilter);
   const parents = chevronParents(state.indicators);
@@ -73,18 +79,22 @@ export function Setup({ block }: { block: string }) {
     setIsNew(true);
     setEditInd({
       id: `i${Date.now()}`,
-      num: `${state.indicators.length + 1}.1`,
+      num: '',
       name: '',
       directionId: state.directions[0]?.id || '',
       cioId: state.cios[0]?.id || '',
       unit: '%',
       optimum: 'max',
-      weight: 1,
+      weight: 0,
       formula: '',
       consCoeff: '',
       level: 1,
       parentId: null,
       actualFrom: new Date().toISOString().split('T')[0],
+      closed: false,
+      zato: false,
+      closedForOmsuIds: [],
+      calcException: '',
     });
   };
 
@@ -94,6 +104,11 @@ export function Setup({ block }: { block: string }) {
 
   const save = () => {
     if (!editInd || !editInd.name.trim()) return;
+    const w = Number(editInd.weight);
+    if (Number.isNaN(w) || w < 0 || w > 100) {
+      alert('Вес (раздельного показателя) должен быть числом от 0 до 100');
+      return;
+    }
     if (isNew) {
       dispatch({ type: 'ADD_INDICATOR', indicator: editInd });
     } else {
@@ -101,7 +116,7 @@ export function Setup({ block }: { block: string }) {
       if (oldInd) {
         dispatch({ type: 'UPDATE_INDICATOR', indicator: { ...oldInd, actualTo: editInd.actualFrom } });
       }
-      dispatch({ type: 'ADD_INDICATOR', indicator: { ...editInd, id: 'i' + Date.now() } });
+      dispatch({ type: 'ADD_INDICATOR', indicator: { ...editInd, id: 'i' + Date.now() }, afterId: oldInd?.id });
     }
     setEditInd(null);
   };
@@ -210,7 +225,24 @@ export function Setup({ block }: { block: string }) {
               const inds = visible.filter((i) => i.directionId === d.id && i.actualFrom <= (treeFilter.actualDate || '9999-99-99') && (!i.actualTo || i.actualTo > (treeFilter.actualDate || '')));
               if (!inds.length) return null;
               return (
-                <Card key={d.id}>
+                <Card
+          key={d.id}
+          className={topDropDir === d.id ? 'ring-2 ring-blue-500' : ''}
+          onDragOver={(e) => {
+            if (!dragId) return;
+            const dragged = state.indicators.find(i => i.id === dragId);
+            if (!dragged || dragged.directionId !== d.id) return;
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            setTopDropDir(d.id);
+          }}
+          onDrop={(e) => {
+            e.preventDefault();
+            if (!dragId || topDropDir !== d.id) return;
+            dispatch({ type: 'MOVE_INDICATOR', id: dragId, newParentId: null, index: Number.MAX_SAFE_INTEGER });
+            setDragId(null); setDropHint(null); setTopDropDir(null);
+          }}
+        >
                   <CardHeader className="py-3">
                     <div className="flex items-center justify-between">
                       <CardTitle className="text-base">{d.name}</CardTitle>
@@ -239,7 +271,45 @@ export function Setup({ block }: { block: string }) {
                       </thead>
                       <tbody>
                         {inds.map((ind) => (
-                          <tr key={ind.id} className={`border-b ${ind.isGroup ? 'bg-slate-50/80' : 'hover:bg-slate-50'}`}>
+                          <tr
+                          key={ind.id}
+                          draggable
+                          onDragStart={(e) => {
+                            e.dataTransfer.effectAllowed = 'move';
+                            e.dataTransfer.setData('text/plain', ind.id);
+                            setDragId(ind.id);
+                          }}
+                          onDragEnd={() => { setDragId(null); setDropHint(null); setTopDropDir(null); }}
+                          onDragOver={(e) => {
+                            if (!dragId || dragId === ind.id) return;
+                            const dragged = state.indicators.find(i => i.id === dragId);
+                            if (!dragged || dragged.directionId !== ind.directionId) return;
+                            if (isDescendant(state.indicators, dragId, ind.id)) return;
+                            e.preventDefault();
+                            e.stopPropagation();
+                            e.dataTransfer.dropEffect = 'move';
+                            const rect = e.currentTarget.getBoundingClientRect();
+                            setDropHint({ targetId: ind.id, before: e.clientY < rect.top + rect.height / 2 });
+                          }}
+                          onDrop={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            if (!dragId || !dropHint || dropHint.targetId !== ind.id) return;
+                            const sibs = state.indicators.filter(
+                              i => i.parentId === ind.parentId && i.directionId === ind.directionId
+                                && i.id !== dragId && isIndActive(i, treeFilter.actualDate || ''),
+                            );
+                            let idx = sibs.findIndex(i => i.id === ind.id);
+                            if (!dropHint.before) idx += 1;
+                            dispatch({ type: 'MOVE_INDICATOR', id: dragId, newParentId: ind.parentId, index: idx });
+                            setDragId(null); setDropHint(null); setTopDropDir(null);
+                          }}
+                          className={`border-b ${ind.isGroup ? 'bg-slate-50/80' : 'hover:bg-slate-50'} cursor-grab active:cursor-grabbing ${
+                            dropHint?.targetId === ind.id
+                              ? dropHint.before ? 'shadow-[inset_0_2px_0_0_#2563eb]' : 'shadow-[inset_0_-2px_0_0_#2563eb]'
+                              : ''
+                          }`}
+                        >
                             <td className="p-2 text-muted-foreground whitespace-nowrap">{ind.num}</td>
                             <td className={`p-2 ${ind.isGroup ? 'font-semibold text-slate-700' : 'font-medium'}`}>
                               <span className="flex items-center gap-1" style={{ paddingLeft: `${(ind.level - 1) * 18}px` }}>
@@ -282,15 +352,26 @@ export function Setup({ block }: { block: string }) {
       </Tabs>
 
       <Dialog open={!!editInd} onOpenChange={(v) => !v && setEditInd(null)}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="w-[70vw] max-w-[70vw] sm:max-w-[70vw] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{isNew ? 'Новый показатель' : 'Редактирование показателя'}</DialogTitle>
           </DialogHeader>
           {editInd && (
             <div className="grid gap-3 text-sm">
               <div className="grid grid-cols-4 items-center gap-2">
-                <Label>№</Label>
-                <Input className="col-span-3" value={editInd.num} onChange={(e) => setEditInd({ ...editInd, num: e.target.value })} />
+                <Label>№ *</Label>
+                <Input
+                  className="col-span-3 bg-slate-50 text-muted-foreground"
+                  disabled
+                  value={autoIndicatorNum(state.indicators, state.directions, treeFilter.actualDate || '', {
+                    id: isNew ? undefined : editInd.id,
+                    parentId: editInd.parentId,
+                    directionId: editInd.directionId,
+                  })}
+                />
+                <p className="col-span-4 -mt-1 text-[10px] text-muted-foreground">
+                  Определяется автоматически по позиции показателя (порядок меняется перетаскиванием строк в списке)
+                </p>
               </div>
               <div className="grid grid-cols-4 items-center gap-2">
                 <Label>Название *</Label>
@@ -330,9 +411,11 @@ export function Setup({ block }: { block: string }) {
                   <SelectTrigger className="col-span-3"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">Нет (верхний уровень)</SelectItem>
-                    {state.indicators.filter(i => i.id !== editInd.id).map(i => (
-                      <SelectItem key={i.id} value={i.id}>{i.num}. {i.name}</SelectItem>
-                    ))}
+                    {state.indicators
+                      .filter(i => i.id !== editInd.id && !isDescendant(state.indicators, editInd.id, i.id))
+                      .map(i => (
+                        <SelectItem key={i.id} value={i.id}>{i.num}. {i.name}</SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -350,19 +433,6 @@ export function Setup({ block }: { block: string }) {
                   </SelectContent>
                 </Select>
               </div>
-
-              {state.campaign.name === 'Рейтинг ОМСУ' && (
-                <div className="grid grid-cols-4 items-center gap-2">
-                  <Label>Оптимум *</Label>
-                  <Select value={editInd.optimum} onValueChange={(v: 'max' | 'min') => setEditInd({ ...editInd, optimum: v })}>
-                    <SelectTrigger className="col-span-3"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="max">Максимум (max)</SelectItem>
-                      <SelectItem value="min">Минимум (min)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
 
               <div className="grid grid-cols-4 gap-2 border-t pt-3 mt-1">
                 <Label className="mt-2 text-sm font-semibold">Формулы</Label>
@@ -385,6 +455,87 @@ export function Setup({ block }: { block: string }) {
                   </div>
                 </div>
               </div>
+
+              <>
+                <div className="grid grid-cols-4 gap-2 border-t pt-3 mt-1">
+                  <Label className="mt-2 text-sm font-semibold">Параметры Рейтинга</Label>
+                </div>
+
+                  <div className="grid grid-cols-4 items-center gap-2">
+                    <Label className="col-span-3">Закрыть показатель от ввода и согласования</Label>
+                    <div className="col-span-1 flex justify-center">
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        checked={!!editInd.closed}
+                        onChange={(e) => setEditInd({ ...editInd, closed: e.target.checked })}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-4 items-center gap-2">
+                    <Label>Оптимум *</Label>
+                    <Select value={editInd.optimum} onValueChange={(v: 'max' | 'min') => setEditInd({ ...editInd, optimum: v })}>
+                      <SelectTrigger className="col-span-3"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="max">Максимум (max)</SelectItem>
+                        <SelectItem value="min">Минимум (min)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="grid grid-cols-4 items-center gap-2">
+                    <Label>Вес (раздельного показателя) *</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      max={100}
+                      step={0.1}
+                      className="col-span-3"
+                      value={editInd.weight ?? 0}
+                      onChange={(e) => setEditInd({ ...editInd, weight: e.target.value === '' ? 0 : Number(e.target.value) })}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-4 items-center gap-2">
+                    <Label className="col-span-3">ЗАТО (показатель виден только ОМСУ с отметкой ЗАТО)</Label>
+                    <div className="col-span-1 flex justify-center">
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        checked={!!editInd.zato}
+                        onChange={(e) => setEditInd({ ...editInd, zato: e.target.checked })}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-4 items-start gap-2">
+                    <Label className="pt-2">Закрыть для ОМСУ</Label>
+                    <div className="col-span-3 space-y-1">
+                      <select
+                        multiple
+                        className="w-full h-32 p-2 text-xs border rounded-md"
+                        value={editInd.closedForOmsuIds || []}
+                        onChange={(e) => setEditInd({ ...editInd, closedForOmsuIds: Array.from(e.target.selectedOptions).map(o => o.value) })}
+                      >
+                        {state.omsus.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
+                      </select>
+                      <p className="text-[10px] text-muted-foreground">
+                        Зажмите Ctrl (Cmd) для выбора нескольких элементов. Выбранные ОМСУ не смогут вводить значения по данному показателю.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-4 items-center gap-2">
+                    <Label>Исключения расчёта</Label>
+                    <Input
+                      className="col-span-3"
+                      placeholder="Дополнительное правило присвоения баллов или мест"
+                      value={editInd.calcException || ''}
+                      onChange={(e) => setEditInd({ ...editInd, calcException: e.target.value })}
+                    />
+                  </div>
+                </>
 
             </div>
           )}
