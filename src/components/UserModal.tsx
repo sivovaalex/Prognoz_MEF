@@ -287,14 +287,18 @@ export function UserModal({ open, onOpenChange, user, onSave }: UserModalProps) 
                       <td className="p-3">
                         <div className="space-y-4">
                           <div>
-                            <Label className="text-xs text-muted-foreground mb-1 block">ЦИО (множественный выбор) *</Label>
+                            <Label className="text-xs text-muted-foreground mb-1 block">ЦИО (одиночный выбор) *</Label>
                             {perms.isCio ? (
-                              <MultiSelect 
-                                options={cios}
-                                selected={perms.cioIds}
-                                onChange={(ids: string[]) => updatePerms({ cioIds: ids })}
-                                placeholder="Выберите ЦИО..."
-                              />
+                              <Select value={perms.cioIds[0] || undefined} onValueChange={(v) => updatePerms({ cioIds: [v] })}>
+                                <SelectTrigger className="w-full h-9">
+                                  <SelectValue placeholder="Выберите ЦИО..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {cios.map(m => (
+                                    <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
                             ) : (
                               <div className="text-xs text-slate-400 py-1">—</div>
                             )}
