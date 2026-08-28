@@ -370,7 +370,7 @@ export function UserModal({ open, onOpenChange, user, onSave }: UserModalProps) 
                       </td>
                       <td className="p-3">
                         {perms.isMef ? (
-                          <div className="text-xs text-slate-600">Активирует вкладки "Обзор сбора", "Управление"</div>
+                          <div className="text-xs text-slate-600">Активирует вкладку "Управление"</div>
                         ) : (
                           <div className="text-xs text-slate-400">—</div>
                         )}

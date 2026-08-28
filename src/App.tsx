@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { StoreProvider, useStore } from '@/lib/store';
 import { ROLES } from '@/lib/data';
 import type { RoleId, AppState } from '@/lib/types';
-import { Overview } from '@/pages/Overview';
 import { Setup } from '@/pages/Setup';
 import { OmsuForm } from '@/pages/OmsuForm';
 import { CioWorkspace } from '@/pages/CioWorkspace';
@@ -24,7 +23,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Bell, Landmark, UserRound, Home as HomeIcon } from 'lucide-react';
 
-type PageId = 'overview' | 'setup' | 'omsu' | 'cio' | 'mef-manage' | 'rating' | 'report' | 'about' | 'users' | 'dicts' | 'output-tables' | 'mef-workspace';
+type PageId = 'setup' | 'omsu' | 'cio' | 'mef-manage' | 'rating' | 'report' | 'about' | 'users' | 'dicts' | 'output-tables' | 'mef-workspace';
 type BlockId = 'mun' | 'obl' | 'params' | 'form2p' | 'long_term' | 'admin_block' | 'ukaz_main' | 'rating_main' | 'rating_view';
 
 const BLOCK_LABELS: Record<BlockId, string> = {
@@ -61,13 +60,11 @@ const getBlocks = (role: RoleId, module: ModuleId, settings: AppState['blockSett
 
 const NAV: Record<RoleId, { id: PageId; label: string }[]> = {
   admin: [
-    { id: 'overview', label: 'Обзор сбора' },
     { id: 'setup', label: 'Настройка показателей' },
     { id: 'mef-manage', label: 'Управление' },
     { id: 'output-tables', label: 'Выходные таблицы' },
   ],
   mef: [
-    { id: 'overview', label: 'Обзор сбора' },
     { id: 'mef-manage', label: 'Управление' },
     { id: 'output-tables', label: 'Выходные таблицы' },
     { id: 'mef-workspace', label: 'Рабочее место МЭФ' },
@@ -259,7 +256,6 @@ function Shell({ activeModule, onHome }: { activeModule: ModuleId, onHome: () =>
       </div>
 
       <main className="w-full px-4 pb-10">
-        {page === 'overview' && <Overview role={role} />}
         {page === 'setup' && <Setup block={block} />}
         {page === 'omsu' && <OmsuForm />}
         {page === 'cio' && <CioWorkspace key={block} block={block} hideOmsuApprove={!(state.blockSettings[block]?.approvers || []).includes('omsu')} />}

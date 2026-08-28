@@ -57,27 +57,10 @@ function CioWorkspaceNew() {
       <div className="flex items-center justify-between">
         <h3 className="font-medium text-slate-800">Согласование показателей ОМСУ</h3>
       </div>
-      <Tabs defaultValue="indicators">
+      <Tabs defaultValue="territory">
         <TabsList className="mb-4">
-          <TabsTrigger value="indicators">Показатели</TabsTrigger>
           <TabsTrigger value="territory">Территория</TabsTrigger>
         </TabsList>
-        <TabsContent value="indicators" className="space-y-4">
-          <CioOwnIndicators 
-            myOwnVisible={myOwnVisible} 
-            myFillable={myFillable}
-            collapsed={collapsed}
-            toggleNode={toggleNode}
-            parents={parents}
-            treeFilter={treeFilter}
-            setTreeFilter={setTreeFilter}
-            munFilter={munFilter}
-            setMunFilter={setMunFilter}
-            cio={cio}
-            setSignTarget={setSignTarget}
-            setReturnTarget={setReturnTarget}
-          />
-        </TabsContent>
         <TabsContent value="territory" className="space-y-4">
           <CioTerritoryIndicators 
             myOwnVisible={myOwnVisible} 
@@ -136,176 +119,6 @@ function CioWorkspaceNew() {
         }}
       />
     </div>
-  );
-}
-
-function CioOwnIndicators({ myOwnVisible, myFillable, collapsed, toggleNode, parents, treeFilter, setTreeFilter, cio, setSignTarget, munFilter, setMunFilter, setReturnTarget}: any) {
-  const { state, dispatch } = useStore();
-  return (
-    <>
-      <div className="flex gap-4">
-        <div className="flex-1">
-          <IndToolbar
-            filter={treeFilter}
-            onChange={setTreeFilter}
-            shown={myOwnVisible.length}
-            total={myFillable.length}
-            hideCioFilter
-            munId={munFilter === 'all' ? state.omsus.filter(o => o.isActive)[0]?.id : munFilter}
-            onMunChange={setMunFilter}
-            allowAllMuns={false}
-          />
-        </div>
-      </div>
-      <div className="rounded-md border border-blue-200 bg-blue-50 p-3 text-sm flex gap-2">
-        <Info className="h-4 w-4 text-blue-700 mt-0.5 shrink-0" />
-        <span>
-          ЦИО вносит собственные значения по тем же показателям, что заполняют ОМСУ его отрасли: отчётные данные за 2023–2025 гг.,
-          оценку 2026 г. и прогнозы на 2027–2029 гг. по консервативному и базовому вариантам. Подпишите ЭЦП и отправьте на
-          согласование в МЭФ.
-        </span>
-      </div>
-      <Card>
-        <CardContent className="pt-4 overflow-x-auto">
-          <table className="w-full text-sm border-collapse">
-            <thead>
-              <tr className="border-b text-xs text-muted-foreground">
-                <th rowSpan={3} className="text-left p-2 align-middle min-w-[220px]">Показатель</th>
-                {VALUE_GROUPS.map((g) => (
-                  <th key={g.key} colSpan={g.span * 2} className={`text-center p-1.5 border-l border-b ${GROUP_HEAD[g._bg]}`}>
-                    {g.label}
-                  </th>
-                ))}
-              </tr>
-              <tr className="border-b text-xs text-muted-foreground">
-                {VALUE_FIELDS.map((f) => (
-                  <th key={f.key} colSpan={2} className={`text-center p-1.5 border-l border-b ${f.key === 'v2026' || f.key === 'v2025' ? 'bg-amber-50/70' : fieldTint(f.key)}`}>
-                    {f.label}
-                  </th>
-                ))}
-              </tr>
-              <tr className="border-b text-xs text-muted-foreground">
-                {VALUE_FIELDS.map((f) => (
-                  <Fragment key={f.key}>
-                    <th className={`text-center p-1.5 font-medium border-l ${f.key === 'v2026' || f.key === 'v2025' ? 'bg-amber-50/70' : fieldTint(f.key)}`}>ОМСУ</th>
-                    <th className={`text-center p-1.5 font-medium ${f.key === 'v2026' || f.key === 'v2025' ? 'bg-amber-50/70' : fieldTint(f.key)}`}>ЦИО</th>
-                    
-                  </Fragment>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {myOwnVisible.map((ind: any) => {
-                if (ind.isGroup) {
-                  return (
-                    <tr key={ind.id} className="border-b bg-slate-50/80">
-                      <td colSpan={1 + VALUE_FIELDS.length * 2} className="p-2 align-middle">
-                        <span className="flex items-center gap-1 font-semibold text-slate-700" style={{ paddingLeft: `${(ind.level - 1) * 18}px` }}>
-                          <TreeToggle hasChildren={parents.has(ind.id)} collapsed={!!collapsed[ind.id]} onToggle={() => toggleNode(ind.id)} />
-                          <span><span className="mr-1 text-slate-400">▸</span>{ind.num}. {ind.name}</span>
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                }
-
-                const v = state.cioValues[ind.id]?.[CURRENT_CIO] ?? { ...emptyValueFields(), status: 'not_filled', updatedAt: null };
-                const omsuV = state.omsuValues[munFilter === 'all' ? state.omsus.filter(o => o.isActive)[0]?.id || 'm1' : munFilter]?.[ind.id];
-
-
-                return (
-                  <tr key={ind.id} className={`border-b ${v.status === 'pending_mef' ? 'bg-amber-50/60' : 'hover:bg-slate-50'}`}>
-                    <td className="p-2 align-top">
-                      <div className="flex items-start gap-1" style={{ paddingLeft: `${(ind.level - 1) * 18}px` }}>
-                        <span className="mt-0.5 inline-flex shrink-0">
-                          <TreeToggle hasChildren={parents.has(ind.id)} collapsed={!!collapsed[ind.id]} onToggle={() => toggleNode(ind.id)} />
-                        </span>
-                        <div>
-                          <span className="font-medium">{ind.num} {ind.name} <span className="font-normal text-muted-foreground">({ind.unit})</span><br /></span>
-                        </div>
-                      </div>
-                    </td>
-                    {VALUE_FIELDS.map((f) => (
-                      <Fragment key={f.key}>
-                        {/* ОМСУ */}
-                        <td className={`p-1.5 text-center border-l ${f.key === 'v2026' || f.key === 'v2025' ? 'bg-amber-50/30' : fieldTint(f.key)}`}>
-                          <div className="flex flex-col items-center justify-center gap-1">
-                            <div className={omsuV?.[f.key] != null && v[f.key] != null && omsuV[f.key] !== v[f.key] ? 'text-red-600 font-bold' : ''}>
-                              <ValueTip value={omsuV?.[f.key] ?? null} updatedAt={omsuV?.updatedAt ?? null} author={omsuV?.signedBy ?? 'ОМСУ'} />
-                            </div>
-                            {(f.key === 'v2026' || f.key === 'v2025') && omsuV && <OmsuStatusBadge status={omsuV.status} />}
-                            {(f.key === 'v2026' || f.key === 'v2025') && omsuV?.status === 'pending_cio' && (
-                              <div className="flex gap-1 mt-1">
-                                <Button size="icon-sm" variant="outline" className="h-6 w-6 text-green-600 hover:text-green-700" onClick={() => dispatch({ type: 'CIO_APPROVE', munId: munFilter === 'all' ? state.omsus.filter(o => o.isActive)[0]?.id || 'm1' : munFilter, indId: ind.id, actor: cio.short })} title="Согласовать">
-                                  <CheckCircle2 className="h-3.5 w-3.5" />
-                                </Button>
-                                <Button size="icon-sm" variant="outline" className="h-6 w-6 text-red-500 hover:text-red-600" onClick={() => setReturnTarget({ munId: munFilter === 'all' ? state.omsus.filter(o => o.isActive)[0]?.id || 'm1' : munFilter, indId: ind.id })} title="Вернуть">
-                                  <Undo2 className="h-3.5 w-3.5" />
-                                </Button>
-                              </div>
-                            )}
-                            {(f.key === 'v2026' || f.key === 'v2025') && omsuV?.status === 'approved' && (
-                              <div className="flex gap-1 mt-1">
-                                <Button size="icon-sm" variant="outline" className="h-6 w-6 text-red-500 hover:text-red-600" onClick={() => setReturnTarget({ munId: munFilter === 'all' ? state.omsus.filter(o => o.isActive)[0]?.id || 'm1' : munFilter, indId: ind.id })} title="Вернуть">
-                                  <Undo2 className="h-3.5 w-3.5" />
-                                </Button>
-                              </div>
-                            )}
-                          </div>
-                        </td>
-                        {/* ЦИО */}
-                        <td className={`p-1.5 text-center ${f.key === 'v2026' || f.key === 'v2025' ? 'bg-amber-50/30' : fieldTint(f.key)}`}>
-                          <div className="flex flex-col items-center justify-center gap-1">
-                            {(f.key === 'v2026' || f.key === 'v2025') ? (
-                              <Input
-                                type="number"
-                                step="0.1"
-                                className="h-8 w-[76px] text-center mx-auto bg-white px-1 font-medium border-amber-300"
-                                placeholder="—"
-                                value={v[f.key] ?? ''}
-                                disabled={v.status === 'pending_mef' || v.status === 'approved'}
-                                onChange={(e) =>
-                                  dispatch({
-                                    type: 'CIO_SET_OWN',
-                                    cioIndId: ind.id,
-                                    cioId: CURRENT_CIO,
-                                    field: f.key,
-                                    value: e.target.value === '' ? null : Number(e.target.value),
-                                  })
-                                }
-                              />
-                            ) : (
-                              <ValueTip value={v[f.key] ?? omsuV?.[f.key] ?? null} updatedAt={v.updatedAt} author="ЦИО" />
-                            )}
-                            {(f.key === 'v2026' || f.key === 'v2025') && (v.status === 'not_filled' || v.status === 'draft' || v.status === 'returned') && v[f.key] !== null && (
-                              <Button size="sm" variant="outline" className="h-6 text-[10px] px-2 mt-1 border-blue-200 hover:bg-blue-50" onClick={() => setSignTarget({ type: 'own', indId: ind.id })} title="Отправить в МЭФ">
-                                <Send className="w-3 h-3 mr-1" /> Отправить
-                              </Button>
-                            )}
-                            {(f.key === 'v2026' || f.key === 'v2025') && v.status === 'pending_mef' && v[f.key] !== null && (
-                              <div className="flex flex-col items-center gap-1 mt-1">
-                                <span className="text-[10px] text-amber-600 leading-tight">На согласовании</span>
-                                <Button size="sm" variant="outline" className="h-6 text-[10px] px-2" onClick={() => dispatch({ type: 'CIO_RECALL_OWN', cioIndId: ind.id, cioId: CURRENT_CIO, actor: cio.short })}>
-                                  <Undo2 className="w-3 h-3 mr-1" /> Отозвать
-                                </Button>
-                              </div>
-                            )}
-                            {(f.key === 'v2026' || f.key === 'v2025') && v.status === 'approved' && v[f.key] !== null && (
-                              <span className="text-[10px] text-green-600 flex items-center gap-0.5 mt-1"><Lock className="w-3 h-3"/> Согласовано МЭФ</span>
-                            )}
-                          </div>
-                        </td>
-                        
-                      </Fragment>
-                    ))}
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </CardContent>
-      </Card>
-    </>
   );
 }
 
@@ -684,26 +497,10 @@ function CioWorkspaceOld({ hideOmsuApprove = false }: { hideOmsuApprove?: boolea
 
         <TabsContent value="own" className="space-y-4 mt-4">
           {!hideOmsuApprove ? (
-            <Tabs defaultValue="indicators">
+            <Tabs defaultValue="territory">
               <TabsList className="mb-4">
-                <TabsTrigger value="indicators">Показатели</TabsTrigger>
                 <TabsTrigger value="territory">Территория</TabsTrigger>
               </TabsList>
-              <TabsContent value="indicators" className="space-y-4">
-                <CioOwnIndicatorsOld 
-                  myOwnVisible={myOwnVisible} 
-                  myFillable={myFillable}
-                  collapsed={collapsed}
-                  toggleNode={toggleNode}
-                  parents={parents}
-                  treeFilter={treeFilter}
-                  setTreeFilter={setTreeFilter}
-
-                  cio={cio}
-            setSignTarget={setSignTarget}
-            setReturnTarget={setReturnTarget}
-          />
-              </TabsContent>
               <TabsContent value="territory" className="space-y-4">
                 <CioTerritoryIndicators 
                   myOwnVisible={myOwnVisible} 
