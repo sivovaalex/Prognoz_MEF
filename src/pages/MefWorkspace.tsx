@@ -11,7 +11,6 @@ import { Undo2, CheckCircle2, Info, Lock, Send } from 'lucide-react';
 import { fieldTint } from '@/components/ValueColumns';
 import { CioStatusBadge } from '@/components/StatusBadge';
 import { ValueTip } from '@/components/ValueTip';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 
 const GROUP_HEAD: Record<string, string> = {
@@ -47,24 +46,17 @@ function MefWorkspaceNew() {
           <p className="text-sm text-muted-foreground">Проверка и утверждение данных ЦИО.</p>
         </div>
       </div>
-      <Tabs defaultValue="territory">
-        <TabsList className="mb-4">
-          <TabsTrigger value="territory">Территория</TabsTrigger>
-        </TabsList>
-        <TabsContent value="territory" className="space-y-4">
-          <MefTerritoryIndicators
-            visible={visible}
-            fillable={fillable}
-            collapsed={collapsed}
-            toggleNode={toggleNode}
-            parents={parents}
-            treeFilter={treeFilter}
-            setTreeFilter={setTreeFilter}
-            showOmsu={showOmsu}
-            setShowOmsu={setShowOmsu}
-          />
-        </TabsContent>
-      </Tabs>
+      <MefTerritoryIndicators
+        visible={visible}
+        fillable={fillable}
+        collapsed={collapsed}
+        toggleNode={toggleNode}
+        parents={parents}
+        treeFilter={treeFilter}
+        setTreeFilter={setTreeFilter}
+        showOmsu={showOmsu}
+        setShowOmsu={setShowOmsu}
+      />
     </div>
   );
 }

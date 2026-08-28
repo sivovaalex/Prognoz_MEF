@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useStore } from '@/lib/store';
 import { isTreeFilterActive, type TreeFilter } from '@/lib/indTree';
 import { Input } from '@/components/ui/input';
@@ -43,10 +43,12 @@ interface Props {
   onMunChange?: (v: string) => void;
   allowAllMuns?: boolean;
   showStatusFilter?: boolean;
+  /** Доп. элементы в начале ряда (до поиска) */
+  prefix?: ReactNode;
 }
 
 /** Панель над таблицами показателей: поиск, фильтр по ЦИО / ОМСУ */
-export function IndToolbar({ filter, onChange, shown, total, hideCioFilter, munId, onMunChange, allowAllMuns, showStatusFilter }: Props) {
+export function IndToolbar({ filter, onChange, shown, total, hideCioFilter, munId, onMunChange, allowAllMuns, showStatusFilter, prefix }: Props) {
   const { state } = useStore();
   const [searchOpen, setSearchOpen] = useState(false);
   const active = isTreeFilterActive(filter);
@@ -59,6 +61,7 @@ export function IndToolbar({ filter, onChange, shown, total, hideCioFilter, munI
 
   return (
     <div className="flex flex-wrap items-center gap-3 rounded-md border bg-white px-3 py-2">
+      {prefix}
       <Popover open={searchOpen} onOpenChange={setSearchOpen}>
         <PopoverTrigger asChild>
           <div className="relative min-w-[220px] flex-1 max-w-sm">

@@ -20,7 +20,7 @@ import {
 import { Send, Undo2, Lock, Info, ChevronDown, Users } from 'lucide-react';
 
 /** Сводка статусов по набору показателей сферы */
-function dirStats(inds: { id: string }[], values: Record<string, { status: string } | undefined>) {
+export function dirStats(inds: { id: string }[], values: Record<string, { status: string } | undefined>) {
   const total = inds.length;
   let filled = 0, approved = 0, pending = 0, returned = 0;
   inds.forEach((i) => {

@@ -1,325 +1,354 @@
-import React, { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useStore } from '@/lib/store';
-
-import { Download, ChevronRight, ChevronDown, Folder, FileText } from 'lucide-react';
+import { VALUE_FIELDS, VALUE_GROUPS } from '@/lib/types';
+import { ARCHIVE_YEARS, CURRENT_EVAL_YEAR, buildArchiveOmsuValues } from '@/lib/data';
+import { EMPTY_TREE_FILTER, chevronParents, visibleTree, type TreeFilter } from '@/lib/indTree';
+import { IndToolbar, TreeToggle } from '@/components/IndToolbar';
+import { ValueGroupHeader, fieldTint, type ValueColumnField, type ValueColumnGroup } from '@/components/ValueColumns';
+import { ValueTip } from '@/components/ValueTip';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+  Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
+} from '@/components/ui/tooltip';
+import { Download, ChevronDown, Info } from 'lucide-react';
+import { dirStats } from './OmsuForm';
 
-// --- Вид ЦИО ---
+// --- Вид ЦИО (только просмотр, компоновка как в рабочем месте ОМСУ) ---
 function OutputTableCio() {
   const { state } = useStore();
-  const [selectedInd, setSelectedInd] = useState<string | null>(null);
-  const [expandedDirs, setExpandedDirs] = useState<Record<string, boolean>>({});
-  const [munFilter, setMunFilter] = useState<string>('all');
-  const [year, setYear] = useState('2026');
-
-  const toggleDir = (id: string) => {
-    setExpandedDirs(prev => ({ ...prev, [id]: !prev[id] }));
-  };
-
-  const activeInd = state.indicators.find(i => i.id === selectedInd);
-  
-  const thCls = 'p-2 text-xs font-medium text-center border bg-slate-50';
-  const tdCls = 'p-2 text-sm border text-right';
-  
-  const fmt = (v: number | undefined | null) => {
-    if (v === undefined || v === null) return '—';
-    return v.toLocaleString('ru-RU', { maximumFractionDigits: 5 });
-  };
-
-  const activeOmsus = state.omsus.filter(o => o.isActive && (munFilter === 'all' || o.id === munFilter));
-
-  return (
-    <div className="flex flex-col h-full bg-white rounded border shadow-sm mt-4">
-      <div className="flex items-center justify-between border-b p-4">
-        <div>
-          <h2 className="text-lg font-semibold text-slate-800 uppercase">
-            {state.campaign.module === 'ukaz' ? 'КОНТРОЛЬ ИСПОЛНЕНИЯ УКАЗА ПРЕЗИДЕНТА РФ №607' : 'ПРОГНОЗ СОЦИАЛЬНО-ЭКОНОМИЧЕСКОГО РАЗВИТИЯ НА 2027-2029 ГОДЫ'}
-          </h2>
-          <div className="text-sm text-slate-500 mt-1">
-            Выходные таблицы по муниципальному прогнозу для ЦИОГВ
-          </div>
-        </div>
-        <Button variant="outline" size="sm">
-          <Download className="mr-2 h-4 w-4 text-green-700" />
-          Скачать эксель
-        </Button>
-      </div>
-
-      <div className="flex flex-1 min-h-[600px]">
-        {/* Левая панель - Дерево */}
-        <div className="w-80 border-r overflow-y-auto bg-slate-50 p-2">
-          <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 pl-2">Показатели</div>
-          {state.directions.map((dir, dIdx) => {
-            const dirInds = state.indicators.filter(i => i.directionId === dir.id);
-            if (dirInds.length === 0) return null;
-            const isExpanded = expandedDirs[dir.id];
-            
-            return (
-              <div key={dir.id} className="mb-1">
-                <button
-                  onClick={() => toggleDir(dir.id)}
-                  className="w-full flex items-center gap-1.5 p-1.5 hover:bg-slate-200 rounded text-sm text-left text-slate-800"
-                >
-                  {isExpanded ? <ChevronDown className="h-4 w-4 text-slate-400" /> : <ChevronRight className="h-4 w-4 text-slate-400" />}
-                  <Folder className="h-4 w-4 text-blue-400 fill-blue-100" />
-                  <span className="truncate font-medium">{dIdx + 1}. {dir.name}</span>
-                </button>
-                {isExpanded && (
-                  <div className="ml-6 border-l pl-2 py-1 space-y-1">
-                    {dirInds.map(ind => (
-                      <button
-                        key={ind.id}
-                        onClick={() => !ind.isGroup && setSelectedInd(ind.id)}
-                        disabled={ind.isGroup}
-                        className={`w-full flex items-center gap-2 p-1.5 rounded text-sm text-left transition-colors ${
-                          selectedInd === ind.id ? 'bg-[#1e5c8f] text-white' : ind.isGroup ? 'text-slate-500 font-medium' : 'text-slate-600 hover:bg-slate-200'
-                        }`}
-                      >
-                        {!ind.isGroup && <FileText className={`h-3.5 w-3.5 shrink-0 ${selectedInd === ind.id ? 'text-blue-200' : 'text-slate-400'}`} />}
-                        <span className="truncate" title={ind.name}>{ind.name}</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Правая панель - Таблица */}
-        <div className="flex-1 p-4 overflow-x-auto">
-          {activeInd ? (
-            <div>
-              <div className="mb-4">
-                <div className="font-semibold text-slate-800">
-                  Показатель: {activeInd.name}
-                </div>
-                <div className="text-sm text-slate-600">
-                  Единица измерения: {activeInd.unit || '—'}
-                </div>
-              </div>
-              <div className="mb-4 flex items-center gap-6">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-slate-600">Фильтр по ОМСУ:</span>
-                  <select 
-                    className="w-[300px] text-sm p-1.5 border rounded border-slate-300"
-                    value={munFilter}
-                    onChange={e => setMunFilter(e.target.value)}
-                  >
-                    <option value="all">Все ОМСУ</option>
-                    {state.omsus.map(o => (
-                      <option key={o.id} value={o.id}>{o.name}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-slate-600">Год оценки:</span>
-                  <select 
-                    className="w-[100px] text-sm p-1.5 border rounded border-slate-300"
-                    value={year}
-                    onChange={e => setYear(e.target.value)}
-                  >
-                    <option value="2024">2024</option>
-                    <option value="2025">2025</option>
-                    <option value="2026">2026</option>
-                  </select>
-                </div>
-              </div>
-              <table className="w-full border-collapse min-w-[1000px]">
-                <thead>
-                  <tr>
-                    <th className={`${thCls} text-left w-64 sticky left-0 z-10`} rowSpan={2}>Муниципальные образования</th>
-                    <th className={thCls}>2024</th>
-                    <th className={thCls}>2025</th>
-                    <th className={thCls}>2026</th>
-                    <th className={thCls} colSpan={2}>2027</th>
-                    <th className={thCls} colSpan={2}>2028</th>
-                    <th className={thCls} colSpan={2}>2029</th>
-                  </tr>
-                  <tr>
-                    <th className={thCls}>Отчет</th>
-                    <th className={thCls}>Отчет</th>
-                    <th className={thCls}>Оценка</th>
-                    <th className={thCls}>1 вариант<br/>(консервативный)</th>
-                    <th className={thCls}>2 вариант<br/>(базовый)</th>
-                    <th className={thCls}>1 вариант<br/>(консервативный)</th>
-                    <th className={thCls}>2 вариант<br/>(базовый)</th>
-                    <th className={thCls}>1 вариант<br/>(консервативный)</th>
-                    <th className={thCls}>2 вариант<br/>(базовый)</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {activeOmsus.map(omsu => {
-                    const vals = state.omsuValues[omsu.id]?.[activeInd.id];
-                    return (
-                      <tr key={omsu.id} className="hover:bg-slate-50">
-                        <td className="p-2 text-sm border font-medium text-slate-700 bg-white sticky left-0 z-10">{omsu.name}</td>
-                        <td className={tdCls}>{fmt(vals?.v2024)}</td>
-                        <td className={tdCls}>{fmt(vals?.v2025)}</td>
-                        <td className={tdCls}>{fmt(vals?.v2026)}</td>
-                        <td className={tdCls}>{fmt(vals?.cons2027)}</td>
-                        <td className={tdCls}>{fmt(vals?.base2027)}</td>
-                        <td className={tdCls}>{fmt(vals?.cons2028)}</td>
-                        <td className={tdCls}>{fmt(vals?.base2028)}</td>
-                        <td className={tdCls}>{fmt(vals?.cons2029)}</td>
-                        <td className={tdCls}>{fmt(vals?.base2029)}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center h-full text-slate-400 space-y-4">
-              <FileText className="h-16 w-16 opacity-20" />
-              <p>Выберите показатель в левом меню для просмотра значений</p>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// --- Вид ОМСУ ---
-function OutputTableOmsu() {
-  const { state } = useStore();
-  
   const activeOmsus = state.omsus.filter(o => o.isActive);
   const [selectedOmsuId, setSelectedOmsuId] = useState<string>(activeOmsus[0]?.id || '');
-  const [year, setYear] = useState('2025');
+  // аккордеон: открыта только одна сфера
+  const [openDir, setOpenDir] = useState<string | null>(state.directions[0]?.id ?? null);
+  // дерево показателей: сворачивание дочерних и фильтры
+  const [treeFilter, setTreeFilter] = useState<TreeFilter>(EMPTY_TREE_FILTER);
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  // «Год оценки»: какую таблицу вытаскивать из «БД» (последние 10 лет оценки)
+  const [selectedYear, setSelectedYear] = useState<number>(CURRENT_EVAL_YEAR);
+  // «Вариант прогноза»: 'all' — оба варианта, '1' — консервативный, '2' — базовый
+  const [forecastVariant, setForecastVariant] = useState<'all' | '1' | '2'>('all');
+  // Отображение справочных показателей (в названии «справочно», без учёта регистра)
+  const [showReference, setShowReference] = useState(true);
+  const isCurrentYear = selectedYear === CURRENT_EVAL_YEAR;
 
-  const selectedOmsu = activeOmsus.find(o => o.id === selectedOmsuId);
-  const vals = state.omsuValues[selectedOmsuId] || {};
-  
-  const thCls = 'p-2 text-xs font-medium text-center border bg-slate-50';
-  const tdCls = 'p-2 text-sm border text-right';
-  
-  const fmt = (v: number | undefined | null) => {
-    if (v === undefined || v === null) return '—';
-    return v.toLocaleString('ru-RU', { maximumFractionDigits: 5 });
+  // Колонки таблицы за год оценки Y: отчёты Y-3…Y-1, оценка Y, прогнозы Y+1…Y+3 (2 варианта)
+  const fields = useMemo<ValueColumnField[]>(() => {
+    if (isCurrentYear)
+      return [...VALUE_FIELDS].map((f) => ({
+        ...f,
+        variant: f.key.startsWith('cons') ? (1 as const) : f.key.startsWith('base') ? (2 as const) : undefined,
+      }));
+    const Y = selectedYear;
+    return [
+      { key: 'r1', group: `y${Y - 3}`, label: 'Отчёт', _bg: 'report' },
+      { key: 'r2', group: `y${Y - 2}`, label: 'Отчёт', _bg: 'report' },
+      { key: 'r3', group: `y${Y - 1}`, label: 'Отчёт', _bg: 'report' },
+      { key: 'e', group: `y${Y}`, label: 'Оценка', _bg: 'estimate' },
+      { key: 'c1', group: `y${Y + 1}`, label: 'Прогноз вариант 1 (консервативный)', _bg: 'y2027', variant: 1 },
+      { key: 'b1', group: `y${Y + 1}`, label: 'Прогноз вариант 2 (базовый)', _bg: 'y2027', variant: 2 },
+      { key: 'c2', group: `y${Y + 2}`, label: 'Прогноз вариант 1 (консервативный)', _bg: 'y2028', variant: 1 },
+      { key: 'b2', group: `y${Y + 2}`, label: 'Прогноз вариант 2 (базовый)', _bg: 'y2028', variant: 2 },
+      { key: 'c3', group: `y${Y + 3}`, label: 'Прогноз вариант 1 (консервативный)', _bg: 'y2029', variant: 1 },
+      { key: 'b3', group: `y${Y + 3}`, label: 'Прогноз вариант 2 (базовый)', _bg: 'y2029', variant: 2 },
+    ];
+  }, [selectedYear, isCurrentYear]);
+
+  // Колонки, отображаемые с учётом фильтра «Вариант прогноза»
+  const visibleFields = useMemo(
+    () =>
+      forecastVariant === 'all'
+        ? fields
+        : fields.filter((f) => f.variant === undefined || f.variant === Number(forecastVariant)),
+    [fields, forecastVariant],
+  );
+
+  const headerGroups = useMemo<ValueColumnGroup[]>(() => {
+    if (isCurrentYear) return [...VALUE_GROUPS];
+    const Y = selectedYear;
+    return [
+      { key: `y${Y - 3}`, label: `${Y - 3}`, span: 1, _bg: 'report' },
+      { key: `y${Y - 2}`, label: `${Y - 2}`, span: 1, _bg: 'report' },
+      { key: `y${Y - 1}`, label: `${Y - 1}`, span: 1, _bg: 'report' },
+      { key: `y${Y}`, label: `${Y}`, span: 1, _bg: 'estimate' },
+      { key: `y${Y + 1}`, label: `${Y + 1}`, span: 2, _bg: 'y2027' },
+      { key: `y${Y + 2}`, label: `${Y + 2}`, span: 2, _bg: 'y2028' },
+      { key: `y${Y + 3}`, label: `${Y + 3}`, span: 2, _bg: 'y2029' },
+    ];
+  }, [selectedYear, isCurrentYear]);
+
+  // «БД»: таблица за выбранный год оценки (текущий год — живые данные из стора)
+  const archiveVals = useMemo(
+    () => (isCurrentYear ? null : buildArchiveOmsuValues(selectedYear, state.indicators)),
+    [selectedYear, isCurrentYear, state.indicators],
+  );
+
+  const mun = state.omsus.find((m) => m.id === selectedOmsuId);
+  const values = state.omsuValues[selectedOmsuId] || {};
+
+  // Значение ячейки: текущий год — из стора, архивный год — из «БД»
+  const getVal = (indId: string, key: string): number | null => {
+    if (isCurrentYear) {
+      const v = values[indId];
+      if (!v) return null;
+      const val = (v as unknown as Record<string, number | null | undefined>)[key];
+      return typeof val === 'number' ? val : null;
+    }
+    return archiveVals?.[selectedOmsuId]?.[indId]?.[key] ?? null;
   };
 
+  // Выделяемые колонки: оценка и последний отчётный год
+  const isBoldKey = (key: string) =>
+    isCurrentYear ? key === 'v2026' || key === 'v2025' : key === 'e' || key === 'r3';
+
+  // Закрытый показатель: общий (closed) или индивидуальный для данного ОМСУ (closedForOmsuIds)
+  const isClosedForMe = (ind: { closed?: boolean; closedForOmsuIds?: string[] }) =>
+    !!ind.closed || (Array.isArray(ind.closedForOmsuIds) && ind.closedForOmsuIds.includes(selectedOmsuId));
+
+  // ЗАТО: показатели с флагом zato видны только ОМСУ с отметкой ЗАТО
+  // (ОМСУ-ЗАТО видит и обычные показатели)
+  const myIndicators = state.indicators.filter((i) => !i.zato || mun?.isZato);
+  // Справочные показатели (в названии «справочно», без учёта регистра) — по желанию
+  const shownIndicators = showReference
+    ? myIndicators
+    : myIndicators.filter((i) => !/справочно/i.test(i.name));
+  const visible = visibleTree(shownIndicators, collapsed, treeFilter);
+  const parents = chevronParents(state.indicators);
+  const toggleNode = (id: string) => setCollapsed((p) => ({ ...p, [id]: !p[id] }));
+
   return (
-    <div className="flex flex-col h-full bg-white rounded border shadow-sm mt-4">
-      <div className="flex items-center justify-between border-b p-4">
+    <div className="space-y-4">
+      <div className="flex items-start justify-between">
         <div>
-          <h2 className="text-lg font-semibold text-slate-800 uppercase">
-            ПРОГНОЗ СОЦИАЛЬНО-ЭКОНОМИЧЕСКОГО РАЗВИТИЯ НА 2026-2028 ГОДЫ
+          <h2 className="text-lg font-semibold">
+            {state.campaign.module === 'ukaz'
+              ? 'Контроль исполнения Указа Президента РФ №607'
+              : 'Прогноз социально-экономического развития'} — {mun?.name || '—'}
           </h2>
-          <div className="text-sm text-slate-500 mt-1">
-            {selectedOmsu?.name || '—'} · Источник данных: Данные муниципальных образований (прогноз)
-          </div>
+          <p className="text-sm text-muted-foreground">
+            {state.campaign.name}, {state.campaign.period} · Выходная таблица для ЦИОГВ (режим просмотра)
+          </p>
         </div>
-        <Button variant="outline" size="sm">
-          <Download className="mr-2 h-4 w-4 text-green-700" />
-          Скачать эксель
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm">
+            <Download className="mr-2 h-4 w-4 text-green-700" />
+            Скачать эксель
+          </Button>
+        </div>
       </div>
 
-      <div className="flex flex-1 min-h-[600px]">
-        {/* Левая панель - Фильтры */}
-        <div className="w-64 border-r bg-slate-50 p-4 space-y-6">
-          <div className="space-y-2">
-            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Территория:</label>
-            <select 
-              className="w-full text-sm p-1.5 border rounded border-slate-300"
+      <div className="rounded-md border border-blue-200 bg-blue-50 p-3 text-sm flex gap-2">
+        <Info className="h-4 w-4 text-blue-700 mt-0.5 shrink-0" />
+        <span>
+          {isCurrentYear
+            ? 'Значения муниципального прогноза в режиме просмотра — изменить данные из этого раздела нельзя. Наборы показателей по сферам можно сворачивать — одновременно открыта одна сфера.'
+            : `Выходная таблица за ${selectedYear} год оценки (из архива «БД»). Отчётные годы: ${selectedYear - 3}–${selectedYear - 1}, оценка: ${selectedYear}, прогноз: ${selectedYear + 1}–${selectedYear + 3}. Режим просмотра — изменить данные нельзя.`}
+        </span>
+      </div>
+
+      <IndToolbar
+        filter={treeFilter}
+        onChange={setTreeFilter}
+        shown={visible.length}
+        total={shownIndicators.length}
+        prefix={
+          <>
+            <select
+              className="text-sm h-9 border rounded border-slate-300 px-2"
               value={selectedOmsuId}
-              onChange={e => setSelectedOmsuId(e.target.value)}
+              onChange={(e) => setSelectedOmsuId(e.target.value)}
             >
-              {activeOmsus.map(o => (
+              {activeOmsus.map((o) => (
                 <option key={o.id} value={o.id}>{o.name}</option>
               ))}
             </select>
-          </div>
-          
-          <div className="space-y-2">
-            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Год оценки:</label>
-            <select 
-              className="w-full text-sm p-1.5 border rounded border-slate-300"
-              value={year}
-              onChange={e => setYear(e.target.value)}
-            >
-              <option value="2024">2024</option>
-              <option value="2025">2025</option>
-              <option value="2026">2026</option>
-            </select>
-          </div>
-        </div>
+            <div className="flex items-center gap-1.5">
+              <span className="text-sm text-muted-foreground whitespace-nowrap">Год оценки:</span>
+              <select
+                className="text-sm h-9 border rounded border-slate-300 px-2"
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(Number(e.target.value))}
+              >
+                {ARCHIVE_YEARS.map((y) => (
+                  <option key={y} value={y}>
+                    {y === CURRENT_EVAL_YEAR ? `${y} (текущая кампания)` : `${y} (архив)`}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="text-sm text-muted-foreground whitespace-nowrap">Вариант прогноза:</span>
+              <select
+                className="text-sm h-9 border rounded border-slate-300 px-2"
+                value={forecastVariant}
+                onChange={(e) => setForecastVariant(e.target.value as 'all' | '1' | '2')}
+              >
+                <option value="all">Все</option>
+                <option value="1">Вариант 1 (Консервативный)</option>
+                <option value="2">Вариант 2 (Базовый)</option>
+              </select>
+            </div>
+            <label className="flex cursor-pointer select-none items-center gap-1.5 whitespace-nowrap text-sm text-muted-foreground">
+              <input
+                type="checkbox"
+                className="h-4 w-4 accent-blue-600"
+                checked={showReference}
+                onChange={(e) => setShowReference(e.target.checked)}
+              />
+              Отображение справочных показателей
+            </label>
+          </>
+        }
+      />
 
-        {/* Правая панель - Таблица */}
-        <div className="flex-1 p-4 overflow-x-auto">
-          <table className="w-full border-collapse min-w-[1000px]">
-            <thead>
-              <tr>
-                <th className={`${thCls} text-left w-80`} rowSpan={2}>Показатели</th>
-                <th className={thCls} rowSpan={2}>Единицы<br/>измерения</th>
-                <th className={thCls}>2023</th>
-                <th className={thCls}>2024</th>
-                <th className={thCls}>2025</th>
-                <th className={thCls} colSpan={2}>2026</th>
-                <th className={thCls} colSpan={2}>2027</th>
-              </tr>
-              <tr>
-                <th className={thCls}>Отчет</th>
-                <th className={thCls}>Отчет</th>
-                <th className={thCls}>Оценка</th>
-                <th className={thCls}>Прогноз вариант 1<br/>(консервативный)</th>
-                <th className={thCls}>Прогноз вариант 2<br/>(базовый)</th>
-                <th className={thCls}>Прогноз вариант 1<br/>(консервативный)</th>
-                <th className={thCls}>Прогноз вариант 2<br/>(базовый)</th>
-              </tr>
-            </thead>
-            <tbody>
-              {state.directions.map((dir, dIdx) => (
-                <React.Fragment key={dir.id}>
-                  <tr className="bg-slate-100 font-semibold">
-                    <td className="p-2 text-sm border font-medium text-slate-800" colSpan={9}>
-                      {dIdx + 1}. {dir.name}
-                    </td>
-                  </tr>
-                  {state.indicators.filter(i => i.directionId === dir.id).map((ind) => {
-                    const rowVals = vals[ind.id];
-                    return (
-                      <tr key={ind.id} className={ind.isGroup ? "bg-slate-50 font-medium text-slate-700" : "hover:bg-slate-50"}>
-                        <td className={`p-2 text-sm border ${!ind.isGroup ? 'pl-8' : 'pl-4'}`}>
-                          {ind.name}
-                        </td>
-                        <td className="p-2 text-xs border text-center text-slate-500">{ind.unit || ''}</td>
-                        {!ind.isGroup ? (
-                          <>
-                            {/* Для имитации старых годов сдвигаем поля. Отчет 2023 - это v2023 (если есть), 2024 - это v2024. */}
-                            <td className={tdCls}>{fmt(rowVals?.v2023)}</td>
-                            <td className={tdCls}>{fmt(rowVals?.v2024)}</td>
-                            <td className={tdCls}>{fmt(rowVals?.v2025)}</td>
-                            <td className={tdCls}>{fmt(rowVals?.v2026)}</td>
-                            <td className={tdCls}>{fmt(rowVals?.cons2027)}</td>
-                            <td className={tdCls}>{fmt(rowVals?.base2027)}</td>
-                            <td className={tdCls}>{fmt(rowVals?.cons2028)}</td>
-                          </>
-                        ) : (
-                          <td className={tdCls} colSpan={7}></td>
-                        )}
-                      </tr>
-                    );
-                  })}
-                </React.Fragment>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      {state.directions.map((d) => {
+        const inds = visible.filter((i) => i.directionId === d.id);
+        if (!inds.length) return null;
+        const dirInds = shownIndicators.filter((i) => i.directionId === d.id && !i.isGroup);
+        const st = isCurrentYear
+          ? dirStats(dirInds, values)
+          : {
+              total: dirInds.length,
+              filled: dirInds.filter((i) => getVal(i.id, 'e') != null).length,
+            };
+        const open = openDir === d.id;
+        return (
+          <Card key={d.id}>
+            <button
+              type="button"
+              className="w-full flex items-center justify-between gap-3 px-6 py-3 text-left hover:bg-slate-50 rounded-t-xl transition-colors"
+              onClick={() => setOpenDir(open ? null : d.id)}
+            >
+              <div className="flex items-center gap-2 min-w-0">
+                <ChevronDown className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${open ? '' : '-rotate-90'}`} />
+                <span className="font-semibold text-base truncate">{d.name}</span>
+              </div>
+              <div className="flex flex-wrap gap-1.5 justify-end text-xs">
+                <Badge variant="outline" className="text-slate-700 border-slate-300">
+                  Введено: {st.filled}/{st.total}
+                </Badge>
+              </div>
+            </button>
+
+            {open && (
+              <CardContent className="pt-0 overflow-x-auto">
+                <table className="w-full text-sm border-collapse">
+                  <thead>
+                    <ValueGroupHeader
+                      fields={visibleFields}
+                      groups={headerGroups}
+                      leading={
+                        <>
+                          <th rowSpan={2} className="text-left p-2 w-12 align-middle">№</th>
+                          <th rowSpan={2} className="text-left p-2 align-middle min-w-[220px]">Показатель</th>
+                          <th rowSpan={2} className="text-left p-2 align-middle">ЦИО</th>
+                        </>
+                      }
+                    />
+                  </thead>
+
+                  <tbody>
+                    {inds.map((ind) => {
+                      if (ind.isGroup) {
+                        return (
+                          <tr key={ind.id} className="border-b bg-slate-50/80">
+                            <td className="p-2 text-muted-foreground whitespace-nowrap align-middle">{ind.num}</td>
+                            <td colSpan={2 + visibleFields.length} className="p-2 align-middle">
+                              <span
+                                className="flex items-center gap-1 font-semibold text-slate-700"
+                                style={{ paddingLeft: `${(ind.level - 1) * 18}px` }}
+                              >
+                                <TreeToggle
+                                  hasChildren={parents.has(ind.id)}
+                                  collapsed={!!collapsed[ind.id]}
+                                  onToggle={() => toggleNode(ind.id)}
+                                />
+                                <span>
+                                  <span className="mr-1 text-slate-400">▸</span>
+                                  {ind.name}
+                                </span>
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      }
+                      const v = values[ind.id];
+                      const closedForMe = isClosedForMe(ind);
+                      return (
+                        <tr key={ind.id} className="border-b hover:bg-slate-50 align-top">
+                          <td className="p-2 text-muted-foreground whitespace-nowrap">{ind.num}</td>
+                          <td className="p-2">
+                            <div className="flex items-start gap-1.5" style={{ paddingLeft: `${(ind.level - 1) * 18}px` }}>
+                              <span className="mt-0.5 inline-flex shrink-0">
+                                <TreeToggle
+                                  hasChildren={parents.has(ind.id)}
+                                  collapsed={!!collapsed[ind.id]}
+                                  onToggle={() => toggleNode(ind.id)}
+                                />
+                              </span>
+                              <TooltipProvider delayDuration={150}>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <button
+                                      type="button"
+                                      aria-label={`Информация о расчёте показателя ${ind.num}`}
+                                      className="mt-0.5 inline-flex shrink-0 cursor-help text-slate-400 hover:text-blue-700 focus:text-blue-700 transition-colors outline-none"
+                                    >
+                                      <Info className="h-4 w-4" />
+                                    </button>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="right" sideOffset={6} className="max-w-xs p-3 text-xs leading-relaxed">
+                                    <div className="font-semibold text-sm mb-1">{ind.num}. {ind.name}</div>
+                                    <div><span className="opacity-60">Формула расчёта:</span> {ind.formula}</div>
+                                    <div><span className="opacity-60">Единица измерения:</span> {ind.unit}</div>
+                                    <div><span className="opacity-60">Оптимум:</span> {ind.optimum === 'max' ? 'чем больше, тем лучше (↑ max)' : 'чем меньше, тем лучше (↓ min)'}</div>
+                                    <div><span className="opacity-60">Отраслевой ЦИО:</span> {state.cios.find((c) => c.id === ind.cioId)?.short}</div>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                              <div className="font-medium">{ind.name}</div>
+                              {closedForMe && (
+                                <span
+                                  title="Показатель закрыт для ввода и согласования"
+                                  className="text-[10px] px-1.5 py-0.5 rounded border border-slate-300 bg-slate-100 text-slate-500 whitespace-nowrap"
+                                >
+                                  Закрыт
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="p-2"><Badge variant="secondary">{state.cios.find((c) => c.id === ind.cioId)?.short}</Badge></td>
+
+                          {visibleFields.map((f) => (
+                            <td key={f.key} className={`p-1.5 text-center ${fieldTint(f.key)}`}>
+                              <div className="flex flex-col items-center justify-center gap-1">
+                                <span className={isBoldKey(f.key) ? 'font-medium' : ''}>
+                                  <ValueTip
+                                    value={getVal(ind.id, f.key)}
+                                    updatedAt={isCurrentYear ? v?.updatedAt ?? null : null}
+                                    author={isCurrentYear ? v?.signedBy ?? 'Иванова А.П.' : null}
+                                  />
+                                </span>
+                              </div>
+                            </td>
+                          ))}
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </CardContent>
+            )}
+          </Card>
+        );
+      })}
     </div>
   );
 }
 
 // --- Главный враппер ---
 export function OutputTablesView() {
-  const { state } = useStore();
-  const [tab, setTab] = useState<'omsu' | 'cio'>('cio');
-
-  const hasOmsuTab = state.campaign.module === 'ser';
-
   return (
     <div className="space-y-4">
       <div>
@@ -329,24 +358,8 @@ export function OutputTablesView() {
         </p>
       </div>
 
-      {hasOmsuTab && (
-        <div className="flex items-center gap-2 border-b">
-          <button
-            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${tab === 'omsu' ? 'border-[#1e5c8f] text-[#1e5c8f]' : 'border-transparent text-slate-500 hover:text-slate-800'}`}
-            onClick={() => setTab('omsu')}
-          >
-            ОМСУ
-          </button>
-          <button
-            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${tab === 'cio' ? 'border-[#1e5c8f] text-[#1e5c8f]' : 'border-transparent text-slate-500 hover:text-slate-800'}`}
-            onClick={() => setTab('cio')}
-          >
-            ЦИО
-          </button>
-        </div>
-      )}
-
-      {(!hasOmsuTab || tab === 'cio') ? <OutputTableCio /> : <OutputTableOmsu />}
+      <OutputTableCio />
     </div>
   );
 }
+

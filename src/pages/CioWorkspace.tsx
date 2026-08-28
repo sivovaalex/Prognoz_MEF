@@ -57,27 +57,20 @@ function CioWorkspaceNew() {
       <div className="flex items-center justify-between">
         <h3 className="font-medium text-slate-800">Согласование показателей ОМСУ</h3>
       </div>
-      <Tabs defaultValue="territory">
-        <TabsList className="mb-4">
-          <TabsTrigger value="territory">Территория</TabsTrigger>
-        </TabsList>
-        <TabsContent value="territory" className="space-y-4">
-          <CioTerritoryIndicators 
-            myOwnVisible={myOwnVisible} 
-            myFillable={myFillable}
-            collapsed={collapsed}
-            toggleNode={toggleNode}
-            parents={parents}
-            treeFilter={treeFilter}
-            setTreeFilter={setTreeFilter}
-            munFilter={munFilter}
-            setMunFilter={setMunFilter}
-            cio={cio}
-            setSignTarget={setSignTarget}
-            setReturnTarget={setReturnTarget}
-          />
-        </TabsContent>
-      </Tabs>
+      <CioTerritoryIndicators
+        myOwnVisible={myOwnVisible}
+        myFillable={myFillable}
+        collapsed={collapsed}
+        toggleNode={toggleNode}
+        parents={parents}
+        treeFilter={treeFilter}
+        setTreeFilter={setTreeFilter}
+        munFilter={munFilter}
+        setMunFilter={setMunFilter}
+        cio={cio}
+        setSignTarget={setSignTarget}
+        setReturnTarget={setReturnTarget}
+      />
 
       {/* Возврат ОМСУ на доработку */}
       <Dialog open={!!returnTarget} onOpenChange={(v) => !v && setReturnTarget(null)}>
@@ -497,24 +490,17 @@ function CioWorkspaceOld({ hideOmsuApprove = false }: { hideOmsuApprove?: boolea
 
         <TabsContent value="own" className="space-y-4 mt-4">
           {!hideOmsuApprove ? (
-            <Tabs defaultValue="territory">
-              <TabsList className="mb-4">
-                <TabsTrigger value="territory">Территория</TabsTrigger>
-              </TabsList>
-              <TabsContent value="territory" className="space-y-4">
-                <CioTerritoryIndicators 
-                  myOwnVisible={myOwnVisible} 
-                  myFillable={myFillable}
-                  collapsed={collapsed}
-                  toggleNode={toggleNode}
-                  parents={parents}
-                  treeFilter={treeFilter}
-                  setTreeFilter={setTreeFilter}
-                  munFilter={munFilter}
-                  setMunFilter={setMunFilter}
-                />
-              </TabsContent>
-            </Tabs>
+            <CioTerritoryIndicators
+              myOwnVisible={myOwnVisible}
+              myFillable={myFillable}
+              collapsed={collapsed}
+              toggleNode={toggleNode}
+              parents={parents}
+              treeFilter={treeFilter}
+              setTreeFilter={setTreeFilter}
+              munFilter={munFilter}
+              setMunFilter={setMunFilter}
+            />
           ) : (
             <div className="space-y-4">
               <CioOwnIndicatorsOld 

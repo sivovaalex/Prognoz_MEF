@@ -358,6 +358,50 @@ function buildOmsuValues(indicators: Indicator[]): Record<string, Record<string,
   return out;
 }
 
+// ─────────────────────────────────────────────────────────────
+// Архив выходных таблиц: последние 10 лет оценки («БД»)
+// ─────────────────────────────────────────────────────────────
+
+/** Текущий (идущий) год оценки */
+export const CURRENT_EVAL_YEAR = 2026;
+
+/** Годы оценки, за которые в «БД» хранятся выходные таблицы (последние 10 лет) */
+export const ARCHIVE_YEARS: number[] = Array.from({ length: 10 }, (_, i) => CURRENT_EVAL_YEAR - i);
+
+/** Строка архива: отчёты r1–r3 (Y-3…Y-1), оценка e (Y), прогнозы c1/b1…c3/b3 (Y+1…Y+3, 2 варианта) */
+export type ArchiveRow = Record<string, number | null>;
+/** munId -> indId -> слот -> значение */
+export type ArchiveOmsuValues = Record<string, Record<string, ArchiveRow>>;
+
+/**
+ * «Вытаскивает» из «БД» выходную таблицу за год оценки Y (детерминированные демо-данные).
+ * Структура колонок та же, что у текущего года: 3 отчётных года, оценка, 3 года прогноза (2 варианта).
+ */
+export function buildArchiveOmsuValues(year: number, indicators: Indicator[]): ArchiveOmsuValues {
+  const fillable = indicators.filter(i => !i.isGroup);
+  const out: ArchiveOmsuValues = {};
+  MUNICIPALITIES.forEach((m, mi) => {
+    const rand = seedRand(year * 7919 + mi * 997 + 13);
+    out[m.id] = {};
+    fillable.forEach((ind) => {
+      const [lo, hi] = RANGES[ind.id] ?? [100, 1000];
+      const v = r2(lo + rand() * (hi - lo));
+      // Имитируем небольшой процент показателей, не заполненных за этот год
+      const empty = rand() < 0.07;
+      const f = makeFields(v);
+      out[m.id][ind.id] = empty
+        ? {}
+        : {
+            r1: f.v2023, r2: f.v2024, r3: f.v2025, e: f.v2026,
+            c1: f.cons2027, b1: f.base2027,
+            c2: f.cons2028, b2: f.base2028,
+            c3: f.cons2029, b3: f.base2029,
+          };
+    });
+  });
+  return out;
+}
+
 
 function buildCioTerritoryValues(indicators: Indicator[], omsus: Municipality[]): Record<string, Record<string, Record<string, CioValue>>> {
   const out: Record<string, Record<string, Record<string, CioValue>>> = {};
