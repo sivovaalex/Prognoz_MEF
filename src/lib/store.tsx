@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useReducer } from 'react';
-import { VALUE_FIELDS, emptyValueFields } from './types';
-import type { AppState, Indicator, Direction, RoleId, ValueFieldKey } from './types';
+import { VALUE_FIELDS, emptyValueFields, deriveNoteStatus } from './types';
+import type { AppState, Indicator, Direction, RoleId, ValueFieldKey, NoteTemplate, NoteOmsuData, NoteCellStatus } from './types';
 import { buildInitialState } from './data';
 import { isDescendant, isIndActive, renumberAll, subtreeIds } from './indTree';
 
@@ -58,7 +58,20 @@ export type Action =
   | { type: 'UPDATE_BLOCK_SETTINGS'; block: string; approvers: ('omsu' | 'cio' | 'mef')[]; reportingPeriods: string[]; estimatedPeriods: string[]; forecastPeriods: string[]; hasNote: boolean; }
   | { type: 'CIO_TERR_SET_VALUE'; cioId: string; indId: string; munId: string; field: ValueFieldKey; value: number | null }
   | { type: 'CIO_TERR_SIGN'; cioId: string; indId: string; munId: string; actor: string }
-  | { type: 'CIO_TERR_RECALL'; cioId: string; indId: string; munId: string; actor: string };
+  | { type: 'CIO_TERR_RECALL'; cioId: string; indId: string; munId: string; actor: string }
+  // ── Пояснительная записка (ПЗ) ──────────────────────────────────────
+  | { type: 'NOTE_ADD_TEMPLATE'; template: NoteTemplate }
+  | { type: 'NOTE_UPDATE_TEMPLATE'; template: NoteTemplate }
+  | { type: 'NOTE_TOGGLE_TEMPLATE'; id: string }
+  | { type: 'NOTE_SET_CELL'; munId: string; templateId: string; cellKey: string; value: string }
+  | { type: 'NOTE_SIGN_SEND'; munId: string; templateId: string; cellKeys: string[]; actor: string }
+  | { type: 'NOTE_RECALL'; munId: string; templateId: string; cellKeys: string[]; actor: string }
+  | { type: 'NOTE_CIO_APPROVE'; templateId: string; munId: string; cellKey: string; actor: string }
+  | { type: 'NOTE_CIO_RETURN'; templateId: string; munId: string; cellKey: string; actor: string; comment: string }
+  | { type: 'NOTE_CIO_SET_NOTE'; templateId: string; munId: string; note: string }
+  | { type: 'NOTE_CAMPAIGN_DATES'; startDate: string; deadlineOmsu: string; deadlineCio: string }
+  | { type: 'NOTE_CAMPAIGN_LAUNCH' }
+  | { type: 'NOTE_CAMPAIGN_STOP' };
 
 function now(): string {
   const d = new Date();
@@ -584,6 +597,189 @@ function reducer(state: AppState, a: Action): AppState {
         history: [{ at: new Date().toISOString(), actor, action: `ЦИО отозвал значение (Территория)` }, ...state.history]
       };
     }
+    // ── Пояснительная записка (ПЗ) ─────────────────────────────────────
+    case 'NOTE_ADD_TEMPLATE':
+      return {
+        ...state,
+        noteTemplates: [...state.noteTemplates, { ...a.template, isActive: true }],
+        history: [...state.history, { at: now(), actor: 'Администратор', action: `Добавлен шаблон пояснительной записки` }],
+      };
+    case 'NOTE_UPDATE_TEMPLATE':
+      return {
+        ...state,
+        noteTemplates: state.noteTemplates.map((t) => (t.id === a.template.id ? { ...a.template, isActive: t.isActive } : t)),
+        history: [...state.history, { at: now(), actor: 'Администратор', action: `Изменён шаблон пояснительной записки` }],
+      };
+    case 'NOTE_TOGGLE_TEMPLATE':
+      return {
+        ...state,
+        noteTemplates: state.noteTemplates.map((t) => (t.id === a.id ? { ...t, isActive: !t.isActive } : t)),
+      };
+    case 'NOTE_SET_CELL': {
+      const cur = state.noteOmsuValues[a.munId]?.[a.templateId];
+      if (!cur) return state;
+      const v = a.value;
+      const empty = !v || v.trim() === '' || v.trim() === '—';
+      const cellStatus = { ...cur.cellStatus };
+      const cellComments = { ...cur.cellComments };
+      if (empty) {
+        delete cellStatus[a.cellKey];
+        delete cellComments[a.cellKey];
+      } else {
+        // новое значение или правка отправленной/согласованной/возвращённой ячейки — снова черновик
+        cellStatus[a.cellKey] = 'draft';
+        delete cellComments[a.cellKey];
+      }
+      const next: NoteOmsuData = {
+        ...cur,
+        cells: { ...cur.cells, [a.cellKey]: v },
+        cellStatus,
+        cellComments,
+        status: deriveNoteStatus(cellStatus),
+        updatedAt: now(),
+      };
+      return {
+        ...state,
+        noteOmsuValues: {
+          ...state.noteOmsuValues,
+          [a.munId]: { ...state.noteOmsuValues[a.munId], [a.templateId]: next },
+        },
+      };
+    }
+    case 'NOTE_SIGN_SEND': {
+      const cur = state.noteOmsuValues[a.munId]?.[a.templateId];
+      if (!cur) return state;
+      // поячеечная отправка: подписываются только заполненные ячейки-черновики
+      const cellStatus = { ...cur.cellStatus };
+      let sent = 0;
+      a.cellKeys.forEach((k) => {
+        const st = cellStatus[k];
+        const v = cur.cells[k];
+        if ((st === 'draft' || st === 'returned') && v && v.trim() !== '' && v.trim() !== '—') {
+          cellStatus[k] = 'pending_cio';
+          sent++;
+        }
+      });
+      if (sent === 0) return state;
+      const cellComments = { ...cur.cellComments };
+      a.cellKeys.forEach((k) => { if (cellStatus[k] === 'pending_cio') delete cellComments[k]; });
+      return {
+        ...state,
+        noteOmsuValues: {
+          ...state.noteOmsuValues,
+          [a.munId]: {
+            ...state.noteOmsuValues[a.munId],
+            [a.templateId]: { ...cur, cellStatus, cellComments, status: deriveNoteStatus(cellStatus), updatedAt: now(), signedBy: a.actor },
+          },
+        },
+        history: [...state.history, { at: now(), actor: `ОМСУ (${a.actor})`, action: `Пояснительная записка: ${sent} яч. подписано ЭЦП и направлено на согласование ЦИО` }],
+      };
+    }
+    case 'NOTE_RECALL': {
+      const cur = state.noteOmsuValues[a.munId]?.[a.templateId];
+      if (!cur) return state;
+      const cellStatus = { ...cur.cellStatus };
+      let recalled = 0;
+      a.cellKeys.forEach((k) => {
+        if (cellStatus[k] === 'pending_cio') { cellStatus[k] = 'draft'; recalled++; }
+      });
+      if (recalled === 0) return state;
+      return {
+        ...state,
+        noteOmsuValues: {
+          ...state.noteOmsuValues,
+          [a.munId]: {
+            ...state.noteOmsuValues[a.munId],
+            [a.templateId]: { ...cur, cellStatus, status: deriveNoteStatus(cellStatus), updatedAt: now(), signedBy: undefined },
+          },
+        },
+        history: [...state.history, { at: now(), actor: `ОМСУ (${a.actor})`, action: `Пояснительная записка: ${recalled} яч. отозвано с согласования` }],
+      };
+    }
+    case 'NOTE_CIO_APPROVE': {
+      const cur = state.noteOmsuValues[a.munId]?.[a.templateId];
+      if (!cur || cur.cellStatus[a.cellKey] !== 'pending_cio') return state;
+      const cellStatus: Record<string, NoteCellStatus> = { ...cur.cellStatus, [a.cellKey]: 'approved' };
+      const derived = deriveNoteStatus(cellStatus);
+      const cioCur = state.noteCioValues[a.templateId]?.[a.munId] || { note: '', status: 'none' as const, updatedAt: null };
+      return {
+        ...state,
+        noteOmsuValues: {
+          ...state.noteOmsuValues,
+          [a.munId]: {
+            ...state.noteOmsuValues[a.munId],
+            [a.templateId]: { ...cur, cellStatus, status: derived, updatedAt: now() },
+          },
+        },
+        noteCioValues: {
+          ...state.noteCioValues,
+          [a.templateId]: {
+            ...(state.noteCioValues[a.templateId] || {}),
+            [a.munId]: { ...cioCur, status: derived === 'approved' ? 'approved' : cioCur.status, updatedAt: now() },
+          },
+        },
+        history: [...state.history, { at: now(), actor: `ЦИО (${a.actor})`, action: `Пояснительная записка: ячейка согласована` }],
+      };
+    }
+    case 'NOTE_CIO_RETURN': {
+      const cur = state.noteOmsuValues[a.munId]?.[a.templateId];
+      if (!cur || cur.cellStatus[a.cellKey] !== 'pending_cio') return state;
+      const cellStatus: Record<string, NoteCellStatus> = { ...cur.cellStatus, [a.cellKey]: 'returned' };
+      const cellComments = { ...cur.cellComments, [a.cellKey]: a.comment };
+      const derived = deriveNoteStatus(cellStatus);
+      const cioCur = state.noteCioValues[a.templateId]?.[a.munId] || { note: '', status: 'none' as const, updatedAt: null };
+      return {
+        ...state,
+        noteOmsuValues: {
+          ...state.noteOmsuValues,
+          [a.munId]: {
+            ...state.noteOmsuValues[a.munId],
+            [a.templateId]: { ...cur, cellStatus, cellComments, status: derived, updatedAt: now(), signedBy: undefined },
+          },
+        },
+        noteCioValues: {
+          ...state.noteCioValues,
+          [a.templateId]: {
+            ...(state.noteCioValues[a.templateId] || {}),
+            [a.munId]: { ...cioCur, status: 'returned', updatedAt: now() },
+          },
+        },
+        notifications: [...state.notifications, { id: ++notifId, at: now(), text: `Пояснительная записка: ячейка возвращена на доработку: ${a.comment}`, forRoles: ['omsu'] }],
+        history: [...state.history, { at: now(), actor: `ЦИО (${a.actor})`, action: `Пояснительная записка: ячейка возвращена на доработку: ${a.comment}` }],
+      };
+    }
+    case 'NOTE_CIO_SET_NOTE': {
+      const cur = state.noteCioValues[a.templateId]?.[a.munId] || { note: '', status: 'none' as const, updatedAt: null };
+      return {
+        ...state,
+        noteCioValues: {
+          ...state.noteCioValues,
+          [a.templateId]: {
+            ...(state.noteCioValues[a.templateId] || {}),
+            [a.munId]: { ...cur, note: a.note, updatedAt: now() },
+          },
+        },
+      };
+    }
+    case 'NOTE_CAMPAIGN_DATES':
+      return {
+        ...state,
+        noteCampaign: { ...state.noteCampaign, startDate: a.startDate, deadlineOmsu: a.deadlineOmsu, deadlineCio: a.deadlineCio },
+        history: [...state.history, { at: now(), actor: 'Куратор МЭФ', action: `Обновлены параметры сбора пояснительной записки (запуск: ${a.startDate}, ОМСУ: ${a.deadlineOmsu}, ЦИО: ${a.deadlineCio})` }],
+      };
+    case 'NOTE_CAMPAIGN_LAUNCH':
+      return {
+        ...state,
+        noteCampaign: { ...state.noteCampaign, status: 'collecting', launchedAt: now() },
+        notifications: [...state.notifications, { id: ++notifId, at: now(), text: 'Запущен сбор пояснительной записки', forRoles: ['omsu', 'cio'] }],
+        history: [...state.history, { at: now(), actor: 'Куратор МЭФ', action: 'Запущен сбор пояснительной записки' }],
+      };
+    case 'NOTE_CAMPAIGN_STOP':
+      return {
+        ...state,
+        noteCampaign: { ...state.noteCampaign, status: 'draft' },
+        history: [...state.history, { at: now(), actor: 'Куратор МЭФ', action: 'Сбор пояснительной записки остановлен' }],
+      };
     default:
       return state;
   }

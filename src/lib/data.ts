@@ -1,7 +1,8 @@
-import { emptyValueFields } from './types';
+import { emptyValueFields, noteCellKey, deriveNoteStatus } from './types';
 import type {
   AppState, Cio, CioValue, Direction, Indicator,
-  Municipality, OmsuValue, Role, MefValue
+  Municipality, OmsuValue, Role, MefValue,
+  NoteTemplate, NoteOmsuData, NoteCioData, NoteCampaign, NoteCellStatus,
 } from './types';
 
 // ─────────────────────────────────────────────────────────────
@@ -134,6 +135,9 @@ export const INDICATORS: Indicator[] = [
   { id: 'i39', num: '3.3', name: 'Справочно: Обрабатывающие производства', directionId: 'd2', cioId: 'c2', unit: '—', optimum: 'max', weight: 0, formula: '—', level: 1, parentId: null, isGroup: true , actualFrom: '2024-01-01' },
   { id: 'i40', num: '3.3.1', name: 'Справочно: Объем отгруженных товаров собственного производства, выполненных работ и услуг собственными силами о крупным и средним организациям (без организаций с численностью работающих менее 15 человек) - раздел C', directionId: 'd2', cioId: 'c2', unit: 'млн.руб.в ценах соответствующих лет', optimum: 'max', weight: 1, formula: '—', level: 2, parentId: 'i39' , actualFrom: '2024-01-01' },
   { id: 'i41', num: '3.3.2', name: 'Справочно: Темп роста - раздел C', directionId: 'd2', cioId: 'c2', unit: 'процент к предыдущему году', optimum: 'max', weight: 1, formula: '—', level: 2, parentId: 'i39' , actualFrom: '2024-01-01' },
+  { id: 'i100', num: '3.4', name: 'Причины увеличения/снижения промышленного производства по крупным и средним организациям (без организаций с численностью работающих менее 15 человек)', directionId: 'd2', cioId: 'c2', unit: '—', optimum: 'max', weight: 1, formula: '—', level: 1, parentId: null , actualFrom: '2024-01-01' },
+  { id: 'i101', num: '3.5', name: 'Промышленные предприятия прекратившие/взл/продолжающие свою деятельность (с указанием вида деятельности)', directionId: 'd2', cioId: 'c2', unit: '—', optimum: 'max', weight: 1, formula: '—', level: 1, parentId: null , actualFrom: '2024-01-01' },
+  { id: 'i102', num: '3.6', name: 'Предприятия, оказывающие существенное влияние на динамику промышленного производства', directionId: 'd2', cioId: 'c2', unit: '—', optimum: 'max', weight: 1, formula: '—', level: 1, parentId: null , actualFrom: '2024-01-01' },
   { id: 'i42', num: '7.1', name: 'Число малых и средних предприятий, включая микропредприятия (на конец года)', directionId: 'd3', cioId: 'c2', unit: 'единица', optimum: 'max', weight: 1, formula: '—', level: 1, parentId: null , actualFrom: '2024-01-01' },
   { id: 'i43', num: '7.2', name: 'Справочно: в том числе, малых предприятий (включая микропредприятия)', directionId: 'd3', cioId: 'c2', unit: 'единица', optimum: 'max', weight: 1, formula: '—', level: 1, parentId: null , actualFrom: '2024-01-01' },
   { id: 'i44', num: '8.1', name: 'Инвестиции в основной капитал за счет всех источников финансирования (без субъектов малого предпринимательства и объемов инвестиций, не наблюдаемых прямыми статистическими методами) - всего', directionId: 'd4', cioId: 'c2', unit: 'млн.рублей', optimum: 'max', weight: 1, formula: '—', level: 1, parentId: null , actualFrom: '2024-01-01' },
@@ -500,6 +504,246 @@ function buildMefTerritoryValues(indicators: Indicator[], omsus: Municipality[],
 }
 
 // ─────────────────────────────────────────────────────────────
+// Пояснительная записка (ПЗ): шаблоны показателей по разделам
+// ─────────────────────────────────────────────────────────────
+
+const noteCols = (names: string[]): { id: string; name: string }[] =>
+  names.map((name, i) => ({ id: `c${i + 1}`, name }));
+
+const STD_COLS = () => noteCols(['Отчёт', 'Оценка', 'Прогноз']);
+
+export const NOTE_TEMPLATES: NoteTemplate[] = [
+  // Раздел 1. Демографические показатели
+  {
+    id: 'nt1', indicatorId: 'i1', sectionId: 'd1', columns: STD_COLS(), indicatorRow: 'value',
+    label: 'Численность постоянного населения (на конец года)',
+    rows: [
+      { id: 'r1t', name: 'Основные демографические тенденции на территории муниципального образования', kind: 'text', subRowCount: 1, mergeColumns: true },
+    ],
+  },
+  {
+    id: 'nt2', indicatorId: 'i2', sectionId: 'd1', columns: STD_COLS(), indicatorRow: 'value',
+    label: 'Рождаемость населения',
+    rows: [
+      { id: 'r2t', name: 'Причины снижения/роста рождаемости', kind: 'text', subRowCount: 1, mergeColumns: true },
+    ],
+  },
+  {
+    id: 'nt3', indicatorId: 'i4', sectionId: 'd1', columns: STD_COLS(), indicatorRow: 'value',
+    label: 'Смертность населения',
+    rows: [
+      { id: 'r3t', name: 'Причины снижения/роста смертности', kind: 'text', subRowCount: 1, mergeColumns: true },
+    ],
+  },
+  {
+    id: 'nt4', indicatorId: 'i8', sectionId: 'd1', columns: STD_COLS(), indicatorRow: 'value',
+    rows: [
+      { id: 'r4t', name: 'Причины снижения/роста миграционного потока', kind: 'text', subRowCount: 1, mergeColumns: true },
+    ],
+  },
+  // Раздел 3. Промышленное производство
+  {
+    id: 'nt5', indicatorId: 'i35', sectionId: 'd2', columns: STD_COLS(), indicatorRow: 'value',
+    rows: [
+      { id: 'r5t1', name: 'Причины увеличения/снижения промышленного производства по крупным и средним организациям (без организаций с численностью работающих менее 15 человек)', kind: 'text', subRowCount: 1, mergeColumns: false },
+      { id: 'r5t2', name: 'Промышленные предприятия прекратившие и/или приостановившие свою деятельность (с указанием вида деятельности)', kind: 'text', subRowCount: 1, mergeColumns: true },
+    ],
+  },
+  {
+    id: 'nt6', indicatorId: 'i100', sectionId: 'd2', columns: STD_COLS(), indicatorRow: 'value',
+    label: '«Обрабатывающие производства»',
+    rows: [
+      { id: 'r6t', name: 'Причины увеличения/снижения промышленного производства в данной отрасли', kind: 'text', subRowCount: 1, mergeColumns: false },
+    ],
+  },
+  {
+    id: 'nt7', indicatorId: 'i102', sectionId: 'd2', indicatorRow: 'none',
+    columns: noteCols([
+      'Наименование предприятия',
+      'Основной вид производимой продукции',
+      'Планы развития предприятия (модернизация, ввод новых линий производства, заключение соглашений/контрактов, сокращение производства, ликвидация)',
+    ]),
+    rows: [
+      { id: 'r10', name: '10 Производство пищевых продуктов', kind: 'enterprises', subRowCount: 2, mergeColumns: false },
+      { id: 'r11', name: '11 Производство напитков', kind: 'enterprises', subRowCount: 2, mergeColumns: false },
+      { id: 'r13', name: '13 Производство текстильных изделий', kind: 'enterprises', subRowCount: 2, mergeColumns: false },
+      { id: 'r14', name: '14 Производство одежды', kind: 'enterprises', subRowCount: 2, mergeColumns: false },
+      { id: 'r15', name: '15 Производство кожи и изделий из кожи', kind: 'enterprises', subRowCount: 2, mergeColumns: false },
+      { id: 'r16', name: '16 Производство деревянных изделий', kind: 'enterprises', subRowCount: 2, mergeColumns: false },
+      { id: 'r17', name: '17 Производство бумажных изделий', kind: 'enterprises', subRowCount: 3, mergeColumns: false },
+    ],
+  },
+];
+
+// Демонстрационные тексты для ПЗ (ключ — id строки шаблона;
+// для строк «Причины…» по столбцам — три текста: Отчёт / Оценка / Прогноз)
+const NOTE_TEXT: Record<string, string | [string, string, string]> = {
+  r1t: 'Основной демографической тенденцией на территории муниципального образования является снижение численности постоянного населения, обусловленное естественной убылью и оттоком молодого населения в крупные города региона. В прогнозируемом периоде ожидается сохранение тенденции с постепенным замедлением темпов снижения за счёт ввода нового жилья и развития социальной инфраструктуры.',
+  r2t: 'Снижение рождаемости обусловлено оттоком молодого населения в возрасте 20–35 лет, ограниченной обеспеченностью жилым жильём и местами в дошкольных образовательных организациях. Рост рождаемости может быть обеспечен реализацией мер государственной поддержки семей с детьми.',
+  r3t: 'Снижение смертности достигнуто за счёт улучшения доступности и качества медицинской помощи, проведения профилактических осмотров и диспансеризации населения, снижения доли смертности от болезней системы кровообращения.',
+  r4t: 'Снижение миграционного притока связано с ограничением предложения жилья на первичном рынке и снижением числа вакансий в строительных отраслях. Рост миграционного потока ожидается за счёт ввода нового жилья и создания рабочих мест в обрабатывающих производствах.',
+  r5t2: 'Прекратили деятельность 2 предприятия (производство строительных материалов), приостановили — 1 предприятие (производство мебели). Продолжают деятельность все остальные предприятия, оказывающие существенное влияние на динамику промышленного производства.',
+  r5t1: [
+    'В отчетном периоде индекс промышленного производства сохранится на уровне 2024 г. за счет увеличения объёмов производства предприятий, выполняющих госзаказы (АО «НИТИ» им. П.И. Снегирёва, АО «НИМИ», ПАО «АК «Рубин»), а также в связи с ростом объёма заказов ПАО «АК «Рубин» в сфере гражданского авиастроения.',
+    'Снижение индекса промышленного производства обусловлено падением рынка строительных материалов (ООО «Роквул», ООО «Фрязинский керамический завод», ОП Кучино), падением спроса в отрасли производства оборудования разделения воздуха (АО «Криогенмаш») и снижением объёмов отгрузки в связи со нестабильной макроэкономической ситуацией.',
+    'В 2027–2029 годы прогнозируются более высокие темпы роста индекса промышленного производства по сравнению с оценочным периодом за счёт выхода на проектную мощность завода ООО «Фабрика вентиляции «Агент», ввода в эксплуатацию механического цеха по изготовлению гидравлических насосов ПАО «АК «Рубин» и обновления производственных мощностей.',
+  ],
+  r6t: [
+    'В 2025 г. увеличились объёмы производства ПАО «АК «Рубин» за счет технического перевооружения производства, разработки и внедрения новых видов изделий, а также за счет увеличения портфеля заказов, изменения курса валют и пересмотра цен в сторону увеличения.',
+    'По оценке 2026 г. ожидается снижение объёмов отгрузки АО «Криогенмаш» (невыполнение плана контрактов 2025 г. в связи с нестабильной макроэкономической ситуацией) и ООО «Фабрика вентиляции «Агент» (сокращение спроса). Умеренный рост объёмов производства планируется ПАО «АК «Рубин» за счет роста портфеля заказов.',
+    'В 2027–2029 годы прогнозируется рост промышленного производства за счет модернизации производства и расширения производственных площадок (ПАО «АК «Рубин»), выхода на проектную мощность завода ООО «Фабрика вентиляции «Агент» и выпуска новой инновационной продукции.',
+  ],
+};
+
+// Демонстрационные данные для шаблона «Предприятия, оказывающие существенное влияние…»
+// Порядок столбцов: наименование предприятия | основной вид производимой продукции | планы развития
+const ENTERPRISES: Record<string, string[][]> = {
+  r10: [
+    ['ООО «Хлебозавод Балашиха»', 'хлебобулочные изделия', 'Запуск линии по согласованию новой продукции'],
+    ['', '', ''],
+  ],
+  r11: [
+    ['ООО «Парламент Продакшн»', 'вода, ликеро-водочные изделия', 'Оптимизация ассортимента выпускаемой продукции, поиск новых партнёров'],
+    ['', '', ''],
+  ],
+  r17: [
+    ['ООО ПОБ «Паллада»', 'изделия бумажные хозяйственно-бытового и санитарно-гигиенического назначения', 'Запуск новых видов продукции'],
+    ['ООО «Контра Кео»', 'изделия бумажные хозяйственно-бытового и санитарно-гигиенического назначения', 'Модернизация и эффективное использование имеющихся производственных мощностей'],
+    ['', '', ''],
+  ],
+};
+
+/** Сид-значения ПЗ для ОМСУ: munId -> templateId -> NoteOmsuData */
+export function buildNoteOmsuValues(templates: NoteTemplate[], muns: Municipality[]): Record<string, Record<string, NoteOmsuData>> {
+  const rand = seedRand(2026);
+  const out: Record<string, Record<string, NoteOmsuData>> = {};
+
+  const simpleValue = (indId: string, mi: number): [string, string, string] => {
+    switch (indId) {
+      case 'i1': return [`${500000 + mi * 20000}`, `${510000 + mi * 20000}`, `${520000 + mi * 20000}`];
+      case 'i2': return [`${3000 + mi * 100}`, `${3100 + mi * 100}`, `${3200 + mi * 100}`];
+      case 'i4': return [`${5000 + mi * 200}`, `${5200 + mi * 200}`, `${5400 + mi * 200}`];
+      case 'i8': return [`${1000 + mi * 50}`, `${1100 + mi * 50}`, `${1200 + mi * 50}`];
+      case 'i35': return [`${10000 + mi * 500}`, `${11000 + mi * 500}`, `${12000 + mi * 500}`];
+      default: {
+        const r = () => String(Math.floor(rand() * 900 + 100));
+        return [r(), r(), r()];
+      }
+    }
+  };
+
+  const rowText = (rowId: string, colIdx: number): string => {
+    const v = NOTE_TEXT[rowId];
+    if (!v) return '';
+    return Array.isArray(v) ? (v[colIdx] ?? '') : v;
+  };
+
+  // Демо-распределение статусов: munId -> templateId -> статус
+  const DEMO_STATUS: Record<string, Partial<Record<string, NoteOmsuData['status']>>> = {
+    m1: { nt1: 'approved', nt2: 'approved', nt3: 'pending_cio', nt4: 'draft', nt5: 'pending_cio', nt6: 'returned', nt7: 'draft' },
+    m2: { nt1: 'pending_cio', nt2: 'pending_cio', nt3: 'pending_cio', nt4: 'draft', nt5: 'draft', nt6: 'draft', nt7: 'draft' },
+    m3: { nt1: 'draft', nt2: 'draft' },
+    m4: { nt1: 'draft' },
+  };
+
+  muns.forEach((m, mi) => {
+    out[m.id] = {};
+    templates.forEach((t, ti) => {
+      const status: NoteOmsuData['status'] = DEMO_STATUS[m.id]?.[t.id] ?? 'not_filled';
+
+      const cells: Record<string, string> = {};
+      if (status !== 'not_filled') {
+        // Строка самого показателя
+        if (t.indicatorRow === 'value') {
+          simpleValue(t.indicatorId, mi).forEach((v, c) => { cells[noteCellKey('ind', 0, c)] = v; });
+        } else if (t.indicatorRow === 'text') {
+          cells[noteCellKey('ind', 0, 0)] = rowText(t.id, 0);
+        }
+        // Дополнительные строки блока
+        t.rows.forEach((r) => {
+          if (r.kind === 'enterprises') {
+            const data = ENTERPRISES[r.id];
+            for (let s = 0; s < r.subRowCount; s++) {
+              for (let c = 0; c < t.columns.length; c++) {
+                cells[noteCellKey(r.id, s, c)] = data?.[s]?.[c] ?? '';
+              }
+            }
+          } else if (r.kind === 'text' && r.mergeColumns) {
+            cells[noteCellKey(r.id, 0, 0)] = rowText(r.id, 0);
+          } else {
+            for (let c = 0; c < t.columns.length; c++) {
+              cells[noteCellKey(r.id, 0, c)] = r.kind === 'text' ? rowText(r.id, c) : simpleValue(t.indicatorId, mi)[c] ?? '';
+            }
+          }
+        });
+      }
+
+      // Поячеечные статусы: все заполненные ячейки получают статус шаблона;
+      // для «returned» одна ячейка возвращена ЦИО с комментарием, остальные — черновики
+      const cellStatus: Record<string, NoteCellStatus> = {};
+      const cellComments: Record<string, string> = {};
+      if (status !== 'not_filled') {
+        const filled = Object.entries(cells).filter(([, v]) => v && v.trim() !== '' && v.trim() !== '—');
+        filled.forEach(([k], i) => {
+          if (status === 'returned') {
+            cellStatus[k] = i === 0 ? 'returned' : 'draft';
+            if (i === 0) cellComments[k] = 'Уточните данные: причины изменения показателей и перечень предприятий';
+          } else {
+            cellStatus[k] = status as NoteCellStatus;
+          }
+        });
+      }
+
+      out[m.id]![t.id] = {
+        cells,
+        cellStatus,
+        cellComments,
+        status: deriveNoteStatus(cellStatus),
+        updatedAt: status === 'not_filled' ? null : `2026-0${(mi % 6) + 1}-${String(10 + ti).padStart(2, '0')} 12:00`,
+        signedBy: status === 'pending_cio' || status === 'approved' ? 'Иванов И.И., главный бухгалтер' : undefined,
+      };
+    });
+  });
+  return out;
+}
+
+/** Сид-значения ПЗ для ЦИО: templateId -> munId -> NoteCioData */
+export function buildNoteCioValues(
+  templates: NoteTemplate[],
+  omsuValues: Record<string, Record<string, NoteOmsuData>>,
+): Record<string, Record<string, NoteCioData>> {
+  const out: Record<string, Record<string, NoteCioData>> = {};
+  templates.forEach((t) => {
+    out[t.id] = {};
+    Object.entries(omsuValues).forEach(([munId, byTpl]) => {
+      const st = byTpl[t.id]?.status;
+      if (st === 'approved') {
+        out[t.id]![munId] = { note: 'Согласовано', status: 'approved', updatedAt: '2026-02-15 14:30' };
+      } else if (st === 'returned') {
+        out[t.id]![munId] = { note: 'Уточните перечень предприятий и виды деятельности', status: 'returned', updatedAt: '2026-02-20 11:00' };
+      }
+    });
+  });
+  return out;
+}
+
+export const NOTE_STATUS_META: Record<NoteOmsuData['status'], { label: string; color: string; bg: string }> = {
+  not_filled: { label: 'Не заполнена', color: '#64748b', bg: '#f1f5f9' },
+  draft: { label: 'Черновик', color: '#0369a1', bg: '#e0f2fe' },
+  pending_cio: { label: 'На согласовании у ЦИО', color: '#b45309', bg: '#fef3c7' },
+  approved: { label: 'Согласовано ЦИО', color: '#047857', bg: '#d1fae5' },
+  returned: { label: 'Возвращена на доработку', color: '#be123c', bg: '#ffe4e6' },
+};
+
+export const NOTE_CAMPAIGN: NoteCampaign = {
+  status: 'collecting',
+  startDate: '2026-02-01T09:00',
+  deadlineOmsu: '2026-03-15',
+  deadlineCio: '2026-03-31',
+  launchedAt: '2026-02-01',
+};
+
+// ─────────────────────────────────────────────────────────────
 // Начальное состояние хранилища
 // ─────────────────────────────────────────────────────────────
 
@@ -564,6 +808,11 @@ export function buildInitialState(moduleId: string): AppState {
     ],
     ratingMode: 'preview',
     finalPublished: false,
+    // Пояснительная записка (ПЗ)
+    noteTemplates: NOTE_TEMPLATES.map(t => ({ ...t, isActive: true, columns: t.columns.map(c => ({ ...c })), rows: t.rows.map(r => ({ ...r })) })),
+    noteOmsuValues: buildNoteOmsuValues(NOTE_TEMPLATES, MUNICIPALITIES),
+    noteCioValues: buildNoteCioValues(NOTE_TEMPLATES, buildNoteOmsuValues(NOTE_TEMPLATES, MUNICIPALITIES)),
+    noteCampaign: { ...NOTE_CAMPAIGN },
   };
 
   // Синхронизируем исторические данные (2023, 2024), чтобы они совпадали у ЦИО и ОМСУ

@@ -195,6 +195,126 @@ export interface BlockSettings {
   hasNote: boolean;
 }
 
+// ===== Пояснительная записка (ПЗ) — подраздел «Муниципальный прогноз» =====
+
+/** ПЗ: столбец данных, заполняемых ОМСУ (напр. «Отчёт», «Оценка», «Прогноз») */
+export interface NoteColumn {
+  id: string;
+  name: string;
+}
+
+/** ПЗ: тип строки шаблона: значения (Отчёт/Оценка/Прогноз), текст, таблица предприятий */
+export type NoteRowKind = 'value' | 'text' | 'enterprises';
+
+/** ПЗ: строка шаблона показателя (наименование, тип, кол-во подстрок, объединение столбцов) */
+export interface NoteRow {
+  id: string;
+  name: string;
+  kind: NoteRowKind;      // value — числовые ячейки по столбцам; text — текст; enterprises — таблица предприятий
+  subRowCount: number;    // для enterprises — кол-во строк предприятий; для value/text — 1
+  mergeColumns: boolean;  // для text: true — одна широкая ячейка, false — по ячейке на столбец
+}
+
+/** ПЗ: тип строки самого показателя в документе */
+export type NoteIndicatorRowKind = 'value' | 'text' | 'none';
+
+/** ПЗ: шаблон показателя пояснительной записки (привязан к показателю общего дерева) */
+export interface NoteTemplate {
+  id: string;
+  indicatorId: string;   // показатель из общего дерева «Настройка показателей»
+  sectionId: string;     // раздел (direction)
+  columns: NoteColumn[];
+  rows: NoteRow[];       // строки блока под строкой показателя
+  indicatorRow: NoteIndicatorRowKind; // строка показателя: value — значения, text — текст, none — нет (напр. таблица предприятий)
+  label?: string;        // отображаемое наименование в документе (перекрывает имя показателя)
+  isActive?: boolean;
+}
+
+/** ПЗ: статус данных ОМСУ по шаблону (выводится из статусов ячеек) */
+export type NoteStatus =
+  | 'not_filled'   // не заполнен
+  | 'draft'        // черновик (есть ячейки, не отправленные на согласование)
+  | 'pending_cio'  // есть ячейки, подписанные ЭЦП, на согласовании у ЦИО
+  | 'approved'     // все заполненные ячейки согласованы ЦИО
+  | 'returned';    // есть ячейки, возвращённые ЦИО на доработку
+
+/** ПЗ: статус отдельной ячейки шаблона (поячеечная отправка и согласование) */
+export type NoteCellStatus =
+  | 'draft'        // заполнена, не отправлена на согласование
+  | 'pending_cio'  // подписана ЭЦП, на согласовании у ЦИО
+  | 'approved'     // согласована ЦИО (изменение заблокировано)
+  | 'returned';    // возвращена ЦИО на доработку
+
+/** ПЗ: данные ОМСУ по шаблону (значения и статусы всех ячеек) */
+export interface NoteOmsuData {
+  cells: Record<string, string>;               // key: `${rowId}:${subIdx}:${colIdx}`
+  cellStatus: Record<string, NoteCellStatus>;  // key -> статус ячейки (отсутствует = не заполнена)
+  cellComments: Record<string, string>;        // key -> комментарий ЦИО при возврате ячейки
+  status: NoteStatus;
+  updatedAt: string | null;
+  signedBy?: string;
+}
+
+/** ПЗ: данные ЦИО по шаблону и территории (согласование + примечание) */
+export interface NoteCioData {
+  note: string;
+  status: 'none' | 'approved' | 'returned';
+  updatedAt: string | null;
+}
+
+/** ПЗ: кампания сбора пояснительной записки */
+export interface NoteCampaign {
+  status: 'draft' | 'collecting' | 'completed';
+  startDate: string;      // дата запуска сбора (datetime)
+  deadlineOmsu: string;   // срок заполнения ОМСУ
+  deadlineCio: string;    // срок согласования ЦИО
+  launchedAt: string | null;
+}
+
+/** ПЗ: ключ ячейки шаблона */
+export const noteCellKey = (rowId: string, subIdx: number, colIdx: number) =>
+  `${rowId}:${subIdx}:${colIdx}`;
+
+/** ПЗ: вывод статуса шаблона из статусов ячеек */
+export function deriveNoteStatus(cellStatus: Record<string, NoteCellStatus>): NoteStatus {
+  const sts = Object.values(cellStatus);
+  if (sts.length === 0) return 'not_filled';
+  if (sts.includes('returned')) return 'returned';
+  if (sts.includes('pending_cio')) return 'pending_cio';
+  if (sts.every((s) => s === 'approved')) return 'approved';
+  return 'draft';
+}
+
+/** ПЗ: отображаемое наименование шаблона в документе (label или имя показателя без префикса «Справочно:») */
+export function noteTemplateName(t: NoteTemplate, indById: Map<string, Indicator>): string {
+  if (t.label && t.label.trim()) return t.label;
+  const ind = indById.get(t.indicatorId);
+  if (!ind) return t.id;
+  return ind.name.replace(/^Справочно:\s*/, '');
+}
+
+/** ПЗ: список всех ключей ячеек шаблона */
+export function noteTemplateCellKeys(t: NoteTemplate): string[] {
+  const keys: string[] = [];
+  if (t.indicatorRow === 'value') {
+    for (let c = 0; c < t.columns.length; c++) keys.push(noteCellKey('ind', 0, c));
+  } else if (t.indicatorRow === 'text') {
+    keys.push(noteCellKey('ind', 0, 0));
+  }
+  t.rows.forEach((r) => {
+    if (r.kind === 'enterprises') {
+      for (let s = 0; s < r.subRowCount; s++)
+        for (let c = 0; c < t.columns.length; c++) keys.push(noteCellKey(r.id, s, c));
+    } else if (r.kind === 'text' && r.mergeColumns) {
+      keys.push(noteCellKey(r.id, 0, 0));
+    } else {
+      for (let c = 0; c < t.columns.length; c++) keys.push(noteCellKey(r.id, 0, c));
+    }
+  });
+  return keys;
+}
+
+
 
 export interface Campaign {
   module: string;
@@ -241,4 +361,9 @@ export interface AppState {
   notifications: NotificationItem[];
   ratingMode: 'preview' | 'final';
   finalPublished: boolean;
+  // ── Пояснительная записка (ПЗ) ──────────────────────────────────────
+  noteTemplates: NoteTemplate[];
+  noteOmsuValues: Record<string, Record<string, NoteOmsuData>>; // munId -> templateId -> data
+  noteCioValues: Record<string, Record<string, NoteCioData>>;   // templateId -> munId -> data
+  noteCampaign: NoteCampaign;
 }

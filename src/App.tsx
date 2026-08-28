@@ -17,13 +17,19 @@ import type { ModuleId } from '@/pages/Home';
 import { ModuleStub } from '@/pages/ModuleStub';
 import { Login } from '@/pages/Login';
 import { MefWorkspace } from '@/pages/MefWorkspace';
+import { NoteAdmin } from '@/pages/note/NoteAdmin';
+import { NoteCollection } from '@/pages/note/NoteCollection';
+import { NoteOmsuWorkspace } from '@/pages/note/NoteOmsuWorkspace';
+import { NoteCioWorkspace } from '@/pages/note/NoteCioWorkspace';
+import { NoteOutputTables } from '@/pages/note/NoteOutputTables';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Bell, Landmark, UserRound, Home as HomeIcon } from 'lucide-react';
 
-type PageId = 'setup' | 'omsu' | 'cio' | 'mef-manage' | 'rating' | 'report' | 'about' | 'users' | 'dicts' | 'output-tables' | 'mef-workspace';
+type PageId = 'setup' | 'omsu' | 'cio' | 'mef-manage' | 'rating' | 'report' | 'about' | 'users' | 'dicts' | 'output-tables' | 'mef-workspace'
+  | 'note-admin' | 'note-collection' | 'note-omsu' | 'note-cio' | 'note-output';
 type BlockId = 'mun' | 'obl' | 'params' | 'form2p' | 'long_term' | 'admin_block' | 'ukaz_main' | 'rating_main' | 'rating_view';
 
 const BLOCK_LABELS: Record<BlockId, string> = {
@@ -84,6 +90,25 @@ const DEFAULT_PAGE: Record<RoleId, PageId> = {
   omsu: 'omsu',
 };
 
+/** Вкладки подраздела «Пояснительная записка» (внутри блока «Муниципальный прогноз») */
+const NOTE_NAV: Record<RoleId, { id: PageId; label: string }[]> = {
+  admin: [
+    { id: 'note-admin', label: 'Администрирование пояснительной записки' },
+    { id: 'note-collection', label: 'Управление сбором' },
+    { id: 'note-output', label: 'Выходные таблицы пояснительной записки' },
+  ],
+  mef: [
+    { id: 'note-collection', label: 'Управление сбором' },
+    { id: 'note-output', label: 'Выходные таблицы пояснительной записки' },
+  ],
+  cio: [
+    { id: 'note-cio', label: 'Рабочее место ЦИО (ПЗ)' },
+  ],
+  omsu: [
+    { id: 'note-omsu', label: 'Рабочее место ОМСУ (ПЗ)' },
+  ],
+};
+
 const STUB_TITLES: Record<Exclude<ModuleId, 'ser'>, string> = {
   rating: 'Формирование Рейтинга ОМСУ',
   ukaz: 'Контроль исполнения Указа Президента РФ №607',
@@ -94,12 +119,14 @@ function Shell({ activeModule, onHome }: { activeModule: ModuleId, onHome: () =>
   const [role, setRole] = useState<RoleId>('admin');
   const [page, setPage] = useState<PageId>('setup');
   const [block, setBlock] = useState<BlockId>('mun');
+  const [subSection, setSubSection] = useState<'ind' | 'note'>('ind');
 
   useEffect(() => {
     dispatch({ type: 'SET_MODULE', module: activeModule });
     const b = getBlocks(role, activeModule, state.blockSettings);
     setBlock(b[0]);
     setPage(DEFAULT_PAGE[role]);
+    setSubSection('ind');
   }, [activeModule, dispatch]);
 
   const roleInfo = ROLES.find((r) => r.id === role)!;
@@ -110,11 +137,18 @@ function Shell({ activeModule, onHome }: { activeModule: ModuleId, onHome: () =>
     setRole(r);
     setBlock(getBlocks(r, activeModule, state.blockSettings)[0]);
     setPage(DEFAULT_PAGE[r]);
+    setSubSection('ind');
   };
 
   const switchBlock = (b: BlockId) => {
     setBlock(b);
     setPage(b === 'admin_block' ? 'users' : DEFAULT_PAGE[role]);
+    setSubSection('ind');
+  };
+
+  const switchSubSection = (ss: 'ind' | 'note') => {
+    setSubSection(ss);
+    setPage(ss === 'note' ? NOTE_NAV[role][0].id : NAV[role][0].id);
   };
 
   let activeNav = block === 'admin_block'
@@ -124,14 +158,16 @@ function Shell({ activeModule, onHome }: { activeModule: ModuleId, onHome: () =>
       ]
     : block === 'rating_view'
       ? [{ id: 'rating' as PageId, label: 'Рейтинг ОМСУ' }]
-      : NAV[role];
+      : block === 'mun' && subSection === 'note'
+        ? NOTE_NAV[role]
+        : NAV[role];
       
   // Filter NAV tabs based on block settings
   if (block !== 'admin_block' && block !== 'rating_view') {
     const approvers = state.blockSettings[block]?.approvers || [];
     activeNav = activeNav.filter(item => {
-      if (item.id === 'omsu') return approvers.includes('omsu');
-      if (item.id === 'cio') return approvers.includes('cio');
+      if (item.id === 'omsu' || item.id === 'note-omsu') return approvers.includes('omsu');
+      if (item.id === 'cio' || item.id === 'note-cio') return approvers.includes('cio');
       if (item.id === 'mef-workspace') return approvers.includes('mef');
       return true;
     });
@@ -227,6 +263,26 @@ function Shell({ activeModule, onHome }: { activeModule: ModuleId, onHome: () =>
           </div>
         </div>
 
+        {/* Подразделы блока «Муниципальный прогноз» */}
+        {block === 'mun' && (
+          <div className="bg-[#eef4f9] border-b border-slate-200">
+            <div className="w-full px-4 flex gap-1 pt-1">
+              {([['ind', 'Показатели'], ['note', 'Пояснительная записка']] as const).map(([ss, label]) => (
+                <button
+                  key={ss}
+                  onClick={() => switchSubSection(ss)}
+                  className={`px-4 py-1.5 text-sm font-semibold border-b-2 transition-colors ${subSection === ss
+                    ? 'border-[#1e5c8f] text-[#1e5c8f]'
+                    : 'border-transparent text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Вкладки активного блока */}
         <div className="bg-white border-b border-slate-200">
           <div className="w-full px-4 flex gap-1">
@@ -264,6 +320,11 @@ function Shell({ activeModule, onHome }: { activeModule: ModuleId, onHome: () =>
         {page === 'report' && <ReportView />}
         {page === 'output-tables' && <OutputTablesView />}
         {page === 'mef-workspace' && <MefWorkspace key={block} block={block} />}
+        {page === 'note-admin' && <NoteAdmin />}
+        {page === 'note-collection' && <NoteCollection />}
+        {page === 'note-omsu' && <NoteOmsuWorkspace />}
+        {page === 'note-cio' && <NoteCioWorkspace />}
+        {page === 'note-output' && <NoteOutputTables />}
         {page === 'about' && <Description />}
         {page === 'users' && <UserManagement />}
         {page === 'dicts' && <DictsManagement />}
