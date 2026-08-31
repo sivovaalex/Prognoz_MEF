@@ -603,13 +603,13 @@ function reducer(state: AppState, a: Action): AppState {
       return {
         ...state,
         noteTemplates: [...state.noteTemplates, { ...a.template, isActive: true }],
-        history: [...state.history, { at: now(), actor: 'Администратор', action: `Добавлен шаблон пояснительной записки` }],
+        history: [...state.history, { at: now(), actor: 'Администратор', action: `Добавлен показатель пояснительной записки` }],
       };
     case 'NOTE_UPDATE_TEMPLATE':
       return {
         ...state,
         noteTemplates: state.noteTemplates.map((t) => (t.id === a.template.id ? { ...a.template, isActive: t.isActive } : t)),
-        history: [...state.history, { at: now(), actor: 'Администратор', action: `Изменён шаблон пояснительной записки` }],
+        history: [...state.history, { at: now(), actor: 'Администратор', action: `Изменён показатель пояснительной записки` }],
       };
     case 'NOTE_TOGGLE_TEMPLATE':
       return {

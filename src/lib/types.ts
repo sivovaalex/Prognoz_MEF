@@ -203,29 +203,20 @@ export interface NoteColumn {
   name: string;
 }
 
-/** ПЗ: тип строки шаблона: значения (Отчёт/Оценка/Прогноз), текст, таблица предприятий */
-export type NoteRowKind = 'value' | 'text' | 'enterprises';
-
-/** ПЗ: строка шаблона показателя (наименование, тип, кол-во подстрок, объединение столбцов) */
+/** ПЗ: строка шаблона показателя: наименование + ячейки для ввода ОМСУ (по умолчанию 1) */
 export interface NoteRow {
   id: string;
   name: string;
-  kind: NoteRowKind;      // value — числовые ячейки по столбцам; text — текст; enterprises — таблица предприятий
-  subRowCount: number;    // для enterprises — кол-во строк предприятий; для value/text — 1
-  mergeColumns: boolean;  // для text: true — одна широкая ячейка, false — по ячейке на столбец
+  cellCount?: number; // кол-во ячеек строки (по умолчанию 1); ячейки равномерно занимают данные столбцы
 }
-
-/** ПЗ: тип строки самого показателя в документе */
-export type NoteIndicatorRowKind = 'value' | 'text' | 'none';
 
 /** ПЗ: шаблон показателя пояснительной записки (привязан к показателю общего дерева) */
 export interface NoteTemplate {
   id: string;
   indicatorId: string;   // показатель из общего дерева «Настройка показателей»
   sectionId: string;     // раздел (direction)
-  columns: NoteColumn[];
+  columns: NoteColumn[]; // столбцы данных (подшапка со столбцами всегда видна в документе)
   rows: NoteRow[];       // строки блока под строкой показателя
-  indicatorRow: NoteIndicatorRowKind; // строка показателя: value — значения, text — текст, none — нет (напр. таблица предприятий)
   label?: string;        // отображаемое наименование в документе (перекрывает имя показателя)
   isActive?: boolean;
 }
@@ -292,21 +283,28 @@ export function noteTemplateName(t: NoteTemplate, indById: Map<string, Indicator
   return ind.name.replace(/^Справочно:\s*/, '');
 }
 
-/** ПЗ: список всех ключей ячеек шаблона (для «value» строка показателя — только подшапка, ячеек нет) */
+/** ПЗ: эффективное кол-во ячеек строки (по умолчанию — по одной на каждый столбец; не более числа столбцов) */
+export function noteRowCellCount(t: NoteTemplate, r: NoteRow): number {
+  const m = t.columns.length;
+  return Math.max(1, Math.min(r.cellCount ?? m, Math.max(1, m)));
+}
+
+/** ПЗ: colSpan каждой ячейки строки (ячейки равномерно занимают все данные столбцы) */
+export function noteRowCellSpans(t: NoteTemplate, r: NoteRow): number[] {
+  const m = t.columns.length;
+  if (m === 0) return [];
+  const n = noteRowCellCount(t, r);
+  const base = Math.floor(m / n);
+  const rem = m % n;
+  return Array.from({ length: n }, (_, i) => base + (i < rem ? 1 : 0));
+}
+
+/** ПЗ: список всех ключей ячеек шаблона (строка показателя — только подшапка столбцов, ячеек нет) */
 export function noteTemplateCellKeys(t: NoteTemplate): string[] {
   const keys: string[] = [];
-  if (t.indicatorRow === 'text') {
-    keys.push(noteCellKey('ind', 0, 0));
-  }
   t.rows.forEach((r) => {
-    if (r.kind === 'enterprises') {
-      for (let s = 0; s < r.subRowCount; s++)
-        for (let c = 0; c < t.columns.length; c++) keys.push(noteCellKey(r.id, s, c));
-    } else if (r.kind === 'text' && r.mergeColumns) {
-      keys.push(noteCellKey(r.id, 0, 0));
-    } else {
-      for (let c = 0; c < t.columns.length; c++) keys.push(noteCellKey(r.id, 0, c));
-    }
+    const n = noteRowCellCount(t, r);
+    for (let i = 0; i < n; i++) keys.push(noteCellKey(r.id, 0, i));
   });
   return keys;
 }

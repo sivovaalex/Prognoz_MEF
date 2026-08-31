@@ -1,6 +1,6 @@
 import { Fragment } from 'react';
 import type { NoteTemplate, NoteOmsuData, Direction, Indicator, NoteCellStatus } from '@/lib/types';
-import { noteCellKey, noteTemplateName } from '@/lib/types';
+import { noteCellKey, noteTemplateName, noteRowCellSpans } from '@/lib/types';
 import { NOTE_STATUS_META } from '@/lib/data';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -196,83 +196,32 @@ export function NoteTable(props: NoteTableProps) {
       <td rowSpan={rowSpan} className="w-[300px] border border-slate-300 px-2.5 py-1.5 align-top">{label}</td>
     );
 
-    // Строка самого показателя: наименование + подшапка с названиями столбцов (Отчёт / Оценка / Прогноз)
-    if (t.indicatorRow === 'value') {
-      rows.push(
-        <tr key="ind">
-          {labelTd(<div className="text-xs font-semibold text-slate-800">{name}</div>)}
-          {t.columns.map((c) => (
-            <td key={c.id} className="border border-slate-300 bg-slate-50 px-2 py-1 text-center text-[11px] font-semibold text-slate-700">
-              {c.name}
-            </td>
-          ))}
-        </tr>,
-      );
-    } else if (t.indicatorRow === 'text') {
-      rows.push(
-        <tr key="ind">
-          {labelTd(<div className="text-xs font-semibold text-slate-800">{name}</div>)}
-          <td colSpan={t.columns.length} className="border border-slate-300 p-1 align-top">
-            {cell(t, 'ind', 0, 0, { long: true })}
+    // Строка самого показателя: наименование + подшапка с названиями столбцов (постоянная)
+    rows.push(
+      <tr key="ind">
+        {labelTd(<div className="text-xs font-semibold text-slate-800">{name}</div>)}
+        {t.columns.map((c) => (
+          <td key={c.id} className="border border-slate-300 bg-slate-50 px-2 py-1.5 text-center text-[11px] font-semibold text-slate-700">
+            {c.name}
           </td>
-        </tr>,
-      );
-    } else {
-      // Таблица предприятий: подшапка с названиями столбцов
+        ))}
+      </tr>,
+    );
+
+    // Дополнительные строки блока: у каждой строки N ячеек (поля ввода ОМСУ),
+    // ячейки равномерно занимают все данные столбцы
+    t.rows.forEach((r) => {
+      const spans = noteRowCellSpans(t, r);
       rows.push(
-        <tr key="ind">
-          {labelTd(<div className="text-xs font-semibold text-slate-800">{name}</div>)}
-          {t.columns.map((c) => (
-            <td key={c.id} className="border border-slate-300 bg-slate-50 px-2 py-1.5 text-center text-[11px] font-semibold text-slate-700">
-              {c.name}
+        <tr key={r.id}>
+          {labelTd(<div className="text-xs text-slate-700">{r.name}</div>)}
+          {spans.map((span, i) => (
+            <td key={i} colSpan={span} className="border border-slate-300 p-1 align-top">
+              {cell(t, r.id, 0, i, { long: true })}
             </td>
           ))}
         </tr>,
       );
-    }
-
-    // Дополнительные строки блока
-    t.rows.forEach((r) => {
-      if (r.kind === 'enterprises') {
-        // Подпоказатель (rowspan на все строки предприятий) — данные напротив наименования
-        for (let s = 0; s < r.subRowCount; s++) {
-          rows.push(
-            <tr key={`e-${r.id}-${s}`}>
-              {s === 0 && labelTd(<div className="text-xs font-semibold text-slate-800">{r.name}</div>, r.subRowCount)}
-              {t.columns.map((c, ci) => (
-                <td key={c.id} className="border border-slate-300 p-1 align-top">
-                  {cell(t, r.id, s, ci, { long: ci !== 0, noApproval: ci === 0 })}
-                </td>
-              ))}
-            </tr>,
-          );
-        }
-      } else if (r.kind === 'text' && r.mergeColumns) {
-        rows.push(
-          <tr key={r.id}>
-            {labelTd(<div className="text-xs text-slate-700">{r.name}</div>)}
-            <td colSpan={t.columns.length} className="border border-slate-300 p-1 align-top">
-              {cell(t, r.id, 0, 0, { long: true })}
-            </td>
-          </tr>,
-        );
-      } else {
-        // value-строка (Отчёт/Оценка/Прогноз) или текст по столбцам
-        rows.push(
-          <tr key={r.id}>
-            {labelTd(<div className="text-xs text-slate-700">{r.name}</div>)}
-            {t.columns.map((c, ci) => (
-              <td key={c.id} className="border border-slate-300 p-1 align-top">
-                {cell(t, r.id, 0, ci, {
-                  long: r.kind === 'text',
-                  center: r.kind === 'value',
-                  placeholder: r.kind === 'value' ? c.name : undefined,
-                })}
-              </td>
-            ))}
-          </tr>,
-        );
-      }
     });
 
     return <Fragment key={t.id}>{rows}</Fragment>;

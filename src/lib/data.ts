@@ -1,4 +1,4 @@
-import { emptyValueFields, noteCellKey, deriveNoteStatus } from './types';
+import { emptyValueFields, noteCellKey, noteRowCellCount, deriveNoteStatus } from './types';
 import type {
   AppState, Cio, CioValue, Direction, Indicator,
   Municipality, OmsuValue, Role, MefValue,
@@ -515,62 +515,62 @@ const STD_COLS = () => noteCols(['Отчёт', 'Оценка', 'Прогноз']
 export const NOTE_TEMPLATES: NoteTemplate[] = [
   // Раздел 1. Демографические показатели
   {
-    id: 'nt1', indicatorId: 'i1', sectionId: 'd1', columns: STD_COLS(), indicatorRow: 'value',
+    id: 'nt1', indicatorId: 'i1', sectionId: 'd1', columns: STD_COLS(),
     label: 'Численность постоянного населения (на конец года)',
     rows: [
-      { id: 'r1t', name: 'Основные демографические тенденции на территории муниципального образования', kind: 'text', subRowCount: 1, mergeColumns: true },
+      { id: 'r1t', name: 'Основные демографические тенденции на территории муниципального образования' },
     ],
   },
   {
-    id: 'nt2', indicatorId: 'i2', sectionId: 'd1', columns: STD_COLS(), indicatorRow: 'value',
+    id: 'nt2', indicatorId: 'i2', sectionId: 'd1', columns: STD_COLS(),
     label: 'Рождаемость населения',
     rows: [
-      { id: 'r2t', name: 'Причины снижения/роста рождаемости', kind: 'text', subRowCount: 1, mergeColumns: true },
+      { id: 'r2t', name: 'Причины снижения/роста рождаемости' },
     ],
   },
   {
-    id: 'nt3', indicatorId: 'i4', sectionId: 'd1', columns: STD_COLS(), indicatorRow: 'value',
+    id: 'nt3', indicatorId: 'i4', sectionId: 'd1', columns: STD_COLS(),
     label: 'Смертность населения',
     rows: [
-      { id: 'r3t', name: 'Причины снижения/роста смертности', kind: 'text', subRowCount: 1, mergeColumns: true },
+      { id: 'r3t', name: 'Причины снижения/роста смертности' },
     ],
   },
   {
-    id: 'nt4', indicatorId: 'i8', sectionId: 'd1', columns: STD_COLS(), indicatorRow: 'value',
+    id: 'nt4', indicatorId: 'i8', sectionId: 'd1', columns: STD_COLS(),
     rows: [
-      { id: 'r4t', name: 'Причины снижения/роста миграционного потока', kind: 'text', subRowCount: 1, mergeColumns: true },
+      { id: 'r4t', name: 'Причины снижения/роста миграционного потока' },
     ],
   },
   // Раздел 3. Промышленное производство
   {
-    id: 'nt5', indicatorId: 'i35', sectionId: 'd2', columns: STD_COLS(), indicatorRow: 'value',
+    id: 'nt5', indicatorId: 'i35', sectionId: 'd2', columns: STD_COLS(),
     rows: [
-      { id: 'r5t1', name: 'Причины увеличения/снижения промышленного производства по крупным и средним организациям (без организаций с численностью работающих менее 15 человек)', kind: 'text', subRowCount: 1, mergeColumns: false },
-      { id: 'r5t2', name: 'Промышленные предприятия прекратившие и/или приостановившие свою деятельность (с указанием вида деятельности)', kind: 'text', subRowCount: 1, mergeColumns: true },
+      { id: 'r5t1', name: 'Причины увеличения/снижения промышленного производства по крупным и средним организациям (без организаций с численностью работающих менее 15 человек)' },
+      { id: 'r5t2', name: 'Промышленные предприятия прекратившие и/или приостановившие свою деятельность (с указанием вида деятельности)' },
     ],
   },
   {
-    id: 'nt6', indicatorId: 'i100', sectionId: 'd2', columns: STD_COLS(), indicatorRow: 'value',
+    id: 'nt6', indicatorId: 'i100', sectionId: 'd2', columns: STD_COLS(),
     label: '«Обрабатывающие производства»',
     rows: [
-      { id: 'r6t', name: 'Причины увеличения/снижения промышленного производства в данной отрасли', kind: 'text', subRowCount: 1, mergeColumns: false },
+      { id: 'r6t', name: 'Причины увеличения/снижения промышленного производства в данной отрасли' },
     ],
   },
   {
-    id: 'nt7', indicatorId: 'i102', sectionId: 'd2', indicatorRow: 'none',
+    id: 'nt7', indicatorId: 'i102', sectionId: 'd2',
     columns: noteCols([
       'Наименование предприятия',
       'Основной вид производимой продукции',
       'Планы развития предприятия (модернизация, ввод новых линий производства, заключение соглашений/контрактов, сокращение производства, ликвидация)',
     ]),
     rows: [
-      { id: 'r10', name: '10 Производство пищевых продуктов', kind: 'enterprises', subRowCount: 2, mergeColumns: false },
-      { id: 'r11', name: '11 Производство напитков', kind: 'enterprises', subRowCount: 2, mergeColumns: false },
-      { id: 'r13', name: '13 Производство текстильных изделий', kind: 'enterprises', subRowCount: 2, mergeColumns: false },
-      { id: 'r14', name: '14 Производство одежды', kind: 'enterprises', subRowCount: 2, mergeColumns: false },
-      { id: 'r15', name: '15 Производство кожи и изделий из кожи', kind: 'enterprises', subRowCount: 2, mergeColumns: false },
-      { id: 'r16', name: '16 Производство деревянных изделий', kind: 'enterprises', subRowCount: 2, mergeColumns: false },
-      { id: 'r17', name: '17 Производство бумажных изделий', kind: 'enterprises', subRowCount: 3, mergeColumns: false },
+      { id: 'r10', name: '10 Производство пищевых продуктов' },
+      { id: 'r11', name: '11 Производство напитков' },
+      { id: 'r13', name: '13 Производство текстильных изделий' },
+      { id: 'r14', name: '14 Производство одежды' },
+      { id: 'r15', name: '15 Производство кожи и изделий из кожи' },
+      { id: 'r16', name: '16 Производство деревянных изделий' },
+      { id: 'r17', name: '17 Производство бумажных изделий' },
     ],
   },
 ];
@@ -595,47 +595,14 @@ const NOTE_TEXT: Record<string, string | [string, string, string]> = {
   ],
 };
 
-// Демонстрационные данные для шаблона «Предприятия, оказывающие существенное влияние…»
-// Порядок столбцов: наименование предприятия | основной вид производимой продукции | планы развития
-const ENTERPRISES: Record<string, string[][]> = {
-  r10: [
-    ['ООО «Хлебозавод Балашиха»', 'хлебобулочные изделия', 'Запуск линии по согласованию новой продукции'],
-    ['', '', ''],
-  ],
-  r11: [
-    ['ООО «Парламент Продакшн»', 'вода, ликеро-водочные изделия', 'Оптимизация ассортимента выпускаемой продукции, поиск новых партнёров'],
-    ['', '', ''],
-  ],
-  r17: [
-    ['ООО ПОБ «Паллада»', 'изделия бумажные хозяйственно-бытового и санитарно-гигиенического назначения', 'Запуск новых видов продукции'],
-    ['ООО «Контра Кео»', 'изделия бумажные хозяйственно-бытового и санитарно-гигиенического назначения', 'Модернизация и эффективное использование имеющихся производственных мощностей'],
-    ['', '', ''],
-  ],
-};
-
 /** Сид-значения ПЗ для ОМСУ: munId -> templateId -> NoteOmsuData */
 export function buildNoteOmsuValues(templates: NoteTemplate[], muns: Municipality[]): Record<string, Record<string, NoteOmsuData>> {
-  const rand = seedRand(2026);
   const out: Record<string, Record<string, NoteOmsuData>> = {};
-
-  const simpleValue = (indId: string, mi: number): [string, string, string] => {
-    switch (indId) {
-      case 'i1': return [`${500000 + mi * 20000}`, `${510000 + mi * 20000}`, `${520000 + mi * 20000}`];
-      case 'i2': return [`${3000 + mi * 100}`, `${3100 + mi * 100}`, `${3200 + mi * 100}`];
-      case 'i4': return [`${5000 + mi * 200}`, `${5200 + mi * 200}`, `${5400 + mi * 200}`];
-      case 'i8': return [`${1000 + mi * 50}`, `${1100 + mi * 50}`, `${1200 + mi * 50}`];
-      case 'i35': return [`${10000 + mi * 500}`, `${11000 + mi * 500}`, `${12000 + mi * 500}`];
-      default: {
-        const r = () => String(Math.floor(rand() * 900 + 100));
-        return [r(), r(), r()];
-      }
-    }
-  };
 
   const rowText = (rowId: string, colIdx: number): string => {
     const v = NOTE_TEXT[rowId];
     if (!v) return '';
-    return Array.isArray(v) ? (v[colIdx] ?? '') : v;
+    return Array.isArray(v) ? (v[colIdx] ?? '') : (colIdx === 0 ? v : '');
   };
 
   // Демо-распределение статусов: munId -> templateId -> статус
@@ -652,30 +619,12 @@ export function buildNoteOmsuValues(templates: NoteTemplate[], muns: Municipalit
       const status: NoteOmsuData['status'] = DEMO_STATUS[m.id]?.[t.id] ?? 'not_filled';
 
       const cells: Record<string, string> = {};
-      // Ячейки, которые ОМСУ вводит, но не согласуются ЦИО («Наименование предприятия»)
-      const noApprovalKeys = new Set<string>();
       if (status !== 'not_filled') {
-        // Строка самого показателя (для «value» — только подшапка столбцов, числовых значений нет)
-        if (t.indicatorRow === 'text') {
-          cells[noteCellKey('ind', 0, 0)] = rowText(t.id, 0);
-        }
-        // Дополнительные строки блока
+        // Дополнительные строки блока: у каждой строки N ячеек (поля ввода ОМСУ)
         t.rows.forEach((r) => {
-          if (r.kind === 'enterprises') {
-            const data = ENTERPRISES[r.id];
-            for (let s = 0; s < r.subRowCount; s++) {
-              for (let c = 0; c < t.columns.length; c++) {
-                const k = noteCellKey(r.id, s, c);
-                cells[k] = data?.[s]?.[c] ?? '';
-                if (c === 0) noApprovalKeys.add(k);
-              }
-            }
-          } else if (r.kind === 'text' && r.mergeColumns) {
-            cells[noteCellKey(r.id, 0, 0)] = rowText(r.id, 0);
-          } else {
-            for (let c = 0; c < t.columns.length; c++) {
-              cells[noteCellKey(r.id, 0, c)] = r.kind === 'text' ? rowText(r.id, c) : simpleValue(t.indicatorId, mi)[c] ?? '';
-            }
+          const n = noteRowCellCount(t, r);
+          for (let i = 0; i < n; i++) {
+            cells[noteCellKey(r.id, 0, i)] = rowText(r.id, i);
           }
         });
       }
@@ -685,7 +634,7 @@ export function buildNoteOmsuValues(templates: NoteTemplate[], muns: Municipalit
       const cellStatus: Record<string, NoteCellStatus> = {};
       const cellComments: Record<string, string> = {};
       if (status !== 'not_filled') {
-        const filled = Object.entries(cells).filter(([k, v]) => !noApprovalKeys.has(k) && v && v.trim() !== '' && v.trim() !== '—');
+        const filled = Object.entries(cells).filter(([, v]) => v && v.trim() !== '' && v.trim() !== '—');
         filled.forEach(([k], i) => {
           if (status === 'returned') {
             cellStatus[k] = i === 0 ? 'returned' : 'draft';
