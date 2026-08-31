@@ -68,6 +68,7 @@ export type Action =
   | { type: 'NOTE_RECALL'; munId: string; templateId: string; cellKeys: string[]; actor: string }
   | { type: 'NOTE_CIO_APPROVE'; templateId: string; munId: string; cellKey: string; actor: string }
   | { type: 'NOTE_CIO_RETURN'; templateId: string; munId: string; cellKey: string; actor: string; comment: string }
+  | { type: 'NOTE_CIO_REVOKE'; templateId: string; munId: string; cellKey: string; actor: string }
   | { type: 'NOTE_CIO_SET_NOTE'; templateId: string; munId: string; note: string }
   | { type: 'NOTE_CAMPAIGN_DATES'; startDate: string; deadlineOmsu: string; deadlineCio: string }
   | { type: 'NOTE_CAMPAIGN_LAUNCH' }
@@ -746,6 +747,31 @@ function reducer(state: AppState, a: Action): AppState {
         },
         notifications: [...state.notifications, { id: ++notifId, at: now(), text: `Пояснительная записка: ячейка возвращена на доработку: ${a.comment}`, forRoles: ['omsu'] }],
         history: [...state.history, { at: now(), actor: `ЦИО (${a.actor})`, action: `Пояснительная записка: ячейка возвращена на доработку: ${a.comment}` }],
+      };
+    }
+    case 'NOTE_CIO_REVOKE': {
+      const cur = state.noteOmsuValues[a.munId]?.[a.templateId];
+      if (!cur || cur.cellStatus[a.cellKey] !== 'approved') return state;
+      const cellStatus: Record<string, NoteCellStatus> = { ...cur.cellStatus, [a.cellKey]: 'pending_cio' };
+      const derived = deriveNoteStatus(cellStatus);
+      const cioCur = state.noteCioValues[a.templateId]?.[a.munId] || { note: '', status: 'none' as const, updatedAt: null };
+      return {
+        ...state,
+        noteOmsuValues: {
+          ...state.noteOmsuValues,
+          [a.munId]: {
+            ...state.noteOmsuValues[a.munId],
+            [a.templateId]: { ...cur, cellStatus, status: derived, updatedAt: now() },
+          },
+        },
+        noteCioValues: {
+          ...state.noteCioValues,
+          [a.templateId]: {
+            ...(state.noteCioValues[a.templateId] || {}),
+            [a.munId]: { ...cioCur, status: 'none', updatedAt: now() },
+          },
+        },
+        history: [...state.history, { at: now(), actor: `ЦИО (${a.actor})`, action: 'Пояснительная записка: согласование ячейки отозвано' }],
       };
     }
     case 'NOTE_CIO_SET_NOTE': {

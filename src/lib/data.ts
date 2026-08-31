@@ -653,10 +653,8 @@ export function buildNoteOmsuValues(templates: NoteTemplate[], muns: Municipalit
 
       const cells: Record<string, string> = {};
       if (status !== 'not_filled') {
-        // Строка самого показателя
-        if (t.indicatorRow === 'value') {
-          simpleValue(t.indicatorId, mi).forEach((v, c) => { cells[noteCellKey('ind', 0, c)] = v; });
-        } else if (t.indicatorRow === 'text') {
+        // Строка самого показателя (для «value» — только подшапка столбцов, числовых значений нет)
+        if (t.indicatorRow === 'text') {
           cells[noteCellKey('ind', 0, 0)] = rowText(t.id, 0);
         }
         // Дополнительные строки блока

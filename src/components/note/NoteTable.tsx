@@ -20,6 +20,7 @@ interface NoteTableProps {
   onSendCell?: (templateId: string, cellKey: string) => void;      // ОМСУ: отправка ячейки на согласование (edit)
   onRecallCell?: (templateId: string, cellKey: string) => void;    // ОМСУ: отзыв ячейки (edit)
   onApproveCell?: (templateId: string, cellKey: string) => void;   // ЦИО: согласование ячейки (approve)
+  onRevokeCell?: (templateId: string, cellKey: string) => void;    // ЦИО: отзыв согласования ячейки (approve)
   onReturnCell?: (templateId: string, cellKey: string) => void;    // ЦИО: возврат ячейки (approve)
   onEditNote?: (templateId: string) => void;
 }
@@ -47,7 +48,7 @@ const blockRowSpan = (t: NoteTemplate): number => {
 
 /**
  * Таблица пояснительной записки по форме выходного документа:
- * «Наименование показателя | Данные муниципальных образований | Примечание: ЦИО/В».
+ * «Наименование показателя | Данные муниципальных образований | Примечание ЦИОГВ» (в итоговом документе — «Примечание: ЦИО/В»).
  * Режимы: заполнение ОМСУ (edit), согласование ЦИО (approve), итоговый документ (readonly).
  */
 export function NoteTable(props: NoteTableProps) {
@@ -60,7 +61,6 @@ export function NoteTable(props: NoteTableProps) {
     const data = omsuData[t.id];
     const cst = data?.cellStatus[key];
     if (!cst) return null;
-    const comment = data?.cellComments[key];
     return (
       <div className="flex flex-wrap items-center gap-1 px-1 pt-1">
         {(cst === 'draft' || cst === 'returned') && (
@@ -77,9 +77,6 @@ export function NoteTable(props: NoteTableProps) {
           <span className="inline-flex items-center gap-1 text-[10px] font-medium text-emerald-700">
             <CheckCircle2 className="h-3 w-3" /> Согласовано
           </span>
-        )}
-        {cst === 'returned' && comment && (
-          <span className="w-full text-[10px] leading-tight text-rose-600">{comment}</span>
         )}
       </div>
     );
@@ -104,9 +101,20 @@ export function NoteTable(props: NoteTableProps) {
           </div>
         )}
         {cst === 'approved' && (
-          <span className="inline-flex items-center gap-1 text-[10px] font-medium text-emerald-700">
-            <CheckCircle2 className="h-3 w-3" /> Согласовано
-          </span>
+          <div className="flex flex-wrap items-center gap-1">
+            <span className="inline-flex items-center gap-1 text-[10px] font-medium text-emerald-700">
+              <CheckCircle2 className="h-3 w-3" /> Согласовано
+            </span>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-5 gap-1 px-1.5 text-[10px] text-slate-600"
+              title="Отозвать согласование — ячейка снова будет на согласовании"
+              onClick={() => props.onRevokeCell?.(t.id, key)}
+            >
+              <Undo2 className="h-3 w-3" /> Отозвать
+            </Button>
+          </div>
         )}
         {cst === 'returned' && (
           <span className="text-[10px] leading-tight text-rose-600">Возвращено{comment ? `: ${comment}` : ''}</span>
@@ -167,13 +175,12 @@ export function NoteTable(props: NoteTableProps) {
       </div>
     );
   };
-  /** Колонка «Примечание: ЦИО/В» (режимы approve/readonly) */
+  /** Колонка «Примечание ЦИОГВ» (режимы approve/readonly) */
   const noteCell = (t: NoteTemplate) => {
     const data = omsuData[t.id];
     const cio = cioData?.[t.id];
     const sts = Object.values(data?.cellStatus ?? {});
     const approved = sts.filter((s) => s === 'approved').length;
-    const pending = sts.filter((s) => s === 'pending_cio').length;
     const returned = sts.filter((s) => s === 'returned').length;
     if (mode === 'readonly') {
       const allApproved = sts.length > 0 && sts.every((s) => s === 'approved');
@@ -186,7 +193,6 @@ export function NoteTable(props: NoteTableProps) {
         {sts.length > 0 && (
           <div className="flex flex-col gap-0.5 text-[11px] font-medium">
             <span className="text-emerald-700">{approved} согласовано</span>
-            {pending > 0 && <span className="text-amber-700">{pending} на проверке</span>}
             {returned > 0 && <span className="text-rose-700">{returned} возвращено</span>}
           </div>
         )}
@@ -197,6 +203,28 @@ export function NoteTable(props: NoteTableProps) {
       </div>
     );
   };
+  /** Ячейка столбца «Примечание ЦИОГВ» в режиме edit: комментарии ЦИО по возвращённым ячейкам строки */
+  const editNoteTd = (t: NoteTemplate, rowId: string, subIdx: number, colIdxs: number[]) => {
+    const data = omsuData[t.id];
+    const comments = colIdxs
+      .map((ci) => ({ colName: t.columns[ci]?.name, text: data?.cellComments[noteCellKey(rowId, subIdx, ci)] }))
+      .filter((c): c is { colName: string; text: string } => !!c.text);
+    return (
+      <td className="w-36 border border-slate-300 p-1.5 align-top">
+        {comments.length > 0 && (
+          <div className="flex flex-col gap-1">
+            {comments.map((c, i) => (
+              <div key={i} className="whitespace-pre-wrap text-[11px] leading-tight text-rose-600">
+                {comments.length > 1 && c.colName && <span className="font-medium">{c.colName}: </span>}
+                {c.text}
+              </div>
+            ))}
+          </div>
+        )}
+      </td>
+    );
+  };
+
   const renderTemplate = (t: NoteTemplate) => {
     const span = blockRowSpan(t);
     const name = noteTemplateName(t, indById);
@@ -215,7 +243,7 @@ export function NoteTable(props: NoteTableProps) {
       </td>
     );
 
-    // Строка самого показателя
+    // Строка самого показателя: наименование + подшапка с названиями столбцов (Отчёт / Оценка / Прогноз)
     if (t.indicatorRow === 'value') {
       rows.push(
         <tr key="ind">
@@ -232,12 +260,13 @@ export function NoteTable(props: NoteTableProps) {
               )}
             </div>,
           )}
-          {t.columns.map((c, ci) => (
-            <td key={c.id} className="border border-slate-300 p-1 align-top">
-              {cell(t, 'ind', 0, ci, { center: true, placeholder: c.name })}
+          {t.columns.map((c) => (
+            <td key={c.id} className="border border-slate-300 bg-slate-50 px-2 py-1 text-center text-[11px] font-semibold text-slate-700">
+              {c.name}
             </td>
           ))}
           {showNoteCol && noteTd}
+          {mode === 'edit' && editNoteTd(t, 'ind', 0, [])}
         </tr>,
       );
     } else if (t.indicatorRow === 'text') {
@@ -248,6 +277,7 @@ export function NoteTable(props: NoteTableProps) {
             {cell(t, 'ind', 0, 0, { long: true })}
           </td>
           {showNoteCol && noteTd}
+          {mode === 'edit' && editNoteTd(t, 'ind', 0, [0])}
         </tr>,
       );
     } else {
@@ -261,6 +291,7 @@ export function NoteTable(props: NoteTableProps) {
             </td>
           ))}
           {showNoteCol && noteTd}
+          {mode === 'edit' && editNoteTd(t, 'ind', 0, [])}
         </tr>,
       );
     }
@@ -276,6 +307,7 @@ export function NoteTable(props: NoteTableProps) {
             {t.columns.slice(1).map((c) => (
               <td key={c.id} className="border border-slate-300" />
             ))}
+            {mode === 'edit' && editNoteTd(t, r.id, 0, [])}
           </tr>,
         );
         for (let s = 0; s < r.subRowCount; s++) {
@@ -287,6 +319,7 @@ export function NoteTable(props: NoteTableProps) {
                   {cell(t, r.id, s, ci, { long: ci !== 0 })}
                 </td>
               ))}
+              {mode === 'edit' && editNoteTd(t, r.id, s, t.columns.map((_, ci) => ci))}
             </tr>,
           );
         }
@@ -297,6 +330,7 @@ export function NoteTable(props: NoteTableProps) {
             <td colSpan={t.columns.length} className="border border-slate-300 p-1 align-top">
               {cell(t, r.id, 0, 0, { long: true })}
             </td>
+            {mode === 'edit' && editNoteTd(t, r.id, 0, [0])}
           </tr>,
         );
       } else {
@@ -313,6 +347,7 @@ export function NoteTable(props: NoteTableProps) {
                 })}
               </td>
             ))}
+            {mode === 'edit' && editNoteTd(t, r.id, 0, t.columns.map((_, ci) => ci))}
           </tr>,
         );
       }
@@ -332,7 +367,7 @@ export function NoteTable(props: NoteTableProps) {
             return (
               <Fragment key={d.id}>
                 <tr>
-                  <td colSpan={1 + cols + (showNoteCol ? 1 : 0)} className="bg-[#cfe0f4] px-3 py-1.5 text-xs font-bold text-slate-900">
+                  <td colSpan={1 + cols + 1} className="bg-[#cfe0f4] px-3 py-1.5 text-xs font-bold text-slate-900">
                     {d.name}
                   </td>
                 </tr>
@@ -343,11 +378,9 @@ export function NoteTable(props: NoteTableProps) {
                   <td colSpan={cols} className="border border-slate-300 bg-slate-50 px-3 py-1.5 text-center text-[11px] font-semibold text-slate-600">
                     Данные муниципальных образований
                   </td>
-                  {showNoteCol && (
-                    <td className="w-36 border border-slate-300 bg-slate-50 px-3 py-1.5 text-center text-[11px] font-semibold text-slate-600">
-                      Примечание: ЦИО/В
-                    </td>
-                  )}
+                  <td className="w-36 border border-slate-300 bg-slate-50 px-3 py-1.5 text-center text-[11px] font-semibold text-slate-600">
+                    {mode === 'readonly' ? 'Примечание: ЦИО/В' : 'Примечание ЦИОГВ'}
+                  </td>
                 </tr>
                 {tpls.map(renderTemplate)}
               </Fragment>

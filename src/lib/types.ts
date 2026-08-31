@@ -293,12 +293,10 @@ export function noteTemplateName(t: NoteTemplate, indById: Map<string, Indicator
   return ind.name.replace(/^Справочно:\s*/, '');
 }
 
-/** ПЗ: список всех ключей ячеек шаблона */
+/** ПЗ: список всех ключей ячеек шаблона (для «value» строка показателя — только подшапка, ячеек нет) */
 export function noteTemplateCellKeys(t: NoteTemplate): string[] {
   const keys: string[] = [];
-  if (t.indicatorRow === 'value') {
-    for (let c = 0; c < t.columns.length; c++) keys.push(noteCellKey('ind', 0, c));
-  } else if (t.indicatorRow === 'text') {
+  if (t.indicatorRow === 'text') {
     keys.push(noteCellKey('ind', 0, 0));
   }
   t.rows.forEach((r) => {
