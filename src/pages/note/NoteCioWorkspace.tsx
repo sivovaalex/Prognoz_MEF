@@ -16,14 +16,9 @@ export function NoteCioWorkspace() {
   const muns = state.omsus.filter((m) => m.isActive !== false);
   const [munId, setMunId] = useState(muns[0]?.id ?? '');
   const [returnTarget, setReturnTarget] = useState<{ tplId: string; cellKey: string } | null>(null);
-  const [noteTarget, setNoteTarget] = useState<string | null>(null);
   const [comment, setComment] = useState('');
-  const [note, setNote] = useState('');
 
   const munData = state.noteOmsuValues[munId] ?? {};
-  const cioData = Object.fromEntries(
-    active.map((t) => [t.id, state.noteCioValues[t.id]?.[munId] ?? { note: '', status: 'none' as const, updatedAt: null }]),
-  );
   const deadline = state.noteCampaign.deadlineCio.split('-').reverse().join('.');
 
   return (
@@ -48,7 +43,9 @@ export function NoteCioWorkspace() {
       </div>
 
       <div className="rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-900">
-        Ячейки, отправленные ОМСУ на согласование, согласуются по отдельности: под каждой ячейкой нажмите «Согласовать» или «Вернуть» (с комментарием).
+        Ячейки, отправленные ОМСУ на согласование, согласуются по отдельности: под каждой ячейкой нажмите «Согласовать» или «Вернуть».
+        Комментарий при возврате отобразится у ОМСУ в ячейке рядом со значением; после повторной отправки и согласования он исчезнет.
+        Возврат можно отменить, пока ОМСУ не отправил ячейку снова.
       </div>
 
       <NoteTable
@@ -57,11 +54,10 @@ export function NoteCioWorkspace() {
         indicators={state.indicators}
         mode="approve"
         omsuData={munData}
-        cioData={cioData}
         onApproveCell={(tplId, cellKey) => dispatch({ type: 'NOTE_CIO_APPROVE', templateId: tplId, munId, cellKey, actor: cio.short })}
         onRevokeCell={(tplId, cellKey) => dispatch({ type: 'NOTE_CIO_REVOKE', templateId: tplId, munId, cellKey, actor: cio.short })}
         onReturnCell={(tplId, cellKey) => { setReturnTarget({ tplId, cellKey }); setComment(''); }}
-        onEditNote={(tplId) => { setNoteTarget(tplId); setNote(state.noteCioValues[tplId]?.[munId]?.note ?? ''); }}
+        onUndoReturnCell={(tplId, cellKey) => dispatch({ type: 'NOTE_CIO_UNDO_RETURN', templateId: tplId, munId, cellKey, actor: cio.short })}
       />
       {/* Возврат ОМСУ на доработку */}
       <Dialog open={!!returnTarget} onOpenChange={(v) => !v && setReturnTarget(null)}>
@@ -88,35 +84,6 @@ export function NoteCioWorkspace() {
               }}
             >
               Вернуть
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Примечание ЦИО */}
-      <Dialog open={!!noteTarget} onOpenChange={(v) => !v && setNoteTarget(null)}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Примечание ЦИО</DialogTitle>
-          </DialogHeader>
-          <Textarea
-            placeholder="Примечание к пояснительной записке"
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            rows={3}
-          />
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setNoteTarget(null)}>Отмена</Button>
-            <Button
-              className="bg-[#1e5c8f] text-white hover:bg-[#1e5c8f]/90"
-              onClick={() => {
-                if (noteTarget) {
-                  dispatch({ type: 'NOTE_CIO_SET_NOTE', templateId: noteTarget, munId, note: note.trim() });
-                  setNoteTarget(null);
-                }
-              }}
-            >
-              Сохранить
             </Button>
           </DialogFooter>
         </DialogContent>

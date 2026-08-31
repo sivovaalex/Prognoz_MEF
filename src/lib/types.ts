@@ -255,9 +255,8 @@ export interface NoteOmsuData {
   signedBy?: string;
 }
 
-/** ПЗ: данные ЦИО по шаблону и территории (согласование + примечание) */
+/** ПЗ: данные ЦИО по шаблону и территории (статус согласования) */
 export interface NoteCioData {
-  note: string;
   status: 'none' | 'approved' | 'returned';
   updatedAt: string | null;
 }

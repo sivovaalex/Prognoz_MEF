@@ -1,6 +1,7 @@
 import { Fragment, useState } from 'react';
 import { useStore } from '@/lib/store';
 import type { NoteTemplate, NoteRowKind, NoteIndicatorRowKind } from '@/lib/types';
+import { noteTemplateName } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
@@ -21,7 +22,7 @@ export function NoteAdmin() {
           <p className="text-sm text-slate-500">Шаблоны показателей пояснительной записки по разделам</p>
         </div>
         <Button className="bg-[#1e5c8f] text-white hover:bg-[#1e5c8f]/90" onClick={() => setModal({ template: null })}>
-          <Plus className="mr-1 h-4 w-4" /> Добавить шаблон
+          <Plus className="mr-1 h-4 w-4" /> Добавить показатель
         </Button>
       </div>
 
@@ -36,9 +37,8 @@ export function NoteAdmin() {
             <tr className="bg-slate-50 text-left text-xs text-slate-500">
               <th className="w-16 px-3 py-2">№</th>
               <th className="px-3 py-2">Наименование показателя</th>
-              <th className="w-64 px-3 py-2">Раздел</th>
-              <th className="w-28 px-3 py-2">Столбцы</th>
-              <th className="w-32 px-3 py-2">Строки</th>
+              <th className="w-40 px-3 py-2">Столбцы</th>
+              <th className="w-80 px-3 py-2">Строки</th>
               <th className="w-28 px-3 py-2">Статус</th>
               <th className="w-20 px-3 py-2"></th>
             </tr>
@@ -50,7 +50,7 @@ export function NoteAdmin() {
               return (
                 <Fragment key={d.id}>
                   <tr>
-                    <td colSpan={7} className="bg-[#1e5c8f] px-3 py-1.5 text-xs font-semibold text-white">{d.name}</td>
+                    <td colSpan={6} className="bg-[#1e5c8f] px-3 py-1.5 text-xs font-semibold text-white">{d.name}</td>
                   </tr>
                   {tpls.map((t) => {
                     const ind = indById.get(t.indicatorId);
@@ -58,10 +58,37 @@ export function NoteAdmin() {
                       <tr key={t.id} className={`border-t border-slate-100 ${t.isActive ? '' : 'opacity-50'}`}>
                         <td className="px-3 py-2 text-xs">{ind?.num ?? '—'}</td>
                         <td className="px-3 py-2 text-xs">{ind?.name ?? t.indicatorId}</td>
-                        <td className="px-3 py-2 text-xs">{d.name}</td>
-                        <td className="px-3 py-2 text-xs">{t.columns.length}</td>
                         <td className="px-3 py-2 text-xs">
-                          {(t.indicatorRow !== 'none' ? 1 : 0) + t.rows.reduce((s, r) => s + (r.kind === 'enterprises' ? 1 + r.subRowCount : 1), 0)}
+                          <div className="flex flex-col gap-0.5">
+                            {t.columns.map((c) => (
+                              <span key={c.id} className="text-slate-700">{c.name}</span>
+                            ))}
+                          </div>
+                        </td>
+                        <td className="px-3 py-2 text-xs">
+                          <div className="flex flex-col gap-0.5">
+                            {t.indicatorRow !== 'none' && (
+                              <span className="text-slate-700">
+                                {noteTemplateName(t, indById)} —{' '}
+                                <span className="text-slate-400">{t.indicatorRow === 'value' ? 'значения' : 'текст'}</span>
+                              </span>
+                            )}
+                            {t.rows.map((r) => (
+                              <span key={r.id} className="text-slate-700">
+                                {r.name} —{' '}
+                                <span className="text-slate-400">
+                                  {r.kind === 'value'
+                                    ? 'значения'
+                                    : r.kind === 'text'
+                                      ? `текст${r.mergeColumns ? ', объединённые столбцы' : ''}`
+                                      : `предприятия (${r.subRowCount} строк)`}
+                                </span>
+                              </span>
+                            ))}
+                            {t.indicatorRow === 'none' && t.rows.length === 0 && (
+                              <span className="text-slate-400">—</span>
+                            )}
+                          </div>
                         </td>
                         <td className="px-3 py-2">
                           <span
@@ -142,7 +169,7 @@ function NoteTemplateModal({ initial, onClose }: { initial: NoteTemplate | null;
     <Dialog open onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{isNew ? 'Новый шаблон пояснительной записки' : 'Редактирование шаблона'}</DialogTitle>
+          <DialogTitle>{isNew ? 'Новый показатель пояснительной записки' : 'Редактирование шаблона'}</DialogTitle>
         </DialogHeader>
         <div className="flex flex-col gap-4 py-2">
           <div className="flex flex-col gap-1.5">

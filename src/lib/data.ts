@@ -652,6 +652,8 @@ export function buildNoteOmsuValues(templates: NoteTemplate[], muns: Municipalit
       const status: NoteOmsuData['status'] = DEMO_STATUS[m.id]?.[t.id] ?? 'not_filled';
 
       const cells: Record<string, string> = {};
+      // Ячейки, которые ОМСУ вводит, но не согласуются ЦИО («Наименование предприятия»)
+      const noApprovalKeys = new Set<string>();
       if (status !== 'not_filled') {
         // Строка самого показателя (для «value» — только подшапка столбцов, числовых значений нет)
         if (t.indicatorRow === 'text') {
@@ -663,7 +665,9 @@ export function buildNoteOmsuValues(templates: NoteTemplate[], muns: Municipalit
             const data = ENTERPRISES[r.id];
             for (let s = 0; s < r.subRowCount; s++) {
               for (let c = 0; c < t.columns.length; c++) {
-                cells[noteCellKey(r.id, s, c)] = data?.[s]?.[c] ?? '';
+                const k = noteCellKey(r.id, s, c);
+                cells[k] = data?.[s]?.[c] ?? '';
+                if (c === 0) noApprovalKeys.add(k);
               }
             }
           } else if (r.kind === 'text' && r.mergeColumns) {
@@ -676,12 +680,12 @@ export function buildNoteOmsuValues(templates: NoteTemplate[], muns: Municipalit
         });
       }
 
-      // Поячеечные статусы: все заполненные ячейки получают статус шаблона;
+      // Поячеечные статусы: все заполненные ячейки (кроме несогласуемых) получают статус шаблона;
       // для «returned» одна ячейка возвращена ЦИО с комментарием, остальные — черновики
       const cellStatus: Record<string, NoteCellStatus> = {};
       const cellComments: Record<string, string> = {};
       if (status !== 'not_filled') {
-        const filled = Object.entries(cells).filter(([, v]) => v && v.trim() !== '' && v.trim() !== '—');
+        const filled = Object.entries(cells).filter(([k, v]) => !noApprovalKeys.has(k) && v && v.trim() !== '' && v.trim() !== '—');
         filled.forEach(([k], i) => {
           if (status === 'returned') {
             cellStatus[k] = i === 0 ? 'returned' : 'draft';
@@ -716,9 +720,9 @@ export function buildNoteCioValues(
     Object.entries(omsuValues).forEach(([munId, byTpl]) => {
       const st = byTpl[t.id]?.status;
       if (st === 'approved') {
-        out[t.id]![munId] = { note: 'Согласовано', status: 'approved', updatedAt: '2026-02-15 14:30' };
+        out[t.id]![munId] = { status: 'approved', updatedAt: '2026-02-15 14:30' };
       } else if (st === 'returned') {
-        out[t.id]![munId] = { note: 'Уточните перечень предприятий и виды деятельности', status: 'returned', updatedAt: '2026-02-20 11:00' };
+        out[t.id]![munId] = { status: 'returned', updatedAt: '2026-02-20 11:00' };
       }
     });
   });

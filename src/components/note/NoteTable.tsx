@@ -1,11 +1,11 @@
 import { Fragment } from 'react';
-import type { NoteTemplate, NoteOmsuData, NoteCioData, Direction, Indicator, NoteCellStatus } from '@/lib/types';
+import type { NoteTemplate, NoteOmsuData, Direction, Indicator, NoteCellStatus } from '@/lib/types';
 import { noteCellKey, noteTemplateName } from '@/lib/types';
 import { NOTE_STATUS_META } from '@/lib/data';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Pencil, CheckCircle2, Undo2, PenLine } from 'lucide-react';
+import { CheckCircle2, Undo2, PenLine } from 'lucide-react';
 
 export type NoteMode = 'edit' | 'approve' | 'readonly';
 
@@ -15,14 +15,13 @@ interface NoteTableProps {
   indicators: Indicator[];
   mode: NoteMode;
   omsuData: Record<string, NoteOmsuData>; // templateId -> данные одной территории
-  cioData?: Record<string, NoteCioData>;  // templateId -> данные ЦИО (режим approve)
   onCellChange?: (templateId: string, cellKey: string, value: string) => void;
   onSendCell?: (templateId: string, cellKey: string) => void;      // ОМСУ: отправка ячейки на согласование (edit)
   onRecallCell?: (templateId: string, cellKey: string) => void;    // ОМСУ: отзыв ячейки (edit)
   onApproveCell?: (templateId: string, cellKey: string) => void;   // ЦИО: согласование ячейки (approve)
   onRevokeCell?: (templateId: string, cellKey: string) => void;    // ЦИО: отзыв согласования ячейки (approve)
   onReturnCell?: (templateId: string, cellKey: string) => void;    // ЦИО: возврат ячейки (approve)
-  onEditNote?: (templateId: string) => void;
+  onUndoReturnCell?: (templateId: string, cellKey: string) => void; // ЦИО: отмена возврата ячейки (approve)
 }
 
 export function NoteStatusBadge({ status }: { status: NoteOmsuData['status'] }) {
@@ -39,22 +38,14 @@ export function NoteStatusBadge({ status }: { status: NoteOmsuData['status'] }) 
 
 const isFilled = (v: string | undefined) => !!v && v.trim() !== '' && v.trim() !== '—';
 
-/** Число строк таблицы в блоке шаблона (для rowSpan колонки «Примечание») */
-const blockRowSpan = (t: NoteTemplate): number => {
-  let n = t.indicatorRow !== 'none' ? 1 : 0;
-  t.rows.forEach((r) => { n += r.kind === 'enterprises' ? 1 + r.subRowCount : 1; });
-  return n;
-};
-
 /**
  * Таблица пояснительной записки по форме выходного документа:
- * «Наименование показателя | Данные муниципальных образований | Примечание ЦИОГВ» (в итоговом документе — «Примечание: ЦИО/В»).
+ * «Наименование показателя | Данные муниципальных образований».
  * Режимы: заполнение ОМСУ (edit), согласование ЦИО (approve), итоговый документ (readonly).
  */
 export function NoteTable(props: NoteTableProps) {
-  const { templates, directions, indicators, mode, omsuData, cioData } = props;
+  const { templates, directions, indicators, mode, omsuData } = props;
   const indById = new Map(indicators.map((i) => [i.id, i]));
-  const showNoteCol = mode === 'approve' || mode === 'readonly';
 
   /** Поячеечные действия ОМСУ (режим edit): отправка / отзыв / статусы */
   const editControls = (t: NoteTemplate, key: string) => {
@@ -117,38 +108,51 @@ export function NoteTable(props: NoteTableProps) {
           </div>
         )}
         {cst === 'returned' && (
-          <span className="text-[10px] leading-tight text-rose-600">Возвращено{comment ? `: ${comment}` : ''}</span>
-        )}
-        {cst === 'draft' && (
-          <span className="text-[10px] text-slate-400">Не отправлена на согласование</span>
+          <>
+            <span className="text-[10px] leading-tight text-rose-600">Возвращено{comment ? `: ${comment}` : ''}</span>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-5 gap-1 px-1.5 text-[10px] text-slate-600"
+              title="Отменить возврат — комментарий будет удалён, ячейка снова будет на согласовании"
+              onClick={() => props.onUndoReturnCell?.(t.id, key)}
+            >
+              <Undo2 className="h-3 w-3" /> Отменить возврат
+            </Button>
+          </>
         )}
       </div>
     );
   };
 
-  /** Ячейка данных: значение (Input) или текст (Textarea) */
+  /** Ячейка данных: значение (Input) или текст (Textarea);
+   *  noApproval — ячейка вводится ОМСУ, но не участвует в согласовании ЦИО (напр., «Наименование предприятия») */
   const cell = (
     t: NoteTemplate,
     rowId: string,
     subIdx: number,
     colIdx: number,
-    opts: { long?: boolean; center?: boolean; placeholder?: string } = {},
+    opts: { long?: boolean; center?: boolean; placeholder?: string; noApproval?: boolean } = {},
   ) => {
     const key = noteCellKey(rowId, subIdx, colIdx);
     const value = omsuData[t.id]?.cells[key] ?? '';
     const cst: NoteCellStatus | undefined = omsuData[t.id]?.cellStatus[key];
-    const locked = cst === 'approved' || cst === 'pending_cio';
+    const comment = omsuData[t.id]?.cellComments[key];
+    const locked = !opts.noApproval && (cst === 'approved' || cst === 'pending_cio');
     if (mode !== 'edit') {
+      // ЦИО видит только то, что ОМСУ отправил на согласование: черновик (не отправлен) скрыт
+      const hidden = mode === 'approve' && !opts.noApproval && cst === 'draft';
+      const shown = hidden ? '' : value;
       return (
         <div>
           <div className={`whitespace-pre-wrap px-2 py-1.5 text-xs text-slate-700 ${opts.center ? 'text-center' : ''}`}>
-            {isFilled(value) ? (
-              value
+            {isFilled(shown) ? (
+              shown
             ) : mode === 'readonly' && opts.placeholder ? (
               <span className="font-semibold text-slate-400">{opts.placeholder}</span>
             ) : mode === 'readonly' ? null : '—'}
           </div>
-          {mode === 'approve' && approveControls(t, key)}
+          {mode === 'approve' && !opts.noApproval && approveControls(t, key)}
         </div>
       );
     }
@@ -171,102 +175,37 @@ export function NoteTable(props: NoteTableProps) {
             className={`h-8 w-full border-slate-300 px-2 text-xs disabled:bg-slate-50 ${opts.center ? 'text-center' : ''}`}
           />
         )}
-        {editControls(t, key)}
-      </div>
-    );
-  };
-  /** Колонка «Примечание ЦИОГВ» (режимы approve/readonly) */
-  const noteCell = (t: NoteTemplate) => {
-    const data = omsuData[t.id];
-    const cio = cioData?.[t.id];
-    const sts = Object.values(data?.cellStatus ?? {});
-    const approved = sts.filter((s) => s === 'approved').length;
-    const returned = sts.filter((s) => s === 'returned').length;
-    if (mode === 'readonly') {
-      const allApproved = sts.length > 0 && sts.every((s) => s === 'approved');
-      if (allApproved) return <div className="px-2 text-center text-xs font-semibold text-slate-800">СОГЛАСОВАНО</div>;
-      if (cio?.note) return <div className="whitespace-pre-wrap px-2 text-[11px] text-slate-600">{cio.note}</div>;
-      return null;
-    }
-    return (
-      <div className="flex flex-col items-start gap-1">
-        {sts.length > 0 && (
-          <div className="flex flex-col gap-0.5 text-[11px] font-medium">
-            <span className="text-emerald-700">{approved} согласовано</span>
-            {returned > 0 && <span className="text-rose-700">{returned} возвращено</span>}
-          </div>
-        )}
-        {cio?.note && <div className="whitespace-pre-wrap text-[11px] text-slate-600">{cio.note}</div>}
-        <button type="button" className="text-slate-400 hover:text-blue-700" title="Примечание ЦИО" onClick={() => props.onEditNote?.(t.id)}>
-          <Pencil className="h-3.5 w-3.5" />
-        </button>
-      </div>
-    );
-  };
-  /** Ячейка столбца «Примечание ЦИОГВ» в режиме edit: комментарии ЦИО по возвращённым ячейкам строки */
-  const editNoteTd = (t: NoteTemplate, rowId: string, subIdx: number, colIdxs: number[]) => {
-    const data = omsuData[t.id];
-    const comments = colIdxs
-      .map((ci) => ({ colName: t.columns[ci]?.name, text: data?.cellComments[noteCellKey(rowId, subIdx, ci)] }))
-      .filter((c): c is { colName: string; text: string } => !!c.text);
-    return (
-      <td className="w-36 border border-slate-300 p-1.5 align-top">
-        {comments.length > 0 && (
-          <div className="flex flex-col gap-1">
-            {comments.map((c, i) => (
-              <div key={i} className="whitespace-pre-wrap text-[11px] leading-tight text-rose-600">
-                {comments.length > 1 && c.colName && <span className="font-medium">{c.colName}: </span>}
-                {c.text}
+        {!opts.noApproval && (
+          <>
+            {cst === 'returned' && comment && (
+              <div className="whitespace-pre-wrap px-1 pt-1 text-[10px] leading-tight text-rose-600">
+                Возвращено ЦИО: {comment}
               </div>
-            ))}
-          </div>
+            )}
+            {editControls(t, key)}
+          </>
         )}
-      </td>
+      </div>
     );
   };
-
   const renderTemplate = (t: NoteTemplate) => {
-    const span = blockRowSpan(t);
     const name = noteTemplateName(t, indById);
-    const data = omsuData[t.id];
-    const status = data?.status ?? 'not_filled';
-    const sts = Object.values(data?.cellStatus ?? {});
-    const approvedCount = sts.filter((s) => s === 'approved').length;
     const rows: React.ReactNode[] = [];
 
-    const labelTd = (label: React.ReactNode) => (
-      <td className="w-[300px] border border-slate-300 px-2.5 py-1.5 align-top">{label}</td>
-    );
-    const noteTd = (
-      <td rowSpan={span} className="w-36 border border-slate-300 px-1.5 py-1.5 align-middle">
-        {noteCell(t)}
-      </td>
+    const labelTd = (label: React.ReactNode, rowSpan?: number) => (
+      <td rowSpan={rowSpan} className="w-[300px] border border-slate-300 px-2.5 py-1.5 align-top">{label}</td>
     );
 
     // Строка самого показателя: наименование + подшапка с названиями столбцов (Отчёт / Оценка / Прогноз)
     if (t.indicatorRow === 'value') {
       rows.push(
         <tr key="ind">
-          {labelTd(
-            <div>
-              <div className="text-xs font-semibold text-slate-800">{name}</div>
-              {mode === 'edit' && (
-                <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                  <NoteStatusBadge status={status} />
-                  {sts.length > 0 && (
-                    <span className="text-[10px] text-slate-500">Ячейки: {approvedCount}/{sts.length} согл.</span>
-                  )}
-                </div>
-              )}
-            </div>,
-          )}
+          {labelTd(<div className="text-xs font-semibold text-slate-800">{name}</div>)}
           {t.columns.map((c) => (
             <td key={c.id} className="border border-slate-300 bg-slate-50 px-2 py-1 text-center text-[11px] font-semibold text-slate-700">
               {c.name}
             </td>
           ))}
-          {showNoteCol && noteTd}
-          {mode === 'edit' && editNoteTd(t, 'ind', 0, [])}
         </tr>,
       );
     } else if (t.indicatorRow === 'text') {
@@ -276,8 +215,6 @@ export function NoteTable(props: NoteTableProps) {
           <td colSpan={t.columns.length} className="border border-slate-300 p-1 align-top">
             {cell(t, 'ind', 0, 0, { long: true })}
           </td>
-          {showNoteCol && noteTd}
-          {mode === 'edit' && editNoteTd(t, 'ind', 0, [0])}
         </tr>,
       );
     } else {
@@ -290,8 +227,6 @@ export function NoteTable(props: NoteTableProps) {
               {c.name}
             </td>
           ))}
-          {showNoteCol && noteTd}
-          {mode === 'edit' && editNoteTd(t, 'ind', 0, [])}
         </tr>,
       );
     }
@@ -299,27 +234,16 @@ export function NoteTable(props: NoteTableProps) {
     // Дополнительные строки блока
     t.rows.forEach((r) => {
       if (r.kind === 'enterprises') {
-        // Строка-группа (вид производства) + строки предприятий
-        rows.push(
-          <tr key={`g-${r.id}`}>
-            <td className="border border-slate-300" />
-            <td className="border border-slate-300 bg-slate-50/70 px-2.5 py-1 text-xs font-semibold text-slate-800">{r.name}</td>
-            {t.columns.slice(1).map((c) => (
-              <td key={c.id} className="border border-slate-300" />
-            ))}
-            {mode === 'edit' && editNoteTd(t, r.id, 0, [])}
-          </tr>,
-        );
+        // Подпоказатель (rowspan на все строки предприятий) — данные напротив наименования
         for (let s = 0; s < r.subRowCount; s++) {
           rows.push(
             <tr key={`e-${r.id}-${s}`}>
-              <td className="border border-slate-300" />
+              {s === 0 && labelTd(<div className="text-xs font-semibold text-slate-800">{r.name}</div>, r.subRowCount)}
               {t.columns.map((c, ci) => (
                 <td key={c.id} className="border border-slate-300 p-1 align-top">
-                  {cell(t, r.id, s, ci, { long: ci !== 0 })}
+                  {cell(t, r.id, s, ci, { long: ci !== 0, noApproval: ci === 0 })}
                 </td>
               ))}
-              {mode === 'edit' && editNoteTd(t, r.id, s, t.columns.map((_, ci) => ci))}
             </tr>,
           );
         }
@@ -330,7 +254,6 @@ export function NoteTable(props: NoteTableProps) {
             <td colSpan={t.columns.length} className="border border-slate-300 p-1 align-top">
               {cell(t, r.id, 0, 0, { long: true })}
             </td>
-            {mode === 'edit' && editNoteTd(t, r.id, 0, [0])}
           </tr>,
         );
       } else {
@@ -347,7 +270,6 @@ export function NoteTable(props: NoteTableProps) {
                 })}
               </td>
             ))}
-            {mode === 'edit' && editNoteTd(t, r.id, 0, t.columns.map((_, ci) => ci))}
           </tr>,
         );
       }
@@ -367,7 +289,7 @@ export function NoteTable(props: NoteTableProps) {
             return (
               <Fragment key={d.id}>
                 <tr>
-                  <td colSpan={1 + cols + 1} className="bg-[#cfe0f4] px-3 py-1.5 text-xs font-bold text-slate-900">
+                  <td colSpan={1 + cols} className="bg-[#cfe0f4] px-3 py-1.5 text-xs font-bold text-slate-900">
                     {d.name}
                   </td>
                 </tr>
@@ -377,9 +299,6 @@ export function NoteTable(props: NoteTableProps) {
                   </td>
                   <td colSpan={cols} className="border border-slate-300 bg-slate-50 px-3 py-1.5 text-center text-[11px] font-semibold text-slate-600">
                     Данные муниципальных образований
-                  </td>
-                  <td className="w-36 border border-slate-300 bg-slate-50 px-3 py-1.5 text-center text-[11px] font-semibold text-slate-600">
-                    {mode === 'readonly' ? 'Примечание: ЦИО/В' : 'Примечание ЦИОГВ'}
                   </td>
                 </tr>
                 {tpls.map(renderTemplate)}

@@ -69,7 +69,7 @@ export type Action =
   | { type: 'NOTE_CIO_APPROVE'; templateId: string; munId: string; cellKey: string; actor: string }
   | { type: 'NOTE_CIO_RETURN'; templateId: string; munId: string; cellKey: string; actor: string; comment: string }
   | { type: 'NOTE_CIO_REVOKE'; templateId: string; munId: string; cellKey: string; actor: string }
-  | { type: 'NOTE_CIO_SET_NOTE'; templateId: string; munId: string; note: string }
+  | { type: 'NOTE_CIO_UNDO_RETURN'; templateId: string; munId: string; cellKey: string; actor: string }
   | { type: 'NOTE_CAMPAIGN_DATES'; startDate: string; deadlineOmsu: string; deadlineCio: string }
   | { type: 'NOTE_CAMPAIGN_LAUNCH' }
   | { type: 'NOTE_CAMPAIGN_STOP' };
@@ -701,15 +701,17 @@ function reducer(state: AppState, a: Action): AppState {
       const cur = state.noteOmsuValues[a.munId]?.[a.templateId];
       if (!cur || cur.cellStatus[a.cellKey] !== 'pending_cio') return state;
       const cellStatus: Record<string, NoteCellStatus> = { ...cur.cellStatus, [a.cellKey]: 'approved' };
+      const cellComments = { ...cur.cellComments };
+      delete cellComments[a.cellKey]; // примечание ЦИО исчезает после согласования
       const derived = deriveNoteStatus(cellStatus);
-      const cioCur = state.noteCioValues[a.templateId]?.[a.munId] || { note: '', status: 'none' as const, updatedAt: null };
+      const cioCur = state.noteCioValues[a.templateId]?.[a.munId] || { status: 'none' as const, updatedAt: null };
       return {
         ...state,
         noteOmsuValues: {
           ...state.noteOmsuValues,
           [a.munId]: {
             ...state.noteOmsuValues[a.munId],
-            [a.templateId]: { ...cur, cellStatus, status: derived, updatedAt: now() },
+            [a.templateId]: { ...cur, cellStatus, cellComments, status: derived, updatedAt: now() },
           },
         },
         noteCioValues: {
@@ -728,7 +730,7 @@ function reducer(state: AppState, a: Action): AppState {
       const cellStatus: Record<string, NoteCellStatus> = { ...cur.cellStatus, [a.cellKey]: 'returned' };
       const cellComments = { ...cur.cellComments, [a.cellKey]: a.comment };
       const derived = deriveNoteStatus(cellStatus);
-      const cioCur = state.noteCioValues[a.templateId]?.[a.munId] || { note: '', status: 'none' as const, updatedAt: null };
+      const cioCur = state.noteCioValues[a.templateId]?.[a.munId] || { status: 'none' as const, updatedAt: null };
       return {
         ...state,
         noteOmsuValues: {
@@ -754,7 +756,7 @@ function reducer(state: AppState, a: Action): AppState {
       if (!cur || cur.cellStatus[a.cellKey] !== 'approved') return state;
       const cellStatus: Record<string, NoteCellStatus> = { ...cur.cellStatus, [a.cellKey]: 'pending_cio' };
       const derived = deriveNoteStatus(cellStatus);
-      const cioCur = state.noteCioValues[a.templateId]?.[a.munId] || { note: '', status: 'none' as const, updatedAt: null };
+      const cioCur = state.noteCioValues[a.templateId]?.[a.munId] || { status: 'none' as const, updatedAt: null };
       return {
         ...state,
         noteOmsuValues: {
@@ -774,17 +776,31 @@ function reducer(state: AppState, a: Action): AppState {
         history: [...state.history, { at: now(), actor: `ЦИО (${a.actor})`, action: 'Пояснительная записка: согласование ячейки отозвано' }],
       };
     }
-    case 'NOTE_CIO_SET_NOTE': {
-      const cur = state.noteCioValues[a.templateId]?.[a.munId] || { note: '', status: 'none' as const, updatedAt: null };
+    case 'NOTE_CIO_UNDO_RETURN': {
+      const cur = state.noteOmsuValues[a.munId]?.[a.templateId];
+      if (!cur || cur.cellStatus[a.cellKey] !== 'returned') return state;
+      const cellStatus: Record<string, NoteCellStatus> = { ...cur.cellStatus, [a.cellKey]: 'pending_cio' };
+      const cellComments = { ...cur.cellComments };
+      delete cellComments[a.cellKey]; // комментарий при возврате больше не нужен
+      const derived = deriveNoteStatus(cellStatus);
+      const cioCur = state.noteCioValues[a.templateId]?.[a.munId] || { status: 'none' as const, updatedAt: null };
       return {
         ...state,
+        noteOmsuValues: {
+          ...state.noteOmsuValues,
+          [a.munId]: {
+            ...state.noteOmsuValues[a.munId],
+            [a.templateId]: { ...cur, cellStatus, cellComments, status: derived, updatedAt: now() },
+          },
+        },
         noteCioValues: {
           ...state.noteCioValues,
           [a.templateId]: {
             ...(state.noteCioValues[a.templateId] || {}),
-            [a.munId]: { ...cur, note: a.note, updatedAt: now() },
+            [a.munId]: { ...cioCur, status: 'none', updatedAt: now() },
           },
         },
+        history: [...state.history, { at: now(), actor: `ЦИО (${a.actor})`, action: 'Пояснительная записка: возврат ячейки отменён' }],
       };
     }
     case 'NOTE_CAMPAIGN_DATES':

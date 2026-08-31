@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { StoreProvider, useStore } from '@/lib/store';
-import { ROLES } from '@/lib/data';
+import { ROLES, CURRENT_OMSU } from '@/lib/data';
 import type { RoleId, AppState } from '@/lib/types';
 import { Setup } from '@/pages/Setup';
 import { OmsuForm } from '@/pages/OmsuForm';
@@ -103,9 +103,11 @@ const NOTE_NAV: Record<RoleId, { id: PageId; label: string }[]> = {
   ],
   cio: [
     { id: 'note-cio', label: 'Рабочее место ЦИО (ПЗ)' },
+    { id: 'note-output', label: 'Выходные таблицы пояснительной записки' },
   ],
   omsu: [
     { id: 'note-omsu', label: 'Рабочее место ОМСУ (ПЗ)' },
+    { id: 'note-output', label: 'Выходные таблицы пояснительной записки' },
   ],
 };
 
@@ -324,7 +326,7 @@ function Shell({ activeModule, onHome }: { activeModule: ModuleId, onHome: () =>
         {page === 'note-collection' && <NoteCollection />}
         {page === 'note-omsu' && <NoteOmsuWorkspace />}
         {page === 'note-cio' && <NoteCioWorkspace />}
-        {page === 'note-output' && <NoteOutputTables />}
+        {page === 'note-output' && (role === 'omsu' ? <NoteOutputTables fixedMunId={CURRENT_OMSU} /> : <NoteOutputTables />)}
         {page === 'about' && <Description />}
         {page === 'users' && <UserManagement />}
         {page === 'dicts' && <DictsManagement />}
