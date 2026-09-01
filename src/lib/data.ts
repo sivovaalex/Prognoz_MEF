@@ -695,6 +695,101 @@ export const NOTE_CAMPAIGN: NoteCampaign = {
 };
 
 // ─────────────────────────────────────────────────────────────
+// ПЗ: отчётный год и архив пояснительных записок
+// ─────────────────────────────────────────────────────────────
+
+/** ПЗ: отчётный год текущей кампании пояснительной записки */
+export const NOTE_REPORTING_YEAR = 2026;
+
+/** ПЗ: годы архива пояснительной записки (последние 15 лет, без текущего года): 2025…2011 */
+export const NOTE_ARCHIVE_YEARS: number[] = Array.from(
+  { length: 15 },
+  (_, i) => NOTE_REPORTING_YEAR - 1 - i,
+);
+
+/** ПЗ: архивные (завершённые) значения ОМСУ за отчётный год —
+ *  для просмотра выходных таблиц за прошлые годы (детерминированные демо-данные) */
+export function buildNoteArchiveOmsuValues(
+  year: number,
+  templates: NoteTemplate[],
+  muns: Municipality[],
+): Record<string, Record<string, NoteOmsuData>> {
+  const out: Record<string, Record<string, NoteOmsuData>> = {};
+
+  // Детерминированный псевдослучайный генератор: данные стабильны при повторных рендерах
+  let seed = (year * 2654435761) % 2147483647;
+  const rnd = () => {
+    seed = (seed * 1103515245 + 12345) % 2147483648;
+    return seed / 2147483648;
+  };
+  const pick = <T,>(arr: T[]): T => arr[Math.floor(rnd() * arr.length)];
+
+  // Сдвигаем годы в демонстрационных текстах под выбранный отчётный год
+  const shiftYear = (text: string): string =>
+    text
+      .replace(/2027–2029/g, `${year + 1}–${year + 3}`)
+      .replace(/2026/g, `${year}`)
+      .replace(/2025/g, `${year - 1}`)
+      .replace(/2024/g, `${year - 2}`);
+
+  const ARCHIVE_ENTERPRISES = [
+    'ПАО «АК «Рубин»', 'АО «Криогенмаш»', 'ООО «Фабрика вентиляции «Агент»',
+    'ООО «Роквул»', 'АО «НИТИ» им. П.И. Снегирёва', 'АО «НИМИ»',
+  ];
+  const ARCHIVE_PRODUCTS = [
+    'Производство готовых металлических изделий',
+    'Производство строительных материалов',
+    'Производство пищевых продуктов',
+    'Производство оборудования разделения воздуха',
+  ];
+  const ARCHIVE_PLANS = [
+    `Модернизация производства и ввод новых линий в ${year + 1} г.`,
+    `Расширение производственных площадок в ${year}–${year + 1} гг.`,
+    `Обновление производственных мощностей, увеличение объёмов выпуска в ${year + 1} г.`,
+  ];
+
+  // Текст для строк без демо-текста (напр., перечень предприятий) — по названию столбца
+  const genericText = (colName: string): string => {
+    if (colName.includes('Наименование')) return pick(ARCHIVE_ENTERPRISES);
+    if (colName.toLowerCase().includes('продукци')) return pick(ARCHIVE_PRODUCTS);
+    if (colName.includes('Планы')) return pick(ARCHIVE_PLANS);
+    return `Данные за ${year} год представлены в соответствии с отчётностью за отчётный период.`;
+  };
+
+  muns.forEach((m, mi) => {
+    out[m.id] = {};
+    templates.forEach((t) => {
+      const cells: Record<string, string> = {};
+      const cellStatus: Record<string, NoteCellStatus> = {};
+      t.rows.forEach((r) => {
+        const n = noteRowCellCount(t, r);
+        for (let i = 0; i < n; i++) {
+          const key = noteCellKey(r.id, 0, i);
+          const v = NOTE_TEXT[r.id];
+          let text = '';
+          if (Array.isArray(v)) text = shiftYear(v[i] ?? '');
+          else if (typeof v === 'string') text = i === 0 ? shiftYear(v) : '';
+          // Строки без демо-текста заполнены не всегда (как в реальной отчётности)
+          if (!text.trim() && rnd() < 0.75) text = genericText(t.columns[i]?.name ?? '');
+          if (text.trim() === '') continue;
+          cells[key] = text;
+          cellStatus[key] = 'approved';
+        }
+      });
+      out[m.id]![t.id] = {
+        cells,
+        cellStatus,
+        cellComments: {},
+        status: deriveNoteStatus(cellStatus),
+        updatedAt: `${year}-03-${String(10 + (mi % 18)).padStart(2, '0')} 14:30`,
+        signedBy: 'Иванов И.И., главный бухгалтер',
+      };
+    });
+  });
+  return out;
+}
+
+// ─────────────────────────────────────────────────────────────
 // Начальное состояние хранилища
 // ─────────────────────────────────────────────────────────────
 

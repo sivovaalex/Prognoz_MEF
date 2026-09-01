@@ -1,7 +1,7 @@
 import { Fragment } from 'react';
 import type { NoteTemplate, NoteOmsuData, Direction, Indicator, NoteCellStatus } from '@/lib/types';
 import { noteCellKey, noteTemplateName, noteRowCellSpans } from '@/lib/types';
-import { NOTE_STATUS_META } from '@/lib/data';
+import { NOTE_STATUS_META, NOTE_REPORTING_YEAR } from '@/lib/data';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
@@ -15,6 +15,7 @@ interface NoteTableProps {
   indicators: Indicator[];
   mode: NoteMode;
   omsuData: Record<string, NoteOmsuData>; // templateId -> данные одной территории
+  reportingYear?: number; // отчётный год документа (подпись над таблицей)
   onCellChange?: (templateId: string, cellKey: string, value: string) => void;
   onSendCell?: (templateId: string, cellKey: string) => void;      // ОМСУ: отправка ячейки на согласование (edit)
   onRecallCell?: (templateId: string, cellKey: string) => void;    // ОМСУ: отзыв ячейки (edit)
@@ -44,7 +45,7 @@ const isFilled = (v: string | undefined) => !!v && v.trim() !== '' && v.trim() !
  * Режимы: заполнение ОМСУ (edit), согласование ЦИО (approve), итоговый документ (readonly).
  */
 export function NoteTable(props: NoteTableProps) {
-  const { templates, directions, indicators, mode, omsuData } = props;
+  const { templates, directions, indicators, mode, omsuData, reportingYear = NOTE_REPORTING_YEAR } = props;
   const indById = new Map(indicators.map((i) => [i.id, i]));
 
   /** Поячеечные действия ОМСУ (режим edit): отправка / отзыв / статусы */
@@ -229,6 +230,9 @@ export function NoteTable(props: NoteTableProps) {
 
   return (
     <div className="overflow-x-auto rounded-md border border-slate-200 bg-white">
+      <div className="border-b border-slate-200 px-3 py-2 text-center text-sm font-semibold text-slate-900">
+        Отчетный год: {reportingYear}
+      </div>
       <table className="w-full border-collapse text-sm">
         <tbody>
           {directions.map((d) => {

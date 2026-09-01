@@ -146,7 +146,9 @@ function NoteTemplateModal({ initial, presetSectionId, onClose }: { initial: Not
     initial ? initial.columns.map((c) => ({ ...c })) : [{ id: 'c1', name: 'Отчёт' }, { id: 'c2', name: 'Оценка' }, { id: 'c3', name: 'Прогноз' }],
   );
   const [rows, setRows] = useState(initial ? initial.rows.map((r) => ({ ...r })) : []);
-  const [label, setLabel] = useState(initial?.label ?? '');
+  // Наименование в таблице: для существующих шаблонов сохраняется без изменений
+  // (редактируемое поле убрано; для новых показателей из дерева используется имя показателя без префикса «Справочно:»)
+  const [label] = useState(initial?.label ?? '');
   const [error, setError] = useState('');
 
   const sectionIndicators = state.indicators.filter((i) => i.directionId === sectionId && !i.isGroup);
@@ -192,7 +194,7 @@ function NoteTemplateModal({ initial, presetSectionId, onClose }: { initial: Not
     onClose();
   };
 
-  // Черновик шаблона для живого предпросмотра (как показатель будет выглядеть в документе)
+  // Черновик шаблона для живого предпросмотра (как показатель будет выглядеть в таблице)
   const previewLabel = customMode
     ? customName.trim() || 'Показатель (введите наименование)'
     : indicatorId
@@ -260,17 +262,6 @@ function NoteTemplateModal({ initial, presetSectionId, onClose }: { initial: Not
               </Select>
             )}
           </div>
-          {!customMode && (
-            <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium">Наименование в документе (необязательно)</label>
-              <input
-                value={label}
-                onChange={(e) => setLabel(e.target.value)}
-                placeholder="По умолчанию — имя показателя без префикса «Справочно:»"
-                className="h-9 rounded-md border border-slate-300 px-3 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-              />
-            </div>
-          )}
           <div className="border-t pt-3">
             <div className="mb-2 text-sm font-medium">Конфигурация данных, заполняемых ОМСУ</div>
             <div className="mb-1 text-xs font-medium text-slate-500">Столбцы</div>
@@ -342,7 +333,7 @@ function NoteTemplateModal({ initial, presetSectionId, onClose }: { initial: Not
           {error && <div className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">{error}</div>}
           </div>
           <div className="flex w-full flex-col gap-2 lg:w-[44%]">
-            <div className="text-sm font-medium">Предпросмотр — как показатель будет выглядеть в документе</div>
+            <div className="text-sm font-medium">Предпросмотр — как показатель будет выглядеть в таблице</div>
             <div className="max-h-[62vh] overflow-auto rounded-md border border-slate-200 bg-white p-2">
               <NoteTable
                 templates={[previewTemplate]}
