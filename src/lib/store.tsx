@@ -70,7 +70,7 @@ export type Action =
   | { type: 'NOTE_CIO_RETURN'; templateId: string; munId: string; cellKey: string; actor: string; comment: string }
   | { type: 'NOTE_CIO_REVOKE'; templateId: string; munId: string; cellKey: string; actor: string }
   | { type: 'NOTE_CIO_UNDO_RETURN'; templateId: string; munId: string; cellKey: string; actor: string }
-  | { type: 'NOTE_CAMPAIGN_DATES'; startDate: string; deadlineOmsu: string; deadlineCio: string }
+  | { type: 'NOTE_CAMPAIGN_SCHEDULE'; startDate: string; deadline: string }
   | { type: 'NOTE_CAMPAIGN_LAUNCH' }
   | { type: 'NOTE_CAMPAIGN_STOP' };
 
@@ -803,11 +803,11 @@ function reducer(state: AppState, a: Action): AppState {
         history: [...state.history, { at: now(), actor: `ЦИО (${a.actor})`, action: 'Пояснительная записка: возврат ячейки отменён' }],
       };
     }
-    case 'NOTE_CAMPAIGN_DATES':
+    case 'NOTE_CAMPAIGN_SCHEDULE':
       return {
         ...state,
-        noteCampaign: { ...state.noteCampaign, startDate: a.startDate, deadlineOmsu: a.deadlineOmsu, deadlineCio: a.deadlineCio },
-        history: [...state.history, { at: now(), actor: 'Куратор МЭФ', action: `Обновлены параметры сбора пояснительной записки (запуск: ${a.startDate}, ОМСУ: ${a.deadlineOmsu}, ЦИО: ${a.deadlineCio})` }],
+        noteCampaign: { ...state.noteCampaign, startDate: a.startDate, deadline: a.deadline },
+        history: [...state.history, { at: now(), actor: 'Куратор МЭФ', action: `Установлены даты сбора пояснительной записки (запуск: ${a.startDate}, окончание: ${a.deadline})` }],
       };
     case 'NOTE_CAMPAIGN_LAUNCH':
       return {

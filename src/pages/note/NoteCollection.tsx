@@ -8,23 +8,21 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { CalendarClock, PlayCircle, StopCircle, Send } from 'lucide-react';
 
-/** Вкладка «Управление» ПЗ: управление сбором, сроки */
+/** Вкладка «Управление сбором» ПЗ: в точности как вкладка «Управление» раздела «Показатели» —
+ *  параметры сбора (дата запуска и дата окончания), запуск/остановка, историчность сборов */
 export function NoteCollection() {
   const { state, dispatch } = useStore();
   const cam = state.noteCampaign;
   const [startDate, setStartDate] = useState(cam.startDate ?? '2026-02-01T09:00');
-  const [dOmsu, setDOmsu] = useState(cam.deadlineOmsu);
-  const [dCio, setDCio] = useState(cam.deadlineCio);
+  const [dlEnd, setDlEnd] = useState(cam.deadline);
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
-
-  const muns = state.omsus.filter((m) => m.isActive !== false);
 
   return (
     <div className="space-y-4">
       <div>
         <h2 className="text-lg font-semibold">Управление сбором пояснительной записки</h2>
         <p className="text-sm text-muted-foreground">
-          Куратор отчёта: запуск сбора, контроль сроков, статус заполнения по территориям
+          Куратор отчёта: запуск сбора, контроль сроков
         </p>
       </div>
 
@@ -40,18 +38,14 @@ export function NoteCollection() {
               <Input type="datetime-local" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
             </div>
             <div className="grid grid-cols-2 items-center gap-2">
-              <Label>Срок заполнения ОМСУ</Label>
-              <Input type="date" value={dOmsu} onChange={(e) => setDOmsu(e.target.value)} />
+              <Label>Дата окончания сбора</Label>
+              <Input type="datetime-local" value={dlEnd} onChange={(e) => setDlEnd(e.target.value)} />
             </div>
-            <div className="grid grid-cols-2 items-center gap-2">
-              <Label>Срок согласования ЦИО</Label>
-              <Input type="date" value={dCio} onChange={(e) => setDCio(e.target.value)} />
-            </div>
-            <div className="flex flex-wrap gap-2 pt-2">
+            <div className="flex gap-2 pt-2">
               <Button
                 variant="outline"
                 onClick={() =>
-                  dispatch({ type: 'NOTE_CAMPAIGN_DATES', startDate, deadlineOmsu: dOmsu, deadlineCio: dCio })
+                  dispatch({ type: 'NOTE_CAMPAIGN_SCHEDULE', startDate, deadline: dlEnd })
                 }
               >
                 <CalendarClock className="h-4 w-4 mr-1" /> Сохранить даты
@@ -75,7 +69,7 @@ export function NoteCollection() {
               )}
             </div>
             <p className="text-xs text-muted-foreground">
-              В указанную дату КФ автоматически рассылает уведомления и формы: {muns.length} ОМСУ и {state.cios.length} ЦИО.
+              В указанную дату КФ автоматически рассылает уведомления и формы: {state.omsus.length} ОМСУ и {state.cios.length} ЦИО.
             </p>
           </CardContent>
         </Card>

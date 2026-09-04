@@ -689,6 +689,7 @@ export const NOTE_STATUS_META: Record<NoteOmsuData['status'], { label: string; c
 export const NOTE_CAMPAIGN: NoteCampaign = {
   status: 'collecting',
   startDate: '2026-02-01T09:00',
+  deadline: '2026-03-31T18:00',
   deadlineOmsu: '2026-03-15',
   deadlineCio: '2026-03-31',
   launchedAt: '2026-02-01',

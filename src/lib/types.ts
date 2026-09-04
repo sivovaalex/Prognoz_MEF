@@ -256,6 +256,7 @@ export interface NoteCioData {
 export interface NoteCampaign {
   status: 'draft' | 'collecting' | 'completed';
   startDate: string;      // дата запуска сбора (datetime)
+  deadline: string;       // дата окончания сбора (datetime)
   deadlineOmsu: string;   // срок заполнения ОМСУ
   deadlineCio: string;    // срок согласования ЦИО
   launchedAt: string | null;
