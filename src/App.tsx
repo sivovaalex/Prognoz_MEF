@@ -144,7 +144,7 @@ function Shell({ activeModule, onHome }: { activeModule: ModuleId, onHome: () =>
 
   const switchBlock = (b: BlockId) => {
     setBlock(b);
-    setPage(b === 'admin_block' ? 'users' : DEFAULT_PAGE[role]);
+    setPage(b === 'admin_block' ? 'users' : b === 'rating_view' ? 'rating' : DEFAULT_PAGE[role]);
     setSubSection('ind');
   };
 
