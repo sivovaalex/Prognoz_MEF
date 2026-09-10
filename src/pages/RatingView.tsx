@@ -33,6 +33,48 @@ function DynCell({ delta }: { delta: number }) {
   return <span className="inline-flex items-center gap-1 text-gray-500 text-xs"><Minus className="h-3.5 w-3.5" />0</span>;
 }
 
+/** Шапка отчёта над таблицей рейтинга ОМСУ: территория, отчётный период, источник данных, дата обновления */
+function TableMeta({ period }: { period: number }) {
+  return (
+    <div className="mb-2 flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-muted-foreground">
+      <span>Территория: <b className="font-semibold text-slate-800">Московская область</b></span>
+      <span>Отчетный период: <b className="font-semibold text-slate-800">{period} квартал {YEAR}</b></span>
+      <span>Источник данных: <b className="font-semibold text-slate-800">Ведомственные данные</b></span>
+      <span>Дата последнего обновления: <b className="font-semibold text-slate-800">{now()}</b></span>
+    </div>
+  );
+}
+
+/** Повёрнутый текст шапки (читается снизу вверх, как в референсном отчёте) */
+function RotatedHeader({ text, height, align = 'center' }: { text: string; height: number; align?: 'center' | 'end' }) {
+  return (
+    <div
+      className={`flex justify-center overflow-hidden ${align === 'end' ? 'items-end' : 'items-center'}`}
+      style={{ height }}
+    >
+      <span
+        className="whitespace-nowrap text-[11px] leading-tight"
+        style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}
+      >
+        {text}
+      </span>
+    </div>
+  );
+}
+
+/** Цвет ячейки матрицы «По показателям»: зелёный (топ-30%) → жёлтый → красный (при 51 ОМСУ: 1–15 / 16–40 / 41–51) */
+function cellColor(rank: number | null, n: number): string {
+  if (rank == null) return '#f1f5f9';
+  const t = (rank - 1) / Math.max(1, n - 1);
+  if (t < 0.3) return '#90ee90';
+  if (t < 0.8) return '#ffff99';
+  return '#ff9999';
+}
+
+// Матричные таблицы рейтинга (стиль референсного отчёта: серая шапка #d9d9d9, рамки #ccc, по центру)
+const mTh = 'border border-[#ccc] bg-[#d9d9d9] px-1 py-1 text-center text-[12px] font-bold align-middle';
+const mTd = 'border border-[#ccc] px-1 py-1 text-center text-[12px] whitespace-nowrap';
+
 export function RatingView() {
   const { state, dispatch } = useStore();
   const mode = state.ratingMode;
@@ -53,8 +95,14 @@ export function RatingView() {
   const [tab, setTab] = useState('territory');
   // 6. Вкладка «По разделу показателя»: сортировка строк
   const [sortDir, setSortDir] = useState<string>('none');
+  // 7. Вкладка «Сравнение вариантов»: сортировка строк
+  const [compareSort, setCompareSort] = useState<string>('none');
 
   const rows = useMemo(() => computeRating(state, mode, { calcType, period }), [state, mode, calcType, period]);
+  // Вкладка «По показателям»: место с учётом индивидуальных весов показателей
+  const weightedRows = useMemo(() => computeRating(state, mode, { calcType: 'individual', period }), [state, mode, period]);
+  // Короткие названия ответственных ЦИО для шапки «По показателям»
+  const cioById = useMemo(() => new Map(state.cios.map((c) => [c.id, c])), [state.cios]);
   const dirRows = useMemo(() => computeDirectionRatings(state, rows, { calcType }), [state, rows, calcType]);
 
   // Динамика: место ОМСУ по динамике (1 = лучшая динамика)
@@ -95,6 +143,17 @@ export function RatingView() {
     () => state.indicators.filter((i) => !i.isGroup),
     [state.indicators],
   );
+  // «По показателям»: группировка показателей по направлениям для шапки-группы
+  const indGroups = useMemo(() => {
+    const groups: { dirId: string; dirName: string; inds: typeof matrixInds }[] = [];
+    for (const ind of matrixInds) {
+      const dir = state.directions.find((d) => d.id === ind.directionId);
+      const last = groups[groups.length - 1];
+      if (last && last.dirId === ind.directionId) last.inds.push(ind);
+      else groups.push({ dirId: ind.directionId, dirName: dir?.name ?? '', inds: [ind] });
+    }
+    return groups;
+  }, [matrixInds, state.directions]);
 
   const n = state.omsus.length;
   const mun = rows.find((r) => r.munId === selMun)!;
@@ -180,18 +239,20 @@ export function RatingView() {
       <Card>
         <CardContent className="pt-4">
           <div className="flex flex-wrap items-end gap-x-5 gap-y-3">
-            <div className="space-y-1">
-              <span className="text-xs font-medium text-muted-foreground">Тип расчёта</span>
-              <div>
-                <Select value={calcType} onValueChange={(v) => setCalcType(v as RatingCalcType)}>
-                  <SelectTrigger className="w-52"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="base">Исходный алгоритм</SelectItem>
-                    <SelectItem value="individual">Индивидуальный вес</SelectItem>
-                  </SelectContent>
-                </Select>
+            {tab !== 'compare' && (
+              <div className="space-y-1">
+                <span className="text-xs font-medium text-muted-foreground">Тип расчёта</span>
+                <div>
+                  <Select value={calcType} onValueChange={(v) => setCalcType(v as RatingCalcType)}>
+                    <SelectTrigger className="w-52"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="base">Исходный алгоритм</SelectItem>
+                      <SelectItem value="individual">Индивидуальный вес</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-            </div>
+            )}
             <div className="space-y-1">
               <span className="text-xs font-medium text-muted-foreground">Период</span>
               <div>
@@ -255,6 +316,23 @@ export function RatingView() {
                 </div>
               </div>
             )}
+            {tab === 'compare' && (
+              <div className="space-y-1">
+                <span className="text-xs font-medium text-muted-foreground">Сортировка</span>
+                <div>
+                  <Select value={compareSort} onValueChange={setCompareSort}>
+                    <SelectTrigger className="w-64"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Без сортировки</SelectItem>
+                      <SelectItem value="base-desc">Место без учета веса по убыванию</SelectItem>
+                      <SelectItem value="base-asc">Место без учета веса по возрастанию</SelectItem>
+                      <SelectItem value="ind-desc">Место с учетом веса по убыванию</SelectItem>
+                      <SelectItem value="ind-asc">Место с учетом веса по возрастанию</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
             {tab !== 'direction' && (
               <div className="space-y-1">
                 <span className="text-xs font-medium text-muted-foreground">Территория</span>
@@ -290,6 +368,7 @@ export function RatingView() {
 
             {/* ===== По территории ===== */}
             <TabsContent value="territory">
+              <TableMeta period={period} />
               <div className="overflow-x-auto">
                 <table className="w-full border-collapse">
                   <thead>
@@ -382,6 +461,7 @@ export function RatingView() {
 
             {/* ===== По направлению ===== */}
             <TabsContent value="direction">
+              <TableMeta period={period} />
               <div className="overflow-x-auto">
                 <table className="w-full border-collapse">
                   <thead>
@@ -418,48 +498,103 @@ export function RatingView() {
 
             {/* ===== По показателям (матрица) ===== */}
             <TabsContent value="indicators">
+              <TableMeta period={period} />
               <div className="overflow-x-auto">
-                <table className="w-full border-collapse text-xs">
+                <table className="w-full border-collapse">
                   <thead>
                     <tr>
-                      <th className={`${thCls} sticky left-0 z-10 min-w-[140px]`}>Территория</th>
-                      {matrixInds.map((ind) => (
-                        <th key={ind.id} className={`${thCls} text-center`} title={ind.name}>{ind.num}</th>
+                      <th className={`${mTh} sticky left-0 z-20`} rowSpan={4} style={{ width: 34 }}>
+                        <RotatedHeader text="Направления/показатели" height={680} />
+                      </th>
+                      <th className={`${mTh} sticky left-[34px] z-20`} rowSpan={4} />
+                      <th className={mTh} rowSpan={3}>
+                        <RotatedHeader text="Индивидуальный вес" height={660} />
+                      </th>
+                      <th className={mTh} rowSpan={3}>
+                        <RotatedHeader text="Итоговый рейтинг" height={660} />
+                      </th>
+                      {indGroups.map((g) => (
+                        <th key={g.dirId} className={mTh} colSpan={g.inds.length}>{g.dirName}</th>
                       ))}
-                      <th className={`${thCls} text-center`}>Σ мест</th>
-                      <th className={`${thCls} text-center`}>Место</th>
+                    </tr>
+                    <tr>
+                      {matrixInds.map((ind) => (
+                        <th key={ind.id} className={mTh} title={cioById.get(ind.cioId)?.name}>
+                          <RotatedHeader text={cioById.get(ind.cioId)?.short ?? '—'} height={64} />
+                        </th>
+                      ))}
+                    </tr>
+                    <tr>
+                      {matrixInds.map((ind) => (
+                        <th key={ind.id} className={mTh} title={`${ind.num} ${ind.name}`}>
+                          <RotatedHeader text={`${ind.num} ${ind.name.replace(/^Справочно:\s*/, '')}`} height={440} align="end" />
+                        </th>
+                      ))}
+                    </tr>
+                    <tr>
+                      <th className={mTh}>
+                        <RotatedHeader text="Место с учетом весов показателей" height={190} />
+                      </th>
+                      <th className={mTh}>
+                        <RotatedHeader text="Место по значению" height={190} />
+                      </th>
+                      {matrixInds.map((ind) => (
+                        <th key={ind.id} className={mTh}>
+                          <RotatedHeader text="Место по значению" height={190} />
+                        </th>
+                      ))}
                     </tr>
                   </thead>
                   <tbody>
-                    {[...rows].sort((a, b) => (a.place ?? 999) - (b.place ?? 999)).map((r) => (
-                      <tr key={r.munId}>
-                        <td className={`${tdCls} sticky left-0 bg-white font-medium`}>{r.name}</td>
-                        {matrixInds.map((ind) => {
-                          const c = r.cells[ind.id];
-                          return (
-                            <td
-                              key={ind.id}
-                              className={`${tdCls} text-center`}
-                              style={{ background: rankColor(c?.rank ?? null, n) }}
-                              title={`${ind.name}: ${fmt(c?.value ?? null)}${c && !c.approved ? ' (не согласовано)' : ''}`}
-                            >
-                              {c?.rank ?? '—'}
-                            </td>
-                          );
-                        })}
-                        <td className={`${tdCls} text-center font-medium`} style={{ background: rankColor(r.place, n) }}>{fmt(r.score, 0)}</td>
-                        <td className={`${tdCls} text-center font-semibold`} style={{ background: rankColor(r.place, n) }}>{r.place ?? '—'}</td>
-                      </tr>
-                    ))}
+                    {munsSorted.map((m, idx) => {
+                      const r = rows.find((x) => x.munId === m.id);
+                      const wr = weightedRows.find((x) => x.munId === m.id);
+                      if (!r || !wr) return null;
+                      return (
+                        <tr key={m.id}>
+                          <td className={`${mTd} sticky left-0 z-10 bg-white`} style={{ width: 34 }} />
+                          <td className={`${mTd} sticky left-[34px] z-10 bg-white font-medium`}>{idx + 1}. {m.name}</td>
+                          <td
+                            className={mTd}
+                            style={{ background: cellColor(wr.place, n) }}
+                            title={`С учётом индивидуальных весов показателей: ${fmt(wr.score, 0)}`}
+                          >
+                            {wr.place ?? '—'}
+                          </td>
+                          <td
+                            className={`${mTd} font-semibold`}
+                            style={{ background: cellColor(r.place, n) }}
+                            title={`Итоговый рейтинг (${calcType === 'individual' ? 'индивидуальный вес' : 'сумма мест'}): ${fmt(r.score, 0)}`}
+                          >
+                            {r.place ?? '—'}
+                          </td>
+                          {matrixInds.map((ind) => {
+                            const c = r.cells[ind.id];
+                            return (
+                              <td
+                                key={ind.id}
+                                className={mTd}
+                                style={{ background: cellColor(c?.rank ?? null, n) }}
+                                title={`${ind.num} ${ind.name}: ${fmt(c?.value ?? null)}${c && !c.approved ? ' (не согласовано)' : ''}`}
+                              >
+                                {c?.rank ?? '—'}
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
-              <p className="text-xs text-muted-foreground mt-2">В ячейках — место ОМСУ по показателю (наведите курсор для просмотра значения).</p>
+              <p className="text-xs text-muted-foreground mt-2">
+                В ячейках — место ОМСУ по значению показателя (наведите курсор для просмотра значения). «Место с учетом весов показателей» — итоговое место при расчёте с индивидуальными весами показателей.
+              </p>
             </TabsContent>
 
             {/* ===== Сравнение вариантов ===== */}
             <TabsContent value="compare">
-              <CompareVariants calcType={calcType} period={period} />
+              <CompareVariants sort={compareSort} period={period} />
             </TabsContent>
           </Tabs>
         </CardContent>
@@ -468,80 +603,63 @@ export function RatingView() {
   );
 }
 
-/** Вариант А: сумма мест. Вариант Б: взвешенная сумма нормированных баллов (0..100) */
-function CompareVariants({ calcType, period }: { calcType: RatingCalcType; period: number }) {
+/** Сравнение вариантов: «Исходный алгоритм» (равные веса) и «Индивидуальный вес» показателей */
+function CompareVariants({ sort, period }: { sort: string; period: number }) {
   const { state } = useStore();
   const mode = state.ratingMode;
-  const rows = useMemo(() => computeRating(state, mode, { calcType, period }), [state, mode, calcType, period]);
   const n = state.omsus.length;
+  const baseRows = useMemo(() => computeRating(state, mode, { calcType: 'base', period }), [state, mode, period]);
+  const indRows = useMemo(() => computeRating(state, mode, { calcType: 'individual', period }), [state, mode, period]);
 
-  const variantB = useMemo(() => {
-    // нормирование: балл = 100 × (1 − (место−1)/(N−1))
-    return rows.map((r) => {
-      let sum = 0;
-      let cnt = 0;
-      state.indicators.filter((i) => !i.isGroup).forEach((ind) => {
-        const c = r.cells[ind.id];
-        if (c?.rank !== null && c?.rank !== undefined) {
-          sum += (100 * (1 - (c.rank - 1) / Math.max(n - 1, 1))) * (ind.weight || 1);
-          cnt += 1;
-        }
-      });
-      return { munId: r.munId, name: r.name, ball: cnt ? Math.round(sum) : null };
+  // Сводные строки: место без учета веса (исходный алгоритм) и с учетом веса (индивидуальный вес)
+  const compareRows = useMemo(() => {
+    const indById = new Map(indRows.map((r) => [r.munId, r]));
+    const list = baseRows.map((r) => {
+      const ir = indById.get(r.munId);
+      return {
+        munId: r.munId,
+        name: r.name,
+        basePlace: r.place,
+        indPlace: ir?.place ?? null,
+      };
     });
-  }, [rows, state.indicators, n]);
-
-  const placeB = useMemo(() => {
-    const sorted = [...variantB].filter((v) => v.ball !== null).sort((a, b) => (b.ball ?? 0) - (a.ball ?? 0));
-    const map: Record<string, number> = {};
-    sorted.forEach((v, i) => { map[v.munId] = i + 1; });
-    return map;
-  }, [variantB]);
-
-  const tdCls = 'p-2 text-sm border-b';
-  const thCls = 'p-2 text-xs font-medium text-left border-b bg-slate-50';
+    // без сортировки — по алфавиту
+    list.sort((a, b) => a.name.localeCompare(b.name, 'ru'));
+    if (sort !== 'none') {
+      const key: 'basePlace' | 'indPlace' = sort.startsWith('base') ? 'basePlace' : 'indPlace';
+      const desc = sort.endsWith('desc');
+      list.sort((a, b) => {
+        const va = a[key], vb = b[key];
+        if (va == null && vb == null) return a.name.localeCompare(b.name, 'ru');
+        if (va == null) return 1; // ОМСУ без места — в конец
+        if (vb == null) return -1;
+        return desc ? vb - va : va - vb;
+      });
+    }
+    return list;
+  }, [baseRows, indRows, sort]);
 
   return (
     <div className="overflow-x-auto">
+      <TableMeta period={period} />
       <table className="w-full border-collapse">
         <thead>
           <tr>
-            <th className={thCls}>Территория</th>
-            <th className={thCls} colSpan={2}>Вариант А — сумма мест</th>
-            <th className={thCls} colSpan={2}>Вариант Б — взвешенные баллы (0–100)</th>
-            <th className={thCls}>Δ мест</th>
-          </tr>
-          <tr>
-            <th className={thCls}></th>
-            <th className={thCls}>Σ мест</th>
-            <th className={thCls}>Место</th>
-            <th className={thCls}>Балл</th>
-            <th className={thCls}>Место</th>
-            <th className={thCls}></th>
+            <th className={mTh} style={{ width: 34 }} />
+            <th className={mTh}>Территории</th>
+            <th className={mTh}>Исходный алгоритм</th>
+            <th className={mTh}>Индивидуальный вес</th>
           </tr>
         </thead>
         <tbody>
-          {rows.map((r) => {
-            const b = variantB.find((v) => v.munId === r.munId)!;
-            const pb = b.ball !== null ? placeB[r.munId] : null;
-            const delta = r.place !== null && pb !== null ? pb - r.place : null;
-            return (
-              <tr key={r.munId}>
-                <td className={`${tdCls} font-medium`}>{r.name}</td>
-                <td className={tdCls} style={{ background: rankColor(r.place, n) }}>{fmt(r.score, 0)}</td>
-                <td className={tdCls} style={{ background: rankColor(r.place, n) }}>{r.place ?? '—'}</td>
-                <td className={tdCls} style={{ background: rankColor(pb, n) }}>{b.ball ?? '—'}</td>
-                <td className={tdCls} style={{ background: rankColor(pb, n) }}>{pb ?? '—'}</td>
-                <td className={tdCls}>
-                  {delta === null ? '—' : delta === 0 ? <span className="text-gray-500">0</span> : (
-                    <span className={delta > 0 ? 'text-red-700' : 'text-green-700'}>
-                      {delta > 0 ? `+${delta}` : delta}
-                    </span>
-                  )}
-                </td>
-              </tr>
-            );
-          })}
+          {compareRows.map((r, idx) => (
+            <tr key={r.munId}>
+              <td className={`${mTd} text-left`}>{idx + 1}.</td>
+              <td className={`${mTd} text-left`}>{r.name}</td>
+              <td className={mTd} style={{ background: cellColor(r.basePlace, n) }}>{r.basePlace ?? '—'}</td>
+              <td className={mTd} style={{ background: cellColor(r.indPlace, n) }}>{r.indPlace ?? '—'}</td>
+            </tr>
+          ))}
         </tbody>
       </table>
       <p className="text-xs text-muted-foreground mt-2">

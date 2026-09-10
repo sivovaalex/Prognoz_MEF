@@ -63,7 +63,17 @@ export const CIOS: Cio[] = [
   { id: 'c2', name: 'Министерство инвестиций, промышленности и науки Московской области', short: 'Мининвест' },
   { id: 'c3', name: 'Министерство жилищной политики Московской области', short: 'Минжилпол' },
   { id: 'c4', name: 'Министерство социального развития Московской области', short: 'Минсоц' },
-  { id: 'c5', name: 'Министерство сельского хозяйства и продовольствия Московской области', short: 'Минсельхоз' },];
+  { id: 'c5', name: 'Министерство сельского хозяйства и продовольствия Московской области', short: 'Минсельхоз' },
+];
+
+// Дополнительные ЦИО для модуля рейтинга (по референсному отчёту)
+export const RATING_EXTRA_CIOS: Cio[] = [
+  { id: 'c_mininter', name: 'Министерство информатизации и связи Московской области', short: 'Мининтер' },
+  { id: 'c_minsport', name: 'Министерство физической культуры и спорта Московской области', short: 'Минспорт' },
+  { id: 'c_mimp', name: 'Министерство имущественных и земельных отношений Московской области', short: 'МИМП' },
+  { id: 'c_gurb', name: 'Главное управление региональной безопасности Московской области', short: 'ГУРБ' },
+  { id: 'c_mingos', name: 'Министерство государственного управления Московской области', short: 'Мингос' },
+];
 
 // Текущий пользователь-ЦИО (для демо)
 export const CURRENT_CIO = 'c2'; // Мининвест
@@ -74,17 +84,56 @@ export const CURRENT_OMSU = 'm1'; // Балашиха
 
 export const MUNICIPALITIES: Municipality[] = [
   { id: 'm1', name: 'Балашиха' },
-  { id: 'm2', name: 'Химки' },
-  { id: 'm3', name: 'Подольск' },
-  { id: 'm4', name: 'Красногорск' },
-  { id: 'm5', name: 'Мытищи' },
-  { id: 'm6', name: 'Одинцовский' },
-  { id: 'm7', name: 'Люберцы' },
-  { id: 'm8', name: 'Королёв' },
-  { id: 'm9', name: 'Домодедово' },
-  { id: 'm10', name: 'Сергиево-Посадский' },
-  { id: 'm11', name: 'Раменский' },
-  { id: 'm12', name: 'Долгопрудный' },
+  { id: 'm2', name: 'Богородский' },
+  { id: 'm3', name: 'Бронницы' },
+  { id: 'm4', name: 'Волоколамский' },
+  { id: 'm5', name: 'Воскресенск' },
+  { id: 'm6', name: 'Выотово' },
+  { id: 'm7', name: 'Дмитров' },
+  { id: 'm8', name: 'Домодедово' },
+  { id: 'm9', name: 'Дрезна' },
+  { id: 'm10', name: 'Дубна' },
+  { id: 'm11', name: 'Долгопрудный' },
+  { id: 'm12', name: 'Электросталь' },
+  { id: 'm13', name: 'Звенигород' },
+  { id: 'm14', name: 'Истра' },
+  { id: 'm15', name: 'Ивановское' },
+  { id: 'm16', name: 'Клин' },
+  { id: 'm17', name: 'Красногорск' },
+  { id: 'm18', name: 'Краснознаменск' },
+  { id: 'm19', name: 'Кубинка' },
+  { id: 'm20', name: 'Королёв' },
+  { id: 'm21', name: 'Кимовский' },
+  { id: 'm22', name: 'Люберцы' },
+  { id: 'm23', name: 'Лотошино' },
+  { id: 'm24', name: 'Луховицы' },
+  { id: 'm25', name: 'Мытищи' },
+  { id: 'm26', name: 'Наро-Фоминск' },
+  { id: 'm27', name: 'Ногинск' },
+  { id: 'm28', name: 'Одинцовский' },
+  { id: 'm29', name: 'Орехово-Зуево' },
+  { id: 'm30', name: 'Озёрный' },
+  { id: 'm31', name: 'Подольск' },
+  { id: 'm32', name: 'Пушкинский' },
+  { id: 'm33', name: 'Раменский' },
+  { id: 'm34', name: 'Реутов' },
+  { id: 'm35', name: 'Рошаль' },
+  { id: 'm36', name: 'Серпухов' },
+  { id: 'm37', name: 'Сергиево-Посадский' },
+  { id: 'm38', name: 'Шатура' },
+  { id: 'm39', name: 'Ступино' },
+  { id: 'm40', name: 'Талдом' },
+  { id: 'm41', name: 'Химки' },
+  { id: 'm42', name: 'Чехов' },
+  { id: 'm43', name: 'Щёлково' },
+  { id: 'm44', name: 'Егорьевск' },
+  { id: 'm45', name: 'Солнечногорск' },
+  { id: 'm46', name: 'Раменское' },
+  { id: 'm47', name: 'Красноармейск' },
+  { id: 'm48', name: 'Шаховская' },
+  { id: 'm49', name: 'Зарайск' },
+  { id: 'm50', name: 'Кашира' },
+  { id: 'm51', name: 'Серебряные Пруды' },
 ];
 
 // Показатели Муниципального прогноза — по файлу «Показатели Мунпрогноза.xlsx».
@@ -808,12 +857,14 @@ export function buildNoteArchiveOmsuValues(
 export function buildInitialState(moduleId: string): AppState {
   let indicators = INDICATORS;
   let directions = DIRECTIONS;
+  let cios = CIOS;
   if (moduleId === 'ukaz') {
     indicators = UKAZ_INDICATORS;
     directions = UKAZ_DIRECTIONS;
   } else if (moduleId === 'rating') {
     indicators = RATING_INDICATORS;
     directions = RATING_DIRECTIONS;
+    cios = [...CIOS, ...RATING_EXTRA_CIOS];
   }
 
   const units = Array.from(new Set(indicators.map(i => i.unit).filter(Boolean)));
@@ -827,7 +878,7 @@ export function buildInitialState(moduleId: string): AppState {
     const state: AppState = {
       indicators,
       directions,
-      cios: CIOS.map(c => ({ ...c, isActive: true })),
+      cios: cios.map(c => ({ ...c, isActive: true })),
       omsus: MUNICIPALITIES.map(m => ({ ...m, isActive: true })),
       units: units.map((u, i) => ({ id: `u${i + 1}`, name: u, isActive: true })),
       blockSettings: {
@@ -855,7 +906,7 @@ export function buildInitialState(moduleId: string): AppState {
       launchedAt: '20.07.2026 09:00',
     },
     history: [
-      { at: '20.07.2026 09:00', actor: 'МЭФ', action: `Запущена кампания «${moduleId === 'ukaz' ? 'Указ Президента РФ №607' : moduleId === 'rating' ? 'Рейтинг ОМСУ' : 'Муниципальный прогноз СЭР МО'}»: уведомления направлены 12 ОМСУ и 5 ЦИО` },
+      { at: '20.07.2026 09:00', actor: 'МЭФ', action: `Запущена кампания «${moduleId === 'ukaz' ? 'Указ Президента РФ №607' : moduleId === 'rating' ? 'Рейтинг ОМСУ' : 'Муниципальный прогноз СЭР МО'}»: уведомления направлены 51 ОМСУ и 10 ЦИО` },
       { at: '22.07.2026 14:12', actor: 'г.о. Балашиха', action: 'Заполнена форма по показателю «Численность постоянного населения»: направлена на согласование ЦИО' },
       { at: '23.07.2026 10:45', actor: 'Мининвест', action: 'Форма ЦИО подписана ЭЦП и передана в МЭФ' },
       { at: '24.07.2026 16:03', actor: 'МЭФ', action: 'Сформирован проект прогноза. Полнота данных: 71%' },
@@ -1132,76 +1183,20 @@ export const RATING_DIRECTIONS: Direction[] = [
 ];
 
 export const RATING_INDICATORS: Indicator[] = [
-  {
-    id: 'r1',
-    num: '1',
-    name: 'Доверие к власти',
-    unit: '%',
-    directionId: 'd_rating_1',
-    cioId: 'c2',
-    formula: 'X / Y * 100',
-    optimum: 'max',
-    weight: 3,
-    level: 1,
-    parentId: null, actualFrom: '2024-01-01' },
-  {
-    id: 'r3',
-    num: '2',
-    name: 'Жалобы жителей (Добродел)',
-    unit: 'шт',
-    directionId: 'd_rating_1',
-    cioId: 'c4',
-    formula: 'X',
-    optimum: 'min',
-    weight: 2,
-    level: 1,
-    parentId: null, actualFrom: '2024-01-01' },
-  {
-    id: 'r2',
-    num: '1',
-    name: 'Качество дорог',
-    unit: '%',
-    directionId: 'd_rating_2',
-    cioId: 'c1',
-    formula: 'X / Y * 100',
-    optimum: 'max',
-    weight: 2,
-    level: 1,
-    parentId: null, actualFrom: '2024-01-01' },
-  {
-    id: 'r4',
-    num: '2',
-    name: 'Благоустройство общественных территорий',
-    unit: '%',
-    directionId: 'd_rating_2',
-    cioId: 'c3',
-    formula: 'X / Y * 100',
-    optimum: 'max',
-    weight: 1,
-    level: 1,
-    parentId: null, actualFrom: '2024-01-01' },
-  {
-    id: 'r5',
-    num: '1',
-    name: 'Доходы бюджета ОМСУ',
-    unit: 'млн руб.',
-    directionId: 'd_rating_3',
-    cioId: 'c1',
-    formula: 'X',
-    optimum: 'max',
-    weight: 2,
-    level: 1,
-    parentId: null, actualFrom: '2024-01-01' },
-  {
-    id: 'r6',
-    num: '2',
-    name: 'Инвестиции в основной капитал',
-    unit: 'млн руб.',
-    directionId: 'd_rating_3',
-    cioId: 'c2',
-    formula: 'X',
-    optimum: 'max',
-    weight: 1,
-    level: 1,
-    parentId: null, actualFrom: '2024-01-01' },
+  // Направление «Доверие к власти коммуникации и политика» (по референсному отчёту)
+  { id: 'rt1', num: '1', name: 'Уровень доверия населения органам власти, %', directionId: 'd_rating_1', cioId: 'c_mininter', unit: '%', optimum: 'max', weight: 3, level: 1, parentId: null, actualFrom: '2024-01-01' },
+  { id: 'rt2', num: '2', name: 'Реализация государственных задач, %', directionId: 'd_rating_1', cioId: 'c_mininter', unit: '%', optimum: 'max', weight: 2, level: 1, parentId: null, actualFrom: '2024-01-01' },
+  { id: 'rt3', num: '3', name: 'Коммуникация и политика, балл/место', directionId: 'd_rating_1', cioId: 'c_minsport', unit: 'балл', optimum: 'max', weight: 2, level: 1, parentId: null, actualFrom: '2024-01-01' },
+  { id: 'rt31', num: '3.1', name: 'Итоговая оценка критерия «Инфоугрозы», место', directionId: 'd_rating_1', cioId: 'c_mimp', unit: 'место', optimum: 'min', weight: 1, level: 2, parentId: 'rt3', actualFrom: '2024-01-01' },
+  { id: 'rt32', num: '3.2', name: 'Итоговая оценка критерия «Качественная отработка Повторных касаний», место', directionId: 'd_rating_1', cioId: 'c_mininter', unit: 'место', optimum: 'min', weight: 1, level: 2, parentId: 'rt3', actualFrom: '2024-01-01' },
+  { id: 'rt33', num: '3.3', name: 'Итоговая оценка критерия «Безопасный регион», место', directionId: 'd_rating_1', cioId: 'c_gurb', unit: 'место', optimum: 'min', weight: 1, level: 2, parentId: 'rt3', actualFrom: '2024-01-01' },
+  { id: 'rt331', num: '3.3.1', name: 'Оценка подкритерия Система видеонаблюдения «Безопасный регион», балл/место', directionId: 'd_rating_1', cioId: 'c_gurb', unit: 'балл', optimum: 'max', weight: 1, level: 3, parentId: 'rt33', actualFrom: '2024-01-01' },
+  { id: 'rt332', num: '3.3.2', name: 'Оценка подкритерия «Выявление нарушений с помощью камер в/н», балл/место', directionId: 'd_rating_1', cioId: 'c_mingos', unit: 'балл', optimum: 'max', weight: 1, level: 3, parentId: 'rt33', actualFrom: '2024-01-01' },
+  { id: 'rt34', num: '3.4', name: 'Внедрение единого стандарта зон воинских захоронений, место', directionId: 'd_rating_1', cioId: 'c_mimp', unit: 'место', optimum: 'min', weight: 1, level: 2, parentId: 'rt3', actualFrom: '2024-01-01' },
+  // Направление «Жизненное пространство»
+  { id: 'r2', num: '1', name: 'Качество дорог', directionId: 'd_rating_2', cioId: 'c1', unit: '%', optimum: 'max', weight: 2, level: 1, parentId: null, actualFrom: '2024-01-01' },
+  { id: 'r4', num: '2', name: 'Благоустройство общественных территорий', directionId: 'd_rating_2', cioId: 'c3', unit: '%', optimum: 'max', weight: 1, level: 1, parentId: null, actualFrom: '2024-01-01' },
+  // Направление «Экономика и финансы»
+  { id: 'r5', num: '1', name: 'Доходы бюджета ОМСУ', directionId: 'd_rating_3', cioId: 'c1', unit: 'млн руб.', optimum: 'max', weight: 2, level: 1, parentId: null, actualFrom: '2024-01-01' },
+  { id: 'r6', num: '2', name: 'Инвестиции в основной капитал', directionId: 'd_rating_3', cioId: 'c2', unit: 'млн руб.', optimum: 'max', weight: 1, level: 1, parentId: null, actualFrom: '2024-01-01' },
 ];
