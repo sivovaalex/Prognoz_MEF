@@ -1,5 +1,31 @@
-import type { AppState } from './types';
+import type { AppState, Indicator } from './types';
 import { MUNICIPALITIES } from './data';
+
+/** Тип расчёта рейтинга */
+export type RatingCalcType = 'base' | 'individual';
+
+/** Параметры расчёта рейтинга (фильтры вкладки «Рейтинг ОМСУ») */
+export interface RatingOptions {
+  /** 'base' — исходный алгоритм (равные веса показателей); 'individual' — индивидуальный вес из «Настройки рейтинга» */
+  calcType?: RatingCalcType;
+  /** Квартал рейтингового года (1–4): данные «на конец квартала» */
+  period?: number;
+}
+
+const r2 = (v: number) => Math.round(v * 100) / 100;
+
+/**
+ * Детерминированный коэффициент «данные на конец квартала» (демо):
+ * значения каждого ОМСУ по каждому показателю незначительно различаются
+ * от квартала к кварталу, поэтому рейтинг меняется по периодам.
+ */
+function quarterFactor(munId: string, indId: string, period: number): number {
+  if (!period) return 1;
+  let h = 0;
+  const key = `${munId}|${indId}|${period}`;
+  for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) % 100000;
+  return 1 + ((h % 100) / 100 - 0.5) * 0.06; // −3%…+3%
+}
 
 export interface CellData {
   value: number | null;
@@ -24,14 +50,18 @@ export interface DirectionRating {
   place: number | null;
 }
 
-/** Выбор значения в зависимости от режима рейтинга (оценка 2026 — рейтинговый год) */
-function pickValue(state: AppState, munId: string, indId: string, mode: 'preview' | 'final') {
+/** Выбор значения в зависимости от режима рейтинга и квартала (оценка 2026 — рейтинговый год) */
+function pickValue(state: AppState, munId: string, indId: string, mode: 'preview' | 'final', period: number) {
   const v = state.omsuValues[munId]?.[indId];
   if (!v || v.v2026 === null) return { value: null, approved: false };
   const approved = v.status === 'approved';
   if (mode === 'final' && !approved) return { value: null, approved: false };
-  return { value: v.v2026, approved };
+  return { value: r2(v.v2026 * quarterFactor(munId, indId, period)), approved };
 }
+
+/** Вес показателя в зависимости от типа расчёта */
+const weightOf = (ind: Indicator, calcType: RatingCalcType): number =>
+  calcType === 'individual' ? ind.weight || 1 : 1;
 
 /** Ранжирование: лучшее значение = место 1 */
 export function rankValues(values: { id: string; value: number }[], optimum: 'max' | 'min'): Record<string, number> {
@@ -52,13 +82,14 @@ export function rankValues(values: { id: string; value: number }[], optimum: 'ma
 }
 
 /** Полный расчёт рейтинга */
-export function computeRating(state: AppState, mode: 'preview' | 'final'): MunRating[] {
+export function computeRating(state: AppState, mode: 'preview' | 'final', opts: RatingOptions = {}): MunRating[] {
+  const { calcType = 'base', period = 0 } = opts;
   const inds = state.indicators.filter((i) => !i.isGroup);
   const ranksByInd: Record<string, Record<string, number>> = {};
   inds.forEach((ind) => {
     const vals: { id: string; value: number }[] = [];
     MUNICIPALITIES.forEach((m) => {
-      const { value } = pickValue(state, m.id, ind.id, mode);
+      const { value } = pickValue(state, m.id, ind.id, mode, period);
       if (value !== null) vals.push({ id: m.id, value });
     });
     ranksByInd[ind.id] = rankValues(vals, ind.optimum);
@@ -69,9 +100,9 @@ export function computeRating(state: AppState, mode: 'preview' | 'final'): MunRa
     let score = 0;
     let missing = 0;
     inds.forEach((ind) => {
-      const { value, approved } = pickValue(state, m.id, ind.id, mode);
+      const { value, approved } = pickValue(state, m.id, ind.id, mode, period);
       const rank = value !== null ? ranksByInd[ind.id][m.id] ?? null : null;
-      if (rank !== null) score += rank * (ind.weight || 1);
+      if (rank !== null) score += rank * weightOf(ind, calcType);
       else missing += 1;
       cells[ind.id] = { value, approved, rank };
     });
@@ -94,7 +125,8 @@ export function computeRating(state: AppState, mode: 'preview' | 'final'): MunRa
 }
 
 /** Рейтинг по направлению */
-export function computeDirectionRatings(state: AppState, rows: MunRating[]): Record<string, Record<string, DirectionRating>> {
+export function computeDirectionRatings(state: AppState, rows: MunRating[], opts: RatingOptions = {}): Record<string, Record<string, DirectionRating>> {
+  const { calcType = 'base' } = opts;
   const result: Record<string, Record<string, DirectionRating>> = {};
   state.directions.forEach((d) => {
     const inds = state.indicators.filter((i) => i.directionId === d.id && !i.isGroup);
@@ -103,7 +135,7 @@ export function computeDirectionRatings(state: AppState, rows: MunRating[]): Rec
       let cnt = 0;
       inds.forEach((ind) => {
         const cell = r.cells[ind.id];
-        if (cell?.rank !== null && cell?.rank !== undefined) { sum += cell.rank; cnt += 1; }
+        if (cell?.rank !== null && cell?.rank !== undefined) { sum += cell.rank * weightOf(ind, calcType); cnt += 1; }
       });
       return { munId: r.munId, score: cnt > 0 ? sum : null };
     });

@@ -1,16 +1,18 @@
 import { useMemo, useState } from 'react';
 import { useStore } from '@/lib/store';
 
-import { computeRating, computeDirectionRatings, rankColor, fmt } from '@/lib/rating';
-import { EMPTY_TREE_FILTER, chevronParents, visibleTree, type TreeFilter } from '@/lib/indTree';
-import { IndToolbar, TreeToggle } from '@/components/IndToolbar';
+import { computeRating, computeDirectionRatings, rankValues, rankColor, fmt, type RatingCalcType, type MunRating } from '@/lib/rating';
+import { CURRENT_EVAL_YEAR } from '@/lib/data';
+import { EMPTY_TREE_FILTER, chevronParents, visibleTree } from '@/lib/indTree';
+import { TreeToggle } from '@/components/IndToolbar';
 import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
+
+const YEAR = CURRENT_EVAL_YEAR;
 
 function now(): string {
   const d = new Date();
@@ -34,19 +36,111 @@ function DynCell({ delta }: { delta: number }) {
 export function RatingView() {
   const { state, dispatch } = useStore();
   const mode = state.ratingMode;
-  const rows = useMemo(() => computeRating(state, mode), [state, mode]);
-  const dirRows = useMemo(() => computeDirectionRatings(state, rows), [state, rows]);
-  const [selMun, setSelMun] = useState(state.omsus[0]?.id);
+
+  // ── Выпадающие списки-фильтры ─────────────────────────────────────────────
+  // 1. Тип расчёта: исходный алгоритм / индивидуальный вес
+  const [calcType, setCalcType] = useState<RatingCalcType>('base');
+  // 2. Период: кварталы текущего рейтингового года
+  const [period, setPeriod] = useState<number>(() => Math.floor(new Date().getMonth() / 3) + 1);
+  // 3. Показатели и направления (вкладки «По территории» и «По разделу показателя»):
+  //    «Итоговый рейтинг» или одно из направлений
   const [selInd, setSelInd] = useState<string>('total');
-  // дерево показателей в сводной оценке по территории
-  const [treeFilter, setTreeFilter] = useState<TreeFilter>(EMPTY_TREE_FILTER);
+  // 4. Территория
+  const [selMun, setSelMun] = useState<string>(state.omsus[0]?.id);
+  // 5. С учётом динамики (вкладки «По территории» и «По разделу показателя»)
+  const [withDyn, setWithDyn] = useState(false);
+  // Активная вкладка
+  const [tab, setTab] = useState('territory');
+  // 6. Вкладка «По разделу показателя»: сортировка строк
+  const [sortDir, setSortDir] = useState<string>('none');
+
+  const rows = useMemo(() => computeRating(state, mode, { calcType, period }), [state, mode, calcType, period]);
+  const dirRows = useMemo(() => computeDirectionRatings(state, rows, { calcType }), [state, rows, calcType]);
+
+  // Динамика: место ОМСУ по динамике (1 = лучшая динамика)
+  const dynPlaces = (key: string) =>
+    rankValues(state.omsus.map((m) => ({ id: m.id, value: dynDelta(key + m.id) })), 'max');
+  // Итоговое место с учётом динамики: ранг по (базовый балл + место по динамике)
+  const dynAdjustedPlace = (key: string, base: Record<string, number | null>, munId: string): number | null => {
+    const dp = dynPlaces(key);
+    const combined = state.omsus
+      .filter((m) => base[m.id] != null)
+      .map((m) => ({ id: m.id, value: (base[m.id] as number) + dp[m.id] }));
+    if (!combined.length) return null;
+    return rankValues(combined, 'min')[munId] ?? null;
+  };
+
+  // Территории: ОМСУ по алфавиту (первая — Балашиха)
+  const munsSorted = useMemo(
+    () => [...state.omsus].sort((a, b) => a.name.localeCompare(b.name, 'ru')),
+    [state.omsus],
+  );
+
+  // Выбранное направление (null — «Итоговый рейтинг»)
+  const selDirection = selInd === 'total' ? null : state.directions.find((d) => d.id === selInd) ?? null;
+  const activeDirections = selDirection ? [selDirection] : state.directions;
+
+  // Дерево показателей в сводной оценке по территории (с учётом выбранного направления)
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
-  const visible = visibleTree(state.indicators, collapsed, treeFilter);
-  const parents = chevronParents(state.indicators);
+  const treeInds = useMemo(
+    () => state.indicators.filter((i) => activeDirections.some((d) => d.id === i.directionId)),
+    [state.indicators, selInd],
+  );
+  const visible = visibleTree(treeInds, collapsed, EMPTY_TREE_FILTER);
+  const parents = chevronParents(treeInds);
   const toggleNode = (id: string) => setCollapsed((p) => ({ ...p, [id]: !p[id] }));
+
+  // Матрица показателей: все показатели (фильтр направления действует только на вкладке по территории)
+  const matrixInds = useMemo(
+    () => state.indicators.filter((i) => !i.isGroup),
+    [state.indicators],
+  );
 
   const n = state.omsus.length;
   const mun = rows.find((r) => r.munId === selMun)!;
+
+  // Итоговая строка сводной оценки: по выбранному направлению либо общий рейтинг
+  const topScore = selDirection ? (dirRows[selDirection.id]?.[selMun]?.score ?? null) : mun.score;
+  const topPlace = selDirection ? (dirRows[selDirection.id]?.[selMun]?.place ?? null) : mun.place;
+
+  // Базовые баллы по всем ОМСУ для расчёта места «с учётом динамики»
+  const topBaseScores: Record<string, number | null> = {};
+  rows.forEach((r) => {
+    topBaseScores[r.munId] = selDirection ? (dirRows[selDirection.id]?.[r.munId]?.score ?? null) : r.score;
+  });
+  const topPlaceShown = withDyn ? dynAdjustedPlace(selInd, topBaseScores, selMun) : topPlace;
+
+  // Вкладка «По разделу показателя»: базовые баллы выбранного раздела (для «итогового места» с динамикой)
+  const dirTabBaseScores: Record<string, number | null> = {};
+  rows.forEach((r) => {
+    dirTabBaseScores[r.munId] = selInd === 'total' ? r.score : (dirRows[selInd]?.[r.munId]?.score ?? null);
+  });
+
+  // Вкладка «По разделу показателя»: сортировка строк
+  // (без сортировки / место / место динамики / итоговое место — по возрастанию или убыванию)
+  const dirSortedRows: MunRating[] = (() => {
+    const list = [...rows].sort((a, b) => a.name.localeCompare(b.name, 'ru'));
+    if (sortDir === 'none') return list;
+    const dp = dynPlaces(selInd);
+    const basePlace = (m: MunRating) =>
+      selInd === 'total' ? m.place : (dirRows[selInd]?.[m.munId]?.place ?? null);
+    const val = (m: MunRating): number | null => {
+      if (sortDir === 'place-asc' || sortDir === 'place-desc') return basePlace(m);
+      if (sortDir === 'dynplace-asc' || sortDir === 'dynplace-desc') return dp[m.munId] ?? null;
+      if (sortDir === 'final-asc' || sortDir === 'final-desc')
+        return withDyn ? dynAdjustedPlace(selInd, dirTabBaseScores, m.munId) : basePlace(m);
+      return null;
+    };
+    const desc = sortDir.endsWith('-desc');
+    list.sort((a, b) => {
+      const va = val(a), vb = val(b);
+      if (va == null && vb == null) return a.name.localeCompare(b.name, 'ru');
+      if (va == null) return 1; // ОМСУ без места — в конец
+      if (vb == null) return -1;
+      return desc ? vb - va : va - vb;
+    });
+    return list;
+  })();
 
   const thCls = 'p-2 text-xs font-medium text-left border-b bg-slate-50';
   const tdCls = 'p-2 text-sm border-b';
@@ -57,7 +151,7 @@ export function RatingView() {
         <div>
           <h2 className="text-lg font-semibold">Сводный рейтинг ОМСУ</h2>
           <p className="text-sm text-muted-foreground">
-            Отчётный период: {state.campaign.period} · Источник данных: ведомственные данные · Обновлено: {now()}
+            Период: {period} квартал {YEAR} · Тип расчёта: {calcType === 'base' ? 'исходный алгоритм' : 'индивидуальный вес'} · Источник данных: ведомственные данные · Обновлено: {now()}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -82,6 +176,102 @@ export function RatingView() {
         </div>
       )}
 
+      {/* ===== Фильтры: тип расчёта, период, показатели и направления, территория ===== */}
+      <Card>
+        <CardContent className="pt-4">
+          <div className="flex flex-wrap items-end gap-x-5 gap-y-3">
+            <div className="space-y-1">
+              <span className="text-xs font-medium text-muted-foreground">Тип расчёта</span>
+              <div>
+                <Select value={calcType} onValueChange={(v) => setCalcType(v as RatingCalcType)}>
+                  <SelectTrigger className="w-52"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="base">Исходный алгоритм</SelectItem>
+                    <SelectItem value="individual">Индивидуальный вес</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-1">
+              <span className="text-xs font-medium text-muted-foreground">Период</span>
+              <div>
+                <Select value={String(period)} onValueChange={(v) => setPeriod(Number(v))}>
+                  <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {[1, 2, 3, 4].map((q) => (
+                      <SelectItem key={q} value={String(q)}>{q} квартал {YEAR}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            {(tab === 'territory' || tab === 'direction') && (
+              <div className="space-y-1">
+                <span className="text-xs font-medium text-muted-foreground">Показатели и направления</span>
+                <div>
+                  <Select value={selInd} onValueChange={setSelInd}>
+                    <SelectTrigger className="w-80">
+                      <SelectValue>
+                        {selInd === 'total' ? 'Итоговый рейтинг' : (selDirection?.name ?? '')}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="total">Итоговый рейтинг</SelectItem>
+                      {state.directions.map((d) => (
+                        <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
+            {(tab === 'territory' || tab === 'direction') && (
+              <label className="mb-2 flex cursor-pointer select-none items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  checked={withDyn}
+                  onChange={(e) => setWithDyn(e.target.checked)}
+                />
+                С учётом динамики
+              </label>
+            )}
+            {tab === 'direction' && (
+              <div className="space-y-1">
+                <span className="text-xs font-medium text-muted-foreground">Сортировка</span>
+                <div>
+                  <Select value={sortDir} onValueChange={setSortDir}>
+                    <SelectTrigger className="w-64"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Без сортировки</SelectItem>
+                      <SelectItem value="place-desc">Место по убыванию</SelectItem>
+                      <SelectItem value="place-asc">Место по возрастанию</SelectItem>
+                      <SelectItem value="dynplace-desc">Место динамики по убыванию</SelectItem>
+                      <SelectItem value="dynplace-asc">Место динамики по возрастанию</SelectItem>
+                      <SelectItem value="final-desc">Итоговое место по убыванию</SelectItem>
+                      <SelectItem value="final-asc">Итоговое место по возрастанию</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
+            {tab !== 'direction' && (
+              <div className="space-y-1">
+                <span className="text-xs font-medium text-muted-foreground">Территория</span>
+                <div>
+                  <Select value={selMun} onValueChange={setSelMun}>
+                    <SelectTrigger className="w-56"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {munsSorted.map((m) => <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
       <div className="flex items-center gap-2 text-xs text-muted-foreground">
         <span>min</span>
         <div className="h-3 w-64 rounded" style={{ background: 'linear-gradient(to right, #b7e4a8, #fff2a0, #ffb3a7)' }} />
@@ -90,7 +280,7 @@ export function RatingView() {
 
       <Card>
         <CardContent className="pt-4">
-          <Tabs defaultValue="territory">
+          <Tabs value={tab} onValueChange={setTab}>
             <TabsList className="mb-4">
               <TabsTrigger value="territory">Сводная оценка по территории</TabsTrigger>
               <TabsTrigger value="direction">Сводная оценка по разделу показателя</TabsTrigger>
@@ -100,24 +290,6 @@ export function RatingView() {
 
             {/* ===== По территории ===== */}
             <TabsContent value="territory">
-              <div className="mb-3 flex items-center gap-3">
-                <span className="text-sm text-muted-foreground">Территория:</span>
-                <Select value={selMun} onValueChange={setSelMun}>
-                  <SelectTrigger className="w-56"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {rows.map((r) => <SelectItem key={r.munId} value={r.munId}>{r.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-                {!mun.complete && <Badge variant="outline" className="text-amber-700 border-amber-300">неполные данные ({mun.missing} показ.)</Badge>}
-              </div>
-              <div className="mb-3">
-                <IndToolbar
-                  filter={treeFilter}
-                  onChange={setTreeFilter}
-                  shown={visible.length}
-                  total={state.indicators.length}
-                />
-              </div>
               <div className="overflow-x-auto">
                 <table className="w-full border-collapse">
                   <thead>
@@ -132,25 +304,28 @@ export function RatingView() {
                   </thead>
                   <tbody>
                     <tr className="font-semibold">
-                      <td className={tdCls}>Итоговый рейтинг</td>
-                      <td className={tdCls} style={{ background: rankColor(mun.place, n) }}>{fmt(mun.score, 0)}</td>
-                      <td className={tdCls} style={{ background: rankColor(mun.place, n) }}>{mun.place ?? '—'}</td>
-                      <td className={tdCls}><DynCell delta={dynDelta(selMun + 'total')} /></td>
-                      <td className={tdCls}>—</td>
-                      <td className={tdCls} style={{ background: rankColor(mun.place, n) }}>{mun.place ?? '—'}</td>
+                      <td className={tdCls}>{selDirection ? `Итоговый рейтинг: ${selDirection.name}` : 'Итоговый рейтинг'}</td>
+                      <td className={tdCls} style={{ background: rankColor(topPlace, n) }}>{fmt(topScore, 0)}</td>
+                      <td className={tdCls} style={{ background: rankColor(topPlace, n) }}>{topPlace ?? '—'}</td>
+                      <td className={tdCls}><DynCell delta={dynDelta(selMun + selInd)} /></td>
+                      <td className={tdCls}>{withDyn ? (dynPlaces(selInd)[selMun] ?? '—') : '—'}</td>
+                      <td className={tdCls} style={{ background: rankColor(topPlaceShown, n) }}>{topPlaceShown ?? '—'}</td>
                     </tr>
-                    {state.directions.map((d) => {
+                    {activeDirections.map((d) => {
                       const dr = dirRows[d.id]?.[selMun];
                       const inds = visible.filter((i) => i.directionId === d.id);
                       if (!inds.length) return [];
+                      const dBase: Record<string, number | null> = {};
+                      rows.forEach((r) => { dBase[r.munId] = dirRows[d.id]?.[r.munId]?.score ?? null; });
+                      const dPlaceShown = withDyn ? dynAdjustedPlace(d.id, dBase, selMun) : (dr?.place ?? null);
                       return [
                         <tr key={d.id} className="font-medium bg-slate-50/60">
                           <td className={tdCls}>{d.name}</td>
                           <td className={tdCls} style={{ background: rankColor(dr?.place ?? null, n) }}>{fmt(dr?.score ?? null, 0)}</td>
                           <td className={tdCls} style={{ background: rankColor(dr?.place ?? null, n) }}>{dr?.place ?? '—'}</td>
                           <td className={tdCls}><DynCell delta={dynDelta(selMun + d.id)} /></td>
-                          <td className={tdCls}>—</td>
-                          <td className={tdCls} style={{ background: rankColor(dr?.place ?? null, n) }}>{dr?.place ?? '—'}</td>
+                          <td className={tdCls}>{withDyn ? (dynPlaces(d.id)[selMun] ?? '—') : '—'}</td>
+                          <td className={tdCls} style={{ background: rankColor(dPlaceShown, n) }}>{dPlaceShown ?? '—'}</td>
                         </tr>,
                         ...inds.map((ind) => {
                           if (ind.isGroup) {
@@ -173,6 +348,9 @@ export function RatingView() {
                             );
                           }
                           const c = mun.cells[ind.id];
+                          const iBase: Record<string, number | null> = {};
+                          rows.forEach((r) => { iBase[r.munId] = r.cells[ind.id]?.rank ?? null; });
+                          const iPlaceShown = withDyn ? dynAdjustedPlace(ind.id, iBase, selMun) : (c?.rank ?? null);
                           return (
                             <tr key={ind.id}>
                               <td className={tdCls}>
@@ -190,8 +368,8 @@ export function RatingView() {
                               </td>
                               <td className={tdCls} style={{ background: rankColor(c?.rank ?? null, n) }}>{c?.rank ?? '—'}</td>
                               <td className={tdCls}><DynCell delta={dynDelta(selMun + ind.id)} /></td>
-                              <td className={tdCls}>—</td>
-                              <td className={tdCls} style={{ background: rankColor(c?.rank ?? null, n) }}>{c?.rank ?? '—'}</td>
+                              <td className={tdCls}>{withDyn ? (dynPlaces(ind.id)[selMun] ?? '—') : '—'}</td>
+                              <td className={tdCls} style={{ background: rankColor(iPlaceShown, n) }}>{iPlaceShown ?? '—'}</td>
                             </tr>
                           );
                         }),
@@ -204,17 +382,6 @@ export function RatingView() {
 
             {/* ===== По направлению ===== */}
             <TabsContent value="direction">
-              <div className="mb-3 flex items-center gap-3">
-                <span className="text-sm text-muted-foreground">Показатель:</span>
-                <Select value={selInd} onValueChange={setSelInd}>
-                  <SelectTrigger className="w-80"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="total">Итоговый рейтинг</SelectItem>
-                    {state.directions.map((d) => <SelectItem key={d.id} value={d.id}>Раздел показателя: {d.name}</SelectItem>)}
-                    {state.indicators.filter((i) => !i.isGroup).map((i) => <SelectItem key={i.id} value={i.id}>{i.num} {i.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
               <div className="overflow-x-auto">
                 <table className="w-full border-collapse">
                   <thead>
@@ -228,32 +395,22 @@ export function RatingView() {
                     </tr>
                   </thead>
                   <tbody>
-                    {[...rows]
-                      .sort((a, b) => a.name.localeCompare(b.name, 'ru'))
-                      .map((r, idx) => {
-                        let val: number | null, place: number | null, appr = true;
-                        if (selInd === 'total') {
-                          val = r.score; place = r.place;
-                        } else if (selInd.startsWith('d')) {
-                          const dr = dirRows[selInd]?.[r.munId];
-                          val = dr?.score ?? null; place = dr?.place ?? null;
-                        } else {
-                          const c = r.cells[selInd];
-                          val = c?.value ?? null; place = c?.rank ?? null; appr = c?.approved ?? true;
-                        }
-                        return (
-                          <tr key={r.munId}>
-                            <td className={tdCls}>{idx + 1}. {r.name}</td>
-                            <td className={tdCls} style={{ background: rankColor(place, n) }}>
-                              {fmt(val)}{!appr && val !== null && mode === 'preview' ? ' *' : ''}
-                            </td>
-                            <td className={tdCls} style={{ background: rankColor(place, n) }}>{place ?? '—'}</td>
-                            <td className={tdCls}><DynCell delta={dynDelta(r.munId + selInd)} /></td>
-                            <td className={tdCls}>—</td>
-                            <td className={tdCls} style={{ background: rankColor(place, n) }}>{place ?? '—'}</td>
-                          </tr>
-                        );
-                      })}
+                    {dirSortedRows.map((r, idx) => {
+                      const dr = selInd === 'total' ? null : (dirRows[selInd]?.[r.munId] ?? null);
+                      const val = selInd === 'total' ? r.score : (dr?.score ?? null);
+                      const place = selInd === 'total' ? r.place : (dr?.place ?? null);
+                      const finalPlace = withDyn ? dynAdjustedPlace(selInd, dirTabBaseScores, r.munId) : place;
+                      return (
+                        <tr key={r.munId}>
+                          <td className={tdCls}>{idx + 1}. {r.name}</td>
+                          <td className={tdCls} style={{ background: rankColor(place, n) }}>{fmt(val)}</td>
+                          <td className={tdCls} style={{ background: rankColor(place, n) }}>{place ?? '—'}</td>
+                          <td className={tdCls}><DynCell delta={dynDelta(r.munId + selInd)} /></td>
+                          <td className={tdCls}>{withDyn ? (dynPlaces(selInd)[r.munId] ?? '—') : '—'}</td>
+                          <td className={tdCls} style={{ background: rankColor(finalPlace, n) }}>{finalPlace ?? '—'}</td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -266,7 +423,7 @@ export function RatingView() {
                   <thead>
                     <tr>
                       <th className={`${thCls} sticky left-0 z-10 min-w-[140px]`}>Территория</th>
-                      {state.indicators.filter((i) => !i.isGroup).map((ind) => (
+                      {matrixInds.map((ind) => (
                         <th key={ind.id} className={`${thCls} text-center`} title={ind.name}>{ind.num}</th>
                       ))}
                       <th className={`${thCls} text-center`}>Σ мест</th>
@@ -277,7 +434,7 @@ export function RatingView() {
                     {[...rows].sort((a, b) => (a.place ?? 999) - (b.place ?? 999)).map((r) => (
                       <tr key={r.munId}>
                         <td className={`${tdCls} sticky left-0 bg-white font-medium`}>{r.name}</td>
-                        {state.indicators.filter((i) => !i.isGroup).map((ind) => {
+                        {matrixInds.map((ind) => {
                           const c = r.cells[ind.id];
                           return (
                             <td
@@ -302,7 +459,7 @@ export function RatingView() {
 
             {/* ===== Сравнение вариантов ===== */}
             <TabsContent value="compare">
-              <CompareVariants />
+              <CompareVariants calcType={calcType} period={period} />
             </TabsContent>
           </Tabs>
         </CardContent>
@@ -312,10 +469,10 @@ export function RatingView() {
 }
 
 /** Вариант А: сумма мест. Вариант Б: взвешенная сумма нормированных баллов (0..100) */
-function CompareVariants() {
+function CompareVariants({ calcType, period }: { calcType: RatingCalcType; period: number }) {
   const { state } = useStore();
   const mode = state.ratingMode;
-  const rows = useMemo(() => computeRating(state, mode), [state, mode]);
+  const rows = useMemo(() => computeRating(state, mode, { calcType, period }), [state, mode, calcType, period]);
   const n = state.omsus.length;
 
   const variantB = useMemo(() => {
