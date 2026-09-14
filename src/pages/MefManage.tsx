@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useStore } from '@/lib/store';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,8 +12,15 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 /** Вкладка «Управление» МЭФ: управление сбором, сроки, готовность к отчёту */
 export function MefManage({ goRating, goReport }: { goRating: () => void; goReport: () => void }) {
   const { state, dispatch } = useStore();
+  const [periodName, setPeriodName] = useState(state.campaign.period ?? '');
   const [startDate, setStartDate] = useState(state.campaign.startDate ?? '2026-07-20');
   const [dlMef, setDlMef] = useState(state.campaign.deadlineMef);
+
+  useEffect(() => {
+    setPeriodName(state.campaign.period ?? '');
+    setStartDate(state.campaign.startDate ?? '2026-07-20');
+    setDlMef(state.campaign.deadlineMef);
+  }, [state.campaign.module, state.campaign.period, state.campaign.startDate, state.campaign.deadlineMef]);
 
   const stats = approvalStats(state);
   const complete = allApproved(state);
@@ -21,12 +28,16 @@ export function MefManage({ goRating, goReport }: { goRating: () => void; goRepo
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
   const [reportIntent, setReportIntent] = useState<'pre' | 'final'>('final');
   const [reportType, setReportType] = useState('ind');
-  const [period, setPeriod] = useState('2024');
+  const [period, setPeriod] = useState(state.campaign.period || '2024');
 
   const isRating = state.campaign.module === 'rating';
+  const isUkaz = state.campaign.module === 'ukaz';
   const periods = isRating 
-    ? ['2023 год', '1 квартал 2024', '2 квартал 2024', '3 квартал 2024', '4 квартал 2024', '2024 год']
-    : ['2023 год', '2024 год', '2025 год', '2026 год'];
+    ? [state.campaign.period, '4 квартал 2025 года', '3 квартал 2025 года', '2 квартал 2025 года', '1 квартал 2025 года', 'Итоговый рейтинг за 2025 год']
+    : isUkaz
+    ? [state.campaign.period, 'Мониторинг исполнения Указа №607 за 2024 год', 'Мониторинг исполнения Указа №607 за 2023 год']
+    : [state.campaign.period, 'Прогноз СЭР на 2026–2028 годы (оценка 2025)', 'Прогноз СЭР на 2025–2027 годы (оценка 2024)', 'Прогноз СЭР на 2024–2026 годы (оценка 2023)'];
+  const uniquePeriods = Array.from(new Set(periods.filter(Boolean)));
 
   return (
     <div className="space-y-4">
@@ -45,6 +56,15 @@ export function MefManage({ goRating, goReport }: { goRating: () => void; goRepo
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
             <div className="grid grid-cols-2 items-center gap-2">
+              <Label>Период сбора</Label>
+              <Input
+                type="text"
+                placeholder="Введите период сбора..."
+                value={periodName}
+                onChange={(e) => setPeriodName(e.target.value)}
+              />
+            </div>
+            <div className="grid grid-cols-2 items-center gap-2">
               <Label>Дата запуска сбора</Label>
               <Input type="datetime-local" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
             </div>
@@ -56,7 +76,14 @@ export function MefManage({ goRating, goReport }: { goRating: () => void; goRepo
               <Button
                 variant="outline"
                 onClick={() =>
-                  dispatch({ type: 'CAMPAIGN_SCHEDULE', startDate, deadlineOmsu: state.campaign.deadlineOmsu, deadlineCio: state.campaign.deadlineCio, deadlineMef: dlMef })
+                  dispatch({
+                    type: 'CAMPAIGN_SCHEDULE',
+                    startDate,
+                    deadlineOmsu: state.campaign.deadlineOmsu,
+                    deadlineCio: state.campaign.deadlineCio,
+                    deadlineMef: dlMef,
+                    period: periodName,
+                  })
                 }
               >
                 <CalendarClock className="h-4 w-4 mr-1" /> Сохранить даты
@@ -132,13 +159,13 @@ export function MefManage({ goRating, goReport }: { goRating: () => void; goRepo
           </DialogHeader>
           <div className="py-4 space-y-4">
             <div className="space-y-2">
-              <Label>Период</Label>
+              <Label>Период сбора</Label>
               <select 
                 className="flex h-9 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                 value={period}
                 onChange={e => setPeriod(e.target.value)}
               >
-                {periods.map(p => (
+                {uniquePeriods.map(p => (
                   <option key={p} value={p}>{p}</option>
                 ))}
               </select>
@@ -213,27 +240,27 @@ export function MefManage({ goRating, goReport }: { goRating: () => void; goRepo
               <thead>
                 <tr className="border-b text-xs text-muted-foreground">
                   <th className="text-left p-2">Дата и время запуска</th>
-                  <th className="text-left p-2">Период</th>
+                  <th className="text-left p-2">Период сбора</th>
                   <th className="text-left p-2">Статус</th>
                   <th className="text-left p-2">Инициатор</th>
                 </tr>
               </thead>
               <tbody>
                 <tr className="border-b hover:bg-slate-50">
-                  <td className="p-2">2023-01-15 10:00</td>
-                  <td className="p-2">2023 год</td>
+                  <td className="p-2">2024-01-15 10:00</td>
+                  <td className="p-2">{isRating ? '4 квартал 2024 года' : isUkaz ? 'Мониторинг исполнения Указа №607 за 2023 год' : 'Прогноз СЭР на 2025–2027 годы (оценка 2024)'}</td>
                   <td className="p-2"><Badge variant="outline" className="text-green-700 border-green-300">Завершён</Badge></td>
                   <td className="p-2">Система</td>
                 </tr>
                 <tr className="border-b hover:bg-slate-50">
-                  <td className="p-2">2024-02-10 09:30</td>
-                  <td className="p-2">1 квартал 2024</td>
+                  <td className="p-2">2025-02-10 09:30</td>
+                  <td className="p-2">{isRating ? '4 квартал 2025 года' : isUkaz ? 'Мониторинг исполнения Указа №607 за 2024 год' : 'Прогноз СЭР на 2026–2028 годы (оценка 2025)'}</td>
                   <td className="p-2"><Badge variant="outline" className="text-green-700 border-green-300">Завершён</Badge></td>
                   <td className="p-2">МЭФ</td>
                 </tr>
                 {state.campaign.status !== 'draft' && (
                   <tr className="border-b hover:bg-slate-50">
-                    <td className="p-2">{state.campaign.launchedAt || '2024-07-20 10:00'}</td>
+                    <td className="p-2">{state.campaign.launchedAt || '20.07.2026 09:00'}</td>
                     <td className="p-2">{state.campaign.period}</td>
                     <td className="p-2">
                       <Badge variant="outline" className="text-amber-700 border-amber-300">

@@ -255,11 +255,20 @@ export interface NoteCioData {
 /** ПЗ: кампания сбора пояснительной записки */
 export interface NoteCampaign {
   status: 'draft' | 'collecting' | 'completed';
+  period: string;         // период сбора
   startDate: string;      // дата запуска сбора (datetime)
   deadline: string;       // дата окончания сбора (datetime)
   deadlineOmsu: string;   // срок заполнения ОМСУ
   deadlineCio: string;    // срок согласования ЦИО
   launchedAt: string | null;
+}
+
+export interface CollectionPeriodOption {
+  id: string;
+  name: string;
+  year: number;
+  quarter?: number;
+  isCurrent?: boolean;
 }
 
 /** ПЗ: ключ ячейки шаблона */

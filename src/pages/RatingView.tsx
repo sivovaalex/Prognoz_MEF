@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useStore } from '@/lib/store';
 
 import { computeRating, computeDirectionRatings, rankValues, rankColor, fmt, type RatingCalcType, type MunRating } from '@/lib/rating';
-import { CURRENT_EVAL_YEAR } from '@/lib/data';
+import { RATING_DEFAULT_PERIODS } from '@/lib/data';
 import { EMPTY_TREE_FILTER, chevronParents, visibleTree } from '@/lib/indTree';
 import { TreeToggle } from '@/components/IndToolbar';
 import { Card, CardContent } from '@/components/ui/card';
@@ -11,8 +11,6 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
-
-const YEAR = CURRENT_EVAL_YEAR;
 
 function now(): string {
   const d = new Date();
@@ -33,12 +31,12 @@ function DynCell({ delta }: { delta: number }) {
   return <span className="inline-flex items-center gap-1 text-gray-500 text-xs"><Minus className="h-3.5 w-3.5" />0</span>;
 }
 
-/** Шапка отчёта над таблицей рейтинга ОМСУ: территория, отчётный период, источник данных, дата обновления */
-function TableMeta({ period }: { period: number }) {
+/** Шапка отчёта над таблицей рейтинга ОМСУ: территория, период сбора, источник данных, дата обновления */
+function TableMeta({ periodName }: { periodName: string }) {
   return (
     <div className="mb-2 flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-muted-foreground">
       <span>Территория: <b className="font-semibold text-slate-800">Московская область</b></span>
-      <span>Отчетный период: <b className="font-semibold text-slate-800">{period} квартал {YEAR}</b></span>
+      <span>Период сбора: <b className="font-semibold text-slate-800">{periodName}</b></span>
       <span>Источник данных: <b className="font-semibold text-slate-800">Ведомственные данные</b></span>
       <span>Дата последнего обновления: <b className="font-semibold text-slate-800">{now()}</b></span>
     </div>
@@ -82,8 +80,21 @@ export function RatingView() {
   // ── Выпадающие списки-фильтры ─────────────────────────────────────────────
   // 1. Тип расчёта: исходный алгоритм / индивидуальный вес
   const [calcType, setCalcType] = useState<RatingCalcType>('base');
-  // 2. Период: кварталы текущего рейтингового года
-  const [period, setPeriod] = useState<number>(() => Math.floor(new Date().getMonth() / 3) + 1);
+  // 2. Периоды сбора рейтинга
+  const ratingPeriods = useMemo(() => {
+    const curName = state.campaign.module === 'rating' && state.campaign.period
+      ? state.campaign.period
+      : RATING_DEFAULT_PERIODS[0].name;
+    return [
+      { id: 'cur', name: `${curName} (текущий сбор)`, quarter: 1, isCurrent: true },
+      ...RATING_DEFAULT_PERIODS.slice(1).map((p) => ({ ...p, isCurrent: false })),
+    ];
+  }, [state.campaign.module, state.campaign.period]);
+
+  const [selectedPeriodId, setSelectedPeriodId] = useState<string>('cur');
+  const selectedPeriodObj = ratingPeriods.find((p) => p.id === selectedPeriodId) || ratingPeriods[0];
+  const period = selectedPeriodObj.quarter ?? 1;
+  const selectedPeriodName = selectedPeriodObj.name;
   // 3. Показатели и направления (вкладки «По территории» и «По разделу показателя»):
   //    «Итоговый рейтинг» или одно из направлений
   const [selInd, setSelInd] = useState<string>('total');
@@ -210,7 +221,7 @@ export function RatingView() {
         <div>
           <h2 className="text-lg font-semibold">Сводный рейтинг ОМСУ</h2>
           <p className="text-sm text-muted-foreground">
-            Период: {period} квартал {YEAR} · Тип расчёта: {calcType === 'base' ? 'исходный алгоритм' : 'индивидуальный вес'} · Источник данных: ведомственные данные · Обновлено: {now()}
+            Период сбора: {selectedPeriodName} · Тип расчёта: {calcType === 'base' ? 'исходный алгоритм' : 'индивидуальный вес'} · Источник данных: ведомственные данные · Обновлено: {now()}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -254,13 +265,13 @@ export function RatingView() {
               </div>
             )}
             <div className="space-y-1">
-              <span className="text-xs font-medium text-muted-foreground">Период</span>
+              <span className="text-xs font-medium text-muted-foreground">Период сбора</span>
               <div>
-                <Select value={String(period)} onValueChange={(v) => setPeriod(Number(v))}>
-                  <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
+                <Select value={selectedPeriodId} onValueChange={setSelectedPeriodId}>
+                  <SelectTrigger className="w-64"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {[1, 2, 3, 4].map((q) => (
-                      <SelectItem key={q} value={String(q)}>{q} квартал {YEAR}</SelectItem>
+                    {ratingPeriods.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -368,7 +379,7 @@ export function RatingView() {
 
             {/* ===== По территории ===== */}
             <TabsContent value="territory">
-              <TableMeta period={period} />
+              <TableMeta periodName={selectedPeriodName} />
               <div className="overflow-x-auto">
                 <table className="w-full border-collapse">
                   <thead>
@@ -461,7 +472,7 @@ export function RatingView() {
 
             {/* ===== По направлению ===== */}
             <TabsContent value="direction">
-              <TableMeta period={period} />
+              <TableMeta periodName={selectedPeriodName} />
               <div className="overflow-x-auto">
                 <table className="w-full border-collapse">
                   <thead>
@@ -498,7 +509,7 @@ export function RatingView() {
 
             {/* ===== По показателям (матрица) ===== */}
             <TabsContent value="indicators">
-              <TableMeta period={period} />
+              <TableMeta periodName={selectedPeriodName} />
               <div className="overflow-x-auto">
                 <table className="w-full border-collapse">
                   <thead>
@@ -594,7 +605,7 @@ export function RatingView() {
 
             {/* ===== Сравнение вариантов ===== */}
             <TabsContent value="compare">
-              <CompareVariants sort={compareSort} period={period} />
+              <CompareVariants sort={compareSort} period={period} periodName={selectedPeriodName} />
             </TabsContent>
           </Tabs>
         </CardContent>
@@ -604,7 +615,7 @@ export function RatingView() {
 }
 
 /** Сравнение вариантов: «Исходный алгоритм» (равные веса) и «Индивидуальный вес» показателей */
-function CompareVariants({ sort, period }: { sort: string; period: number }) {
+function CompareVariants({ sort, period, periodName }: { sort: string; period: number; periodName: string }) {
   const { state } = useStore();
   const mode = state.ratingMode;
   const n = state.omsus.length;
@@ -641,7 +652,7 @@ function CompareVariants({ sort, period }: { sort: string; period: number }) {
 
   return (
     <div className="overflow-x-auto">
-      <TableMeta period={period} />
+      <TableMeta periodName={periodName} />
       <table className="w-full border-collapse">
         <thead>
           <tr>

@@ -13,6 +13,7 @@ import { CalendarClock, PlayCircle, StopCircle, Send } from 'lucide-react';
 export function NoteCollection() {
   const { state, dispatch } = useStore();
   const cam = state.noteCampaign;
+  const [periodName, setPeriodName] = useState(cam.period ?? 'Пояснительная записка за 2026 год');
   const [startDate, setStartDate] = useState(cam.startDate ?? '2026-02-01T09:00');
   const [dlEnd, setDlEnd] = useState(cam.deadline);
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
@@ -34,6 +35,15 @@ export function NoteCollection() {
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
             <div className="grid grid-cols-2 items-center gap-2">
+              <Label>Период сбора</Label>
+              <Input
+                type="text"
+                placeholder="Введите период сбора..."
+                value={periodName}
+                onChange={(e) => setPeriodName(e.target.value)}
+              />
+            </div>
+            <div className="grid grid-cols-2 items-center gap-2">
               <Label>Дата запуска сбора</Label>
               <Input type="datetime-local" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
             </div>
@@ -45,7 +55,7 @@ export function NoteCollection() {
               <Button
                 variant="outline"
                 onClick={() =>
-                  dispatch({ type: 'NOTE_CAMPAIGN_SCHEDULE', startDate, deadline: dlEnd })
+                  dispatch({ type: 'NOTE_CAMPAIGN_SCHEDULE', startDate, deadline: dlEnd, period: periodName })
                 }
               >
                 <CalendarClock className="h-4 w-4 mr-1" /> Сохранить даты
@@ -85,7 +95,7 @@ export function NoteCollection() {
               <thead>
                 <tr className="border-b text-xs text-muted-foreground">
                   <th className="text-left p-2">Дата и время запуска</th>
-                  <th className="text-left p-2">Период</th>
+                  <th className="text-left p-2">Период сбора</th>
                   <th className="text-left p-2">Статус</th>
                   <th className="text-left p-2">Инициатор</th>
                 </tr>
@@ -93,14 +103,14 @@ export function NoteCollection() {
               <tbody>
                 <tr className="border-b hover:bg-slate-50">
                   <td className="p-2">2025-02-01 09:00</td>
-                  <td className="p-2">2025 год</td>
+                  <td className="p-2">Пояснительная записка за 2025 год</td>
                   <td className="p-2"><Badge variant="outline" className="text-green-700 border-green-300">Завершён</Badge></td>
                   <td className="p-2">Куратор МЭФ</td>
                 </tr>
                 {cam.status !== 'draft' && (
                   <tr className="border-b hover:bg-slate-50">
                     <td className="p-2">{cam.launchedAt || '2026-02-01 09:00'}</td>
-                    <td className="p-2">2026 год</td>
+                    <td className="p-2">{cam.period || 'Пояснительная записка за 2026 год'}</td>
                     <td className="p-2">
                       <Badge variant="outline" className="text-amber-700 border-amber-300">
                         {cam.status === 'collecting' ? 'В процессе' : 'Завершён'}

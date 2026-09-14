@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useStore } from '@/lib/store';
 import { VALUE_FIELDS, VALUE_GROUPS } from '@/lib/types';
-import { ARCHIVE_YEARS, CURRENT_EVAL_YEAR, buildArchiveOmsuValues } from '@/lib/data';
+import { CURRENT_EVAL_YEAR, buildArchiveOmsuValues, SER_DEFAULT_PERIODS, UKAZ_DEFAULT_PERIODS } from '@/lib/data';
 import { EMPTY_TREE_FILTER, chevronParents, visibleTree, type TreeFilter } from '@/lib/indTree';
 import { IndToolbar, TreeToggle } from '@/components/IndToolbar';
 import { ValueGroupHeader, fieldTint, type ValueColumnField, type ValueColumnGroup } from '@/components/ValueColumns';
@@ -25,13 +25,27 @@ function OutputTableCio() {
   // дерево показателей: сворачивание дочерних и фильтры
   const [treeFilter, setTreeFilter] = useState<TreeFilter>(EMPTY_TREE_FILTER);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
-  // «Год оценки»: какую таблицу вытаскивать из «БД» (последние 10 лет оценки)
-  const [selectedYear, setSelectedYear] = useState<number>(CURRENT_EVAL_YEAR);
+
+  const isUkaz = state.campaign.module === 'ukaz';
+  const defaultPeriods = isUkaz ? UKAZ_DEFAULT_PERIODS : SER_DEFAULT_PERIODS;
+  const periodOptions = useMemo(() => {
+    const curName = state.campaign.period || defaultPeriods[0].name;
+    return [
+      { id: 'cur', name: `${curName} (текущий сбор)`, year: CURRENT_EVAL_YEAR, isCurrent: true },
+      ...defaultPeriods.slice(1).map(p => ({ ...p, isCurrent: false })),
+    ];
+  }, [state.campaign.period, defaultPeriods]);
+
+  // «Период сбора»: какую таблицу вытаскивать из «БД» / стора
+  const [selectedPeriodId, setSelectedPeriodId] = useState<string>('cur');
+  const selectedPeriod = periodOptions.find(p => p.id === selectedPeriodId) || periodOptions[0];
+  const selectedYear = selectedPeriod.year;
+  const isCurrentYear = !!selectedPeriod.isCurrent;
+
   // «Вариант прогноза»: 'all' — оба варианта, '1' — консервативный, '2' — базовый
   const [forecastVariant, setForecastVariant] = useState<'all' | '1' | '2'>('all');
   // Отображение справочных показателей (в названии «справочно», без учёта регистра)
   const [showReference, setShowReference] = useState(true);
-  const isCurrentYear = selectedYear === CURRENT_EVAL_YEAR;
 
   // Колонки таблицы за год оценки Y: отчёты Y-3…Y-1, оценка Y, прогнозы Y+1…Y+3 (2 варианта)
   const fields = useMemo<ValueColumnField[]>(() => {
@@ -142,8 +156,8 @@ function OutputTableCio() {
         <Info className="h-4 w-4 text-blue-700 mt-0.5 shrink-0" />
         <span>
           {isCurrentYear
-            ? 'Значения муниципального прогноза в режиме просмотра — изменить данные из этого раздела нельзя. Наборы показателей по сферам можно сворачивать — одновременно открыта одна сфера.'
-            : `Выходная таблица за ${selectedYear} год оценки (из архива «БД»). Отчётные годы: ${selectedYear - 3}–${selectedYear - 1}, оценка: ${selectedYear}, прогноз: ${selectedYear + 1}–${selectedYear + 3}. Режим просмотра — изменить данные нельзя.`}
+            ? `Значения в режиме просмотра («${selectedPeriod.name}») — изменить данные из этого раздела нельзя. Наборы показателей по сферам можно сворачивать — одновременно открыта одна сфера.`
+            : `Выходная таблица за период сбора «${selectedPeriod.name}» (из архива «БД»). Отчётные годы: ${selectedYear - 3}–${selectedYear - 1}, оценка: ${selectedYear}, прогноз: ${selectedYear + 1}–${selectedYear + 3}. Режим просмотра — изменить данные нельзя.`}
         </span>
       </div>
 
@@ -164,15 +178,15 @@ function OutputTableCio() {
               ))}
             </select>
             <div className="flex items-center gap-1.5">
-              <span className="text-sm text-muted-foreground whitespace-nowrap">Год оценки:</span>
+              <span className="text-sm text-muted-foreground whitespace-nowrap">Период сбора:</span>
               <select
-                className="text-sm h-9 border rounded border-slate-300 px-2"
-                value={selectedYear}
-                onChange={(e) => setSelectedYear(Number(e.target.value))}
+                className="text-sm h-9 border rounded border-slate-300 px-2 max-w-[320px] truncate"
+                value={selectedPeriodId}
+                onChange={(e) => setSelectedPeriodId(e.target.value)}
               >
-                {ARCHIVE_YEARS.map((y) => (
-                  <option key={y} value={y}>
-                    {y === CURRENT_EVAL_YEAR ? `${y} (текущая кампания)` : `${y} (архив)`}
+                {periodOptions.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
                   </option>
                 ))}
               </select>

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useStore } from '@/lib/store';
-import { NOTE_ARCHIVE_YEARS, NOTE_REPORTING_YEAR, buildNoteArchiveOmsuValues } from '@/lib/data';
+import { NOTE_REPORTING_YEAR, buildNoteArchiveOmsuValues, NOTE_DEFAULT_PERIODS } from '@/lib/data';
 import { noteTemplateName } from '@/lib/types';
 import { NoteTable } from '@/components/note/NoteTable';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -11,10 +11,19 @@ export function NoteOutputTables({ fixedMunId }: { fixedMunId?: string }) {
   const [munId, setMunId] = useState(fixedMunId ?? muns[0]?.id ?? '');
   const mun = state.omsus.find((m) => m.id === munId);
 
-  // Выбор отчётного года: текущий год + архив за последние 15 лет
-  const years = [NOTE_REPORTING_YEAR, ...NOTE_ARCHIVE_YEARS];
-  const [year, setYear] = useState<number>(NOTE_REPORTING_YEAR);
-  const isArchive = year !== NOTE_REPORTING_YEAR;
+  // Периоды сбора пояснительной записки
+  const notePeriods = useMemo(() => {
+    const curName = state.noteCampaign.period || NOTE_DEFAULT_PERIODS[0].name;
+    return [
+      { id: 'cur', name: `${curName} (текущий сбор)`, year: NOTE_REPORTING_YEAR, isCurrent: true },
+      ...NOTE_DEFAULT_PERIODS.slice(1).map((p) => ({ ...p, isCurrent: false })),
+    ];
+  }, [state.noteCampaign.period]);
+
+  const [selectedPeriodId, setSelectedPeriodId] = useState<string>('cur');
+  const selectedPeriod = notePeriods.find((p) => p.id === selectedPeriodId) || notePeriods[0];
+  const year = selectedPeriod.year;
+  const isArchive = !selectedPeriod.isCurrent;
 
   // Архив — снимок документа за прошлый год (все разделы, данные завершённой кампании)
   const templates = isArchive
@@ -62,13 +71,13 @@ export function NoteOutputTables({ fixedMunId }: { fixedMunId?: string }) {
             </Select>
           </div>
         )}
-        <div className="w-56">
-          <Select value={String(year)} onValueChange={(v) => setYear(Number(v))}>
-            <SelectTrigger className="h-9"><SelectValue placeholder="Отчетный год" /></SelectTrigger>
+        <div className="w-80">
+          <Select value={selectedPeriodId} onValueChange={setSelectedPeriodId}>
+            <SelectTrigger className="h-9"><SelectValue placeholder="Период сбора" /></SelectTrigger>
             <SelectContent>
-              {years.map((y) => (
-                <SelectItem key={y} value={String(y)}>
-                  {y === NOTE_REPORTING_YEAR ? `${y} (текущий)` : `${y} (архив)`}
+              {notePeriods.map((p) => (
+                <SelectItem key={p.id} value={p.id}>
+                  {p.name}
                 </SelectItem>
               ))}
             </SelectContent>

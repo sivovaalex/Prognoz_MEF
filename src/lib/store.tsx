@@ -40,7 +40,7 @@ export type Action =
   | { type: 'MEF_RETURN'; cioIndId: string; cioId: string; actor: string; comment: string }
   | { type: 'MEF_TERR_APPROVE'; cioId: string; indId: string; munId: string; actor: string }
   | { type: 'MEF_TERR_RETURN'; cioId: string; indId: string; munId: string; actor: string; comment: string }
-  | { type: 'CAMPAIGN_SCHEDULE'; startDate: string; deadlineOmsu: string; deadlineCio: string; deadlineMef: string }
+  | { type: 'CAMPAIGN_SCHEDULE'; startDate: string; deadlineOmsu: string; deadlineCio: string; deadlineMef: string; period?: string }
   | { type: 'CAMPAIGN_LAUNCH' }
   | { type: 'CAMPAIGN_STOP' }
   | { type: 'SET_RATING_MODE'; mode: 'preview' | 'final' }
@@ -70,7 +70,7 @@ export type Action =
   | { type: 'NOTE_CIO_RETURN'; templateId: string; munId: string; cellKey: string; actor: string; comment: string }
   | { type: 'NOTE_CIO_REVOKE'; templateId: string; munId: string; cellKey: string; actor: string }
   | { type: 'NOTE_CIO_UNDO_RETURN'; templateId: string; munId: string; cellKey: string; actor: string }
-  | { type: 'NOTE_CAMPAIGN_SCHEDULE'; startDate: string; deadline: string }
+  | { type: 'NOTE_CAMPAIGN_SCHEDULE'; startDate: string; deadline: string; period?: string }
   | { type: 'NOTE_CAMPAIGN_LAUNCH' }
   | { type: 'NOTE_CAMPAIGN_STOP' };
 
@@ -403,8 +403,16 @@ function reducer(state: AppState, a: Action): AppState {
     case 'CAMPAIGN_SCHEDULE':
       return {
         ...state,
-        campaign: { ...state.campaign, status: 'scheduled', startDate: a.startDate, deadlineOmsu: a.deadlineOmsu, deadlineCio: a.deadlineCio, deadlineMef: a.deadlineMef },
-        history: [...state.history, { at: now(), actor: 'Куратор МЭФ', action: `Установлена дата запуска сбора: ${a.startDate}` }],
+        campaign: {
+          ...state.campaign,
+          status: 'scheduled',
+          startDate: a.startDate,
+          deadlineOmsu: a.deadlineOmsu,
+          deadlineCio: a.deadlineCio,
+          deadlineMef: a.deadlineMef,
+          period: a.period !== undefined ? a.period : state.campaign.period,
+        },
+        history: [...state.history, { at: now(), actor: 'Куратор МЭФ', action: `Установлены параметры сбора: период «${a.period ?? state.campaign.period}», запуск ${a.startDate}` }],
       };
     case 'CAMPAIGN_LAUNCH':
       return {
@@ -806,8 +814,13 @@ function reducer(state: AppState, a: Action): AppState {
     case 'NOTE_CAMPAIGN_SCHEDULE':
       return {
         ...state,
-        noteCampaign: { ...state.noteCampaign, startDate: a.startDate, deadline: a.deadline },
-        history: [...state.history, { at: now(), actor: 'Куратор МЭФ', action: `Установлены даты сбора пояснительной записки (запуск: ${a.startDate}, окончание: ${a.deadline})` }],
+        noteCampaign: {
+          ...state.noteCampaign,
+          startDate: a.startDate,
+          deadline: a.deadline,
+          period: a.period !== undefined ? a.period : state.noteCampaign.period,
+        },
+        history: [...state.history, { at: now(), actor: 'Куратор МЭФ', action: `Установлены параметры сбора пояснительной записки: период «${a.period ?? state.noteCampaign.period}» (запуск: ${a.startDate}, окончание: ${a.deadline})` }],
       };
     case 'NOTE_CAMPAIGN_LAUNCH':
       return {

@@ -748,12 +748,60 @@ export const NOTE_STATUS_META: Record<NoteOmsuData['status'], { label: string; c
 
 export const NOTE_CAMPAIGN: NoteCampaign = {
   status: 'collecting',
+  period: 'Пояснительная записка за 2026 год',
   startDate: '2026-02-01T09:00',
   deadline: '2026-03-31T18:00',
   deadlineOmsu: '2026-03-15',
   deadlineCio: '2026-03-31',
   launchedAt: '2026-02-01',
 };
+
+// ─────────────────────────────────────────────────────────────
+// Периоды сбора по умолчанию для модулей
+// ─────────────────────────────────────────────────────────────
+
+export const SER_DEFAULT_PERIODS: { id: string; name: string; year: number; isCurrent?: boolean }[] = [
+  { id: 'cur', name: 'Прогноз СЭР на 2027–2029 годы (оценка 2026)', year: 2026, isCurrent: true },
+  { id: '2025', name: 'Прогноз СЭР на 2026–2028 годы (оценка 2025)', year: 2025 },
+  { id: '2024', name: 'Прогноз СЭР на 2025–2027 годы (оценка 2024)', year: 2024 },
+  { id: '2023', name: 'Прогноз СЭР на 2024–2026 годы (оценка 2023)', year: 2023 },
+  { id: '2022', name: 'Прогноз СЭР на 2023–2025 годы (оценка 2022)', year: 2022 },
+  { id: '2021', name: 'Прогноз СЭР на 2022–2024 годы (оценка 2021)', year: 2021 },
+  { id: '2020', name: 'Прогноз СЭР на 2021–2023 годы (оценка 2020)', year: 2020 },
+  { id: '2019', name: 'Прогноз СЭР на 2020–2022 годы (оценка 2019)', year: 2019 },
+  { id: '2018', name: 'Прогноз СЭР на 2019–2021 годы (оценка 2018)', year: 2018 },
+  { id: '2017', name: 'Прогноз СЭР на 2018–2020 годы (оценка 2017)', year: 2017 },
+];
+
+export const RATING_DEFAULT_PERIODS: { id: string; name: string; year: number; quarter?: number; isCurrent?: boolean }[] = [
+  { id: 'cur_q1', name: '1 квартал 2026 года', year: 2026, quarter: 1, isCurrent: true },
+  { id: '2025_q4', name: '4 квартал 2025 года', year: 2025, quarter: 4 },
+  { id: '2025_q3', name: '3 квартал 2025 года', year: 2025, quarter: 3 },
+  { id: '2025_q2', name: '2 квартал 2025 года', year: 2025, quarter: 2 },
+  { id: '2025_q1', name: '1 квартал 2025 года', year: 2025, quarter: 1 },
+  { id: '2025_year', name: 'Итоговый рейтинг за 2025 год', year: 2025, quarter: 4 },
+  { id: '2024_q4', name: '4 квартал 2024 года', year: 2024, quarter: 4 },
+  { id: '2024_q3', name: '3 квартал 2024 года', year: 2024, quarter: 3 },
+  { id: '2024_year', name: 'Итоговый рейтинг за 2024 год', year: 2024, quarter: 4 },
+  { id: '2023_year', name: 'Итоговый рейтинг за 2023 год', year: 2023, quarter: 4 },
+];
+
+export const UKAZ_DEFAULT_PERIODS: { id: string; name: string; year: number; isCurrent?: boolean }[] = [
+  { id: 'cur', name: 'Мониторинг исполнения Указа №607 за 2025 год', year: 2026, isCurrent: true },
+  { id: '2024', name: 'Мониторинг исполнения Указа №607 за 2024 год', year: 2025 },
+  { id: '2023', name: 'Мониторинг исполнения Указа №607 за 2023 год', year: 2024 },
+  { id: '2022', name: 'Мониторинг исполнения Указа №607 за 2022 год', year: 2023 },
+  { id: '2021', name: 'Мониторинг исполнения Указа №607 за 2021 год', year: 2022 },
+];
+
+export const NOTE_DEFAULT_PERIODS: { id: string; name: string; year: number; isCurrent?: boolean }[] = [
+  { id: 'cur', name: 'Пояснительная записка за 2026 год', year: 2026, isCurrent: true },
+  { id: '2025', name: 'Пояснительная записка за 2025 год', year: 2025 },
+  { id: '2024', name: 'Пояснительная записка за 2024 год', year: 2024 },
+  { id: '2023', name: 'Пояснительная записка за 2023 год', year: 2023 },
+  { id: '2022', name: 'Пояснительная записка за 2022 год', year: 2022 },
+  { id: '2021', name: 'Пояснительная записка за 2021 год', year: 2021 },
+];
 
 // ─────────────────────────────────────────────────────────────
 // ПЗ: отчётный год и архив пояснительных записок
@@ -897,7 +945,7 @@ export function buildInitialState(moduleId: string): AppState {
     campaign: {
       module: moduleId,
       name: moduleId === 'ukaz' ? 'Указ Президента РФ №607' : moduleId === 'rating' ? 'Рейтинг ОМСУ' : 'Муниципальный прогноз СЭР МО',
-      period: moduleId === 'rating' ? 'Оценка за 2026 год' : '2027–2029 годы',
+      period: moduleId === 'rating' ? '1 квартал 2026 года' : moduleId === 'ukaz' ? 'Мониторинг исполнения Указа №607 за 2025 год' : 'Прогноз СЭР на 2027–2029 годы (оценка 2026)',
       status: 'collecting',
       startDate: '2026-07-20',
       deadlineOmsu: '2026-07-31',
