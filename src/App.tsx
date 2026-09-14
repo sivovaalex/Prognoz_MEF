@@ -7,7 +7,6 @@ import { OmsuForm } from '@/pages/OmsuForm';
 import { CioWorkspace } from '@/pages/CioWorkspace';
 import { MefManage } from '@/pages/MefManage';
 import { RatingView } from '@/pages/RatingView';
-import { RatingSetup } from '@/pages/RatingSetup';
 import { ReportView } from '@/pages/ReportView';
 import { Description } from '@/pages/Description';
 import { Home } from '@/pages/Home';
@@ -29,7 +28,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Bell, Landmark, UserRound, Home as HomeIcon } from 'lucide-react';
 
-type PageId = 'setup' | 'omsu' | 'cio' | 'mef-manage' | 'rating' | 'rating-setup' | 'report' | 'about' | 'users' | 'dicts' | 'output-tables' | 'mef-workspace'
+type PageId = 'setup' | 'omsu' | 'cio' | 'mef-manage' | 'rating' | 'report' | 'about' | 'users' | 'dicts' | 'output-tables' | 'mef-workspace'
   | 'note-admin' | 'note-collection' | 'note-omsu' | 'note-cio' | 'note-output';
 type BlockId = 'mun' | 'obl' | 'params' | 'form2p' | 'long_term' | 'admin_block' | 'ukaz_main' | 'rating_main' | 'rating_view';
 
@@ -162,7 +161,6 @@ function Shell({ activeModule, onHome }: { activeModule: ModuleId, onHome: () =>
     : block === 'rating_view'
       ? [
           { id: 'rating' as PageId, label: 'Рейтинг ОМСУ' },
-          ...(role === 'admin' ? [{ id: 'rating-setup' as PageId, label: 'Настройка рейтинга' }] : []),
         ]
       : block === 'mun' && subSection === 'note'
         ? NOTE_NAV[role]
@@ -322,8 +320,7 @@ function Shell({ activeModule, onHome }: { activeModule: ModuleId, onHome: () =>
         {page === 'omsu' && <OmsuForm />}
         {page === 'cio' && <CioWorkspace key={block} block={block} hideOmsuApprove={!(state.blockSettings[block]?.approvers || []).includes('omsu')} />}
         {page === 'mef-manage' && <MefManage block={block} goRating={() => setPage('rating')} goReport={() => setPage('report')} />}
-        {page === 'rating' && <RatingView />}
-        {page === 'rating-setup' && <RatingSetup />}
+        {page === 'rating' && <RatingView role={role} />}
         {page === 'report' && <ReportView />}
         {page === 'output-tables' && <OutputTablesView />}
         {page === 'mef-workspace' && <MefWorkspace key={block} block={block} />}

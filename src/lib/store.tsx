@@ -44,6 +44,7 @@ export type Action =
   | { type: 'CAMPAIGN_LAUNCH' }
   | { type: 'CAMPAIGN_STOP' }
   | { type: 'SET_RATING_MODE'; mode: 'preview' | 'final' }
+  | { type: 'SET_FINAL_RATING_FORMULA'; formula: string }
   | { type: 'PUBLISH_FINAL' }
   | { type: 'ADD_INDICATOR'; indicator: Indicator; afterId?: string }
   | { type: 'UPDATE_INDICATOR'; indicator: Indicator }
@@ -430,6 +431,15 @@ function reducer(state: AppState, a: Action): AppState {
       };
     case 'SET_RATING_MODE':
       return { ...state, ratingMode: a.mode };
+    case 'SET_FINAL_RATING_FORMULA':
+      return {
+        ...state,
+        finalRatingFormula: a.formula,
+        history: [
+          ...state.history,
+          { at: now(), actor: 'Администратор / МЭФ', action: `Обновлена формула расчета итогового рейтинга: ${a.formula}` },
+        ],
+      };
     case 'PUBLISH_FINAL':
       return {
         ...state,

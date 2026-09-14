@@ -7,10 +7,17 @@ import { EMPTY_TREE_FILTER, chevronParents, visibleTree } from '@/lib/indTree';
 import { TreeToggle } from '@/components/IndToolbar';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import type { RoleId } from '@/lib/types';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
-import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
+} from '@/components/ui/dialog';
+import { TrendingUp, TrendingDown, Minus, Calculator, Info } from 'lucide-react';
 
 function now(): string {
   const d = new Date();
@@ -31,14 +38,16 @@ function DynCell({ delta }: { delta: number }) {
   return <span className="inline-flex items-center gap-1 text-gray-500 text-xs"><Minus className="h-3.5 w-3.5" />0</span>;
 }
 
-/** Шапка отчёта над таблицей рейтинга ОМСУ: территория, период сбора, источник данных, дата обновления */
-function TableMeta({ periodName }: { periodName: string }) {
+function TableMeta({ periodName, formula }: { periodName: string; formula?: string }) {
   return (
     <div className="mb-2 flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-muted-foreground">
       <span>Территория: <b className="font-semibold text-slate-800">Московская область</b></span>
       <span>Период сбора: <b className="font-semibold text-slate-800">{periodName}</b></span>
       <span>Источник данных: <b className="font-semibold text-slate-800">Ведомственные данные</b></span>
       <span>Дата последнего обновления: <b className="font-semibold text-slate-800">{now()}</b></span>
+      {formula && (
+        <span>Формула: <b className="font-semibold text-blue-700 font-mono">{formula}</b></span>
+      )}
     </div>
   );
 }
@@ -73,9 +82,13 @@ function cellColor(rank: number | null, n: number): string {
 const mTh = 'border border-[#ccc] bg-[#d9d9d9] px-1 py-1 text-center text-[12px] font-bold align-middle';
 const mTd = 'border border-[#ccc] px-1 py-1 text-center text-[12px] whitespace-nowrap';
 
-export function RatingView() {
+export function RatingView({ role }: { role?: RoleId } = {}) {
   const { state, dispatch } = useStore();
   const mode = state.ratingMode;
+
+  const canConfigureFormula = role === 'admin' || role === 'mef';
+  const [isFormulaModalOpen, setIsFormulaModalOpen] = useState(false);
+  const [formulaInput, setFormulaInput] = useState(state.finalRatingFormula || 'СУММ(Ранг_показателя * Вес)');
 
   // ── Выпадающие списки-фильтры ─────────────────────────────────────────────
   // 1. Тип расчёта: исходный алгоритм / индивидуальный вес
@@ -370,16 +383,32 @@ export function RatingView() {
       <Card>
         <CardContent className="pt-4">
           <Tabs value={tab} onValueChange={setTab}>
-            <TabsList className="mb-4">
-              <TabsTrigger value="territory">Сводная оценка по территории</TabsTrigger>
-              <TabsTrigger value="direction">Сводная оценка по разделу показателя</TabsTrigger>
-              <TabsTrigger value="indicators">Сводная оценка по показателям</TabsTrigger>
-              <TabsTrigger value="compare">Сравнение вариантов расчёта</TabsTrigger>
-            </TabsList>
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+              <TabsList>
+                <TabsTrigger value="territory">Сводная оценка по территории</TabsTrigger>
+                <TabsTrigger value="direction">Сводная оценка по разделу показателя</TabsTrigger>
+                <TabsTrigger value="indicators">Сводная оценка по показателям</TabsTrigger>
+                <TabsTrigger value="compare">Сравнение вариантов расчёта</TabsTrigger>
+              </TabsList>
+              {canConfigureFormula && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setFormulaInput(state.finalRatingFormula || 'СУММ(Ранг_показателя * Вес)');
+                    setIsFormulaModalOpen(true);
+                  }}
+                  className="flex items-center gap-1.5 border-blue-200 bg-blue-50/60 text-blue-800 hover:bg-blue-100 hover:text-blue-900 font-medium shadow-xs"
+                >
+                  <Calculator className="h-4 w-4 text-blue-600" />
+                  Настройка итогового рейтинга
+                </Button>
+              )}
+            </div>
 
             {/* ===== По территории ===== */}
             <TabsContent value="territory">
-              <TableMeta periodName={selectedPeriodName} />
+              <TableMeta periodName={selectedPeriodName} formula={state.finalRatingFormula} />
               <div className="overflow-x-auto">
                 <table className="w-full border-collapse">
                   <thead>
@@ -472,7 +501,7 @@ export function RatingView() {
 
             {/* ===== По направлению ===== */}
             <TabsContent value="direction">
-              <TableMeta periodName={selectedPeriodName} />
+              <TableMeta periodName={selectedPeriodName} formula={state.finalRatingFormula} />
               <div className="overflow-x-auto">
                 <table className="w-full border-collapse">
                   <thead>
@@ -509,7 +538,7 @@ export function RatingView() {
 
             {/* ===== По показателям (матрица) ===== */}
             <TabsContent value="indicators">
-              <TableMeta periodName={selectedPeriodName} />
+              <TableMeta periodName={selectedPeriodName} formula={state.finalRatingFormula} />
               <div className="overflow-x-auto">
                 <table className="w-full border-collapse">
                   <thead>
@@ -610,6 +639,87 @@ export function RatingView() {
           </Tabs>
         </CardContent>
       </Card>
+
+      {/* Модальное окно «Настройка итогового рейтинга» */}
+      <Dialog open={isFormulaModalOpen} onOpenChange={setIsFormulaModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-base">
+              <Calculator className="h-5 w-5 text-blue-600" />
+              Настройка итогового рейтинга
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground">
+              Задайте математическую формулу расчета итогового рейтинга ОМСУ.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="rating-formula" className="text-sm font-semibold">
+                Формула
+              </Label>
+              <Input
+                id="rating-formula"
+                value={formulaInput}
+                onChange={(e) => setFormulaInput(e.target.value)}
+                placeholder="СУММ(Ранг_показателя * Вес)"
+                className="font-mono text-xs h-9"
+              />
+              <p className="text-[11px] text-muted-foreground">
+                Формула задает алгоритм расчета итогового рейтинга ОМСУ.
+              </p>
+            </div>
+
+            <div className="rounded-md border bg-slate-50 p-2.5 text-xs space-y-1.5">
+              <div className="font-medium text-slate-700 flex items-center gap-1">
+                <Info className="h-3.5 w-3.5 text-blue-500" />
+                Примеры и переменные:
+              </div>
+              <div className="flex flex-wrap gap-1">
+                {[
+                  'СУММ(Ранг_показателя * Вес)',
+                  'СУММ(Балл_направления)',
+                  'СРЗНАЧ(Ранг_показателя)',
+                  'Ранг_показателя',
+                  'Вес',
+                ].map((chip) => (
+                  <button
+                    key={chip}
+                    type="button"
+                    onClick={() => setFormulaInput(chip)}
+                    className="rounded bg-white border border-slate-200 px-1.5 py-0.5 text-[10px] font-mono text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
+                    title={`Вставить "${chip}"`}
+                  >
+                    {chip}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsFormulaModalOpen(false)}
+            >
+              Отмена
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => {
+                dispatch({
+                  type: 'SET_FINAL_RATING_FORMULA',
+                  formula: formulaInput.trim() || 'СУММ(Ранг_показателя * Вес)',
+                });
+                setIsFormulaModalOpen(false);
+              }}
+            >
+              Сохранить
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -652,7 +762,7 @@ function CompareVariants({ sort, period, periodName }: { sort: string; period: n
 
   return (
     <div className="overflow-x-auto">
-      <TableMeta periodName={periodName} />
+      <TableMeta periodName={periodName} formula={state.finalRatingFormula} />
       <table className="w-full border-collapse">
         <thead>
           <tr>

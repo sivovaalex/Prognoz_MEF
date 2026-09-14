@@ -369,6 +369,7 @@ export interface AppState {
   notifications: NotificationItem[];
   ratingMode: 'preview' | 'final';
   finalPublished: boolean;
+  finalRatingFormula?: string;
   // ── Пояснительная записка (ПЗ) ──────────────────────────────────────
   noteTemplates: NoteTemplate[];
   noteOmsuValues: Record<string, Record<string, NoteOmsuData>>; // munId -> templateId -> data

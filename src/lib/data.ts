@@ -967,6 +967,7 @@ export function buildInitialState(moduleId: string): AppState {
     ],
     ratingMode: 'preview',
     finalPublished: false,
+    finalRatingFormula: 'СУММ(Ранг_показателя * Вес)',
     // Пояснительная записка (ПЗ)
     noteTemplates: NOTE_TEMPLATES.map(t => ({ ...t, isActive: true, columns: t.columns.map(c => ({ ...c })), rows: t.rows.map(r => ({ ...r })) })),
     noteOmsuValues: buildNoteOmsuValues(NOTE_TEMPLATES, MUNICIPALITIES),
