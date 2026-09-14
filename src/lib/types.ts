@@ -83,6 +83,9 @@ export interface Indicator {
   zato?: boolean;              // показатель для ОМСУ-ЗАТО (виден только ОМСУ с ЗАТО=1)
   closedForOmsuIds?: string[]; // ОМСУ, которым закрыт ввод показателя (ячейки заблокированы)
   calcException?: string;      // исключения расчёта: доп. правило присвоения баллов или мест
+  isReference?: boolean;       // Справочно
+  hasRatingParams?: boolean;   // Параметры рейтинга включены
+  ratingFormula?: string;      // Формула рейтинга
 }
 
 /** Заполняемый показатель (не группа) */

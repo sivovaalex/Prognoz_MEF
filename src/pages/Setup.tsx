@@ -50,6 +50,8 @@ export function Setup({ block: _block }: { block?: string }) {
       weight: 0,
       formula: '',
       consCoeff: '',
+      formulaReport: '',
+      formulaEstimate: '',
       level: 1,
       parentId: null,
       actualFrom: new Date().toISOString().split('T')[0],
@@ -57,6 +59,9 @@ export function Setup({ block: _block }: { block?: string }) {
       zato: false,
       closedForOmsuIds: [],
       calcException: '',
+      isReference: false,
+      hasRatingParams: false,
+      ratingFormula: '',
     });
   };
 
@@ -66,10 +71,12 @@ export function Setup({ block: _block }: { block?: string }) {
 
   const save = () => {
     if (!editInd || !editInd.name.trim()) return;
-    const w = Number(editInd.weight);
-    if (Number.isNaN(w) || w < 0 || w > 100) {
-      alert('Вес (раздельного показателя) должен быть числом от 0 до 100');
-      return;
+    if (editInd.hasRatingParams) {
+      const w = Number(editInd.weight);
+      if (Number.isNaN(w) || w < 0 || w > 100) {
+        alert('Вес (раздельного показателя) должен быть числом от 0 до 100');
+        return;
+      }
     }
     if (isNew) {
       dispatch({ type: 'ADD_INDICATOR', indicator: editInd });
@@ -268,7 +275,22 @@ export function Setup({ block: _block }: { block?: string }) {
                             <td className="p-2 text-xs text-muted-foreground font-mono">{ind.isGroup ? '—' : (ind.consCoeff || '—')}</td>
                             <td className="p-2">
                               <div className="flex gap-1">
-                                <Button variant="ghost" size="icon" onClick={() => { setIsNew(false); setEditInd({ ...ind }); }}>
+                                <Button variant="ghost" size="icon" onClick={() => {
+                                  setIsNew(false);
+                                  setEditInd({
+                                    ...ind,
+                                    isReference: ind.isReference ?? ind.name.startsWith('Справочно: '),
+                                    hasRatingParams: ind.hasRatingParams ?? (
+                                      (ind.weight ?? 0) > 0 ||
+                                      !!ind.closed ||
+                                      !!ind.zato ||
+                                      (ind.closedForOmsuIds && ind.closedForOmsuIds.length > 0) ||
+                                      !!ind.calcException ||
+                                      !!ind.ratingFormula
+                                    ),
+                                    ratingFormula: ind.ratingFormula || '',
+                                  });
+                                }}>
                                   <Pencil className="h-4 w-4" />
                                 </Button>
                                 <Button variant="ghost" size="icon" className="text-red-500 hover:text-red-700" onClick={() => deleteInd(ind.id, ind.name)} title="Деактивировать">
@@ -313,7 +335,44 @@ export function Setup({ block: _block }: { block?: string }) {
               </div>
               <div className="grid grid-cols-4 items-center gap-2">
                 <Label>Название *</Label>
-                <Input className="col-span-3" value={editInd.name} onChange={(e) => setEditInd({ ...editInd, name: e.target.value })} />
+                <div className="col-span-3 flex items-center gap-3">
+                  <Input
+                    className="flex-1"
+                    placeholder="Введите наименование показателя..."
+                    value={editInd.name}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setEditInd({
+                        ...editInd,
+                        name: val,
+                        isReference: val.startsWith('Справочно: ') ? true : false,
+                      });
+                    }}
+                  />
+                  <label className="flex items-center gap-1.5 text-xs font-medium cursor-pointer whitespace-nowrap select-none">
+                    <input
+                      type="checkbox"
+                      id="is-reference-checkbox"
+                      className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      checked={!!(editInd.isReference || editInd.name.startsWith('Справочно: '))}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        let newName = editInd.name;
+                        if (checked) {
+                          if (!newName.startsWith('Справочно: ')) {
+                            newName = `Справочно: ${newName}`;
+                          }
+                        } else {
+                          if (newName.startsWith('Справочно: ')) {
+                            newName = newName.replace(/^Справочно:\s*/, '');
+                          }
+                        }
+                        setEditInd({ ...editInd, isReference: checked, name: newName });
+                      }}
+                    />
+                    <span>Справочно</span>
+                  </label>
+                </div>
               </div>
               <div className="grid grid-cols-4 items-center gap-2">
                 <Label>Раздел показателя *</Label>
@@ -395,16 +454,27 @@ export function Setup({ block: _block }: { block?: string }) {
               </div>
 
               <>
-                <div className="grid grid-cols-4 gap-2 border-t pt-3 mt-1">
-                  <Label className="mt-2 text-sm font-semibold">Параметры Рейтинга</Label>
+                <div className="border-t pt-3 mt-1">
+                  <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      id="has-rating-params-checkbox"
+                      className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      checked={!!editInd.hasRatingParams}
+                      onChange={(e) => setEditInd({ ...editInd, hasRatingParams: e.target.checked })}
+                    />
+                    <span className="text-sm font-semibold text-slate-900">Параметры рейтинга</span>
+                  </label>
                 </div>
 
+                <div className={!editInd.hasRatingParams ? "grid gap-3 text-sm opacity-50 select-none" : "grid gap-3 text-sm"}>
                   <div className="grid grid-cols-4 items-center gap-2">
                     <Label className="col-span-3">Закрыть показатель от ввода и согласования</Label>
                     <div className="col-span-1 flex justify-center">
                       <input
                         type="checkbox"
-                        className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        disabled={!editInd.hasRatingParams}
+                        className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 disabled:cursor-not-allowed"
                         checked={!!editInd.closed}
                         onChange={(e) => setEditInd({ ...editInd, closed: e.target.checked })}
                       />
@@ -413,8 +483,12 @@ export function Setup({ block: _block }: { block?: string }) {
 
                   <div className="grid grid-cols-4 items-center gap-2">
                     <Label>Оптимум *</Label>
-                    <Select value={editInd.optimum} onValueChange={(v: 'max' | 'min') => setEditInd({ ...editInd, optimum: v })}>
-                      <SelectTrigger className="col-span-3"><SelectValue /></SelectTrigger>
+                    <Select
+                      disabled={!editInd.hasRatingParams}
+                      value={editInd.optimum}
+                      onValueChange={(v: 'max' | 'min') => setEditInd({ ...editInd, optimum: v })}
+                    >
+                      <SelectTrigger className="col-span-3 disabled:cursor-not-allowed disabled:bg-slate-100"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="max">Максимум (max)</SelectItem>
                         <SelectItem value="min">Минимум (min)</SelectItem>
@@ -429,7 +503,8 @@ export function Setup({ block: _block }: { block?: string }) {
                       min={0}
                       max={100}
                       step={0.1}
-                      className="col-span-3"
+                      disabled={!editInd.hasRatingParams}
+                      className="col-span-3 disabled:bg-slate-100 disabled:cursor-not-allowed disabled:text-muted-foreground"
                       value={editInd.weight ?? 0}
                       onChange={(e) => setEditInd({ ...editInd, weight: e.target.value === '' ? 0 : Number(e.target.value) })}
                     />
@@ -440,7 +515,8 @@ export function Setup({ block: _block }: { block?: string }) {
                     <div className="col-span-1 flex justify-center">
                       <input
                         type="checkbox"
-                        className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        disabled={!editInd.hasRatingParams}
+                        className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 disabled:cursor-not-allowed"
                         checked={!!editInd.zato}
                         onChange={(e) => setEditInd({ ...editInd, zato: e.target.checked })}
                       />
@@ -452,7 +528,8 @@ export function Setup({ block: _block }: { block?: string }) {
                     <div className="col-span-3 space-y-1">
                       <select
                         multiple
-                        className="w-full h-32 p-2 text-xs border rounded-md"
+                        disabled={!editInd.hasRatingParams}
+                        className="w-full h-32 p-2 text-xs border rounded-md disabled:bg-slate-100 disabled:cursor-not-allowed disabled:text-muted-foreground"
                         value={editInd.closedForOmsuIds || []}
                         onChange={(e) => setEditInd({ ...editInd, closedForOmsuIds: Array.from(e.target.selectedOptions).map(o => o.value) })}
                       >
@@ -467,13 +544,26 @@ export function Setup({ block: _block }: { block?: string }) {
                   <div className="grid grid-cols-4 items-center gap-2">
                     <Label>Исключения расчёта</Label>
                     <Input
-                      className="col-span-3"
+                      disabled={!editInd.hasRatingParams}
+                      className="col-span-3 disabled:bg-slate-100 disabled:cursor-not-allowed disabled:text-muted-foreground"
                       placeholder="Дополнительное правило присвоения баллов или мест"
                       value={editInd.calcException || ''}
                       onChange={(e) => setEditInd({ ...editInd, calcException: e.target.value })}
                     />
                   </div>
-                </>
+
+                  <div className="grid grid-cols-4 items-center gap-2">
+                    <Label>Формула рейтинга</Label>
+                    <Input
+                      disabled={!editInd.hasRatingParams}
+                      className="col-span-3 font-mono text-xs disabled:bg-slate-100 disabled:cursor-not-allowed disabled:text-muted-foreground"
+                      placeholder="Формула расчёта рейтинга"
+                      value={editInd.ratingFormula || ''}
+                      onChange={(e) => setEditInd({ ...editInd, ratingFormula: e.target.value })}
+                    />
+                  </div>
+                </div>
+              </>
 
             </div>
           )}
