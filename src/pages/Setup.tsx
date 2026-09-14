@@ -18,51 +18,13 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Pencil, Settings2, Settings, PowerOff } from 'lucide-react';
+import { Plus, Pencil, Settings2, PowerOff } from 'lucide-react';
 
-const currentYear = new Date().getFullYear();
-const currentQuarter = Math.floor(new Date().getMonth() / 3) + 1;
-
-const repOptions: { value: string, label: string }[] = [];
-for (let y = currentYear - 10; y <= currentYear; y++) {
-  const prefix = y === currentYear ? '[Текущий год]' : `[Текущий год - ${currentYear - y} год]`;
-  repOptions.push({ value: `y${y}`, label: `${prefix} (${y} год)` });
-  for (let q = 1; q <= 4; q++) {
-    if (y === currentYear && q > currentQuarter) break;
-    repOptions.push({ value: `q${q}_${y}`, label: `${prefix} ${q} квартал (${q} квартал ${y} года)` });
-  }
-}
-repOptions.reverse(); // Показываем свежие сверху
-
-const estOptions: { value: string, label: string }[] = [{ value: 'none', label: 'Нет' }];
-for (let y = currentYear - 1; y <= currentYear + 1; y++) {
-  const prefix = y === currentYear ? '[Текущий год]' : y < currentYear ? '[Прошлый год]' : '[Следующий год]';
-  estOptions.push({ value: `y${y}`, label: `${prefix} (${y} год)` });
-  for (let q = 1; q <= 4; q++) {
-    estOptions.push({ value: `q${q}_${y}`, label: `${prefix} ${q} квартал (${q} квартал ${y} года)` });
-  }
-}
-
-const forOptions: { value: string, label: string }[] = [];
-for (let y = currentYear; y <= currentYear + 15; y++) {
-  const prefix = y === currentYear ? '[Текущий год]' : `[Текущий год + ${y - currentYear} год]`;
-  forOptions.push({ value: `y${y}`, label: `${prefix} (${y} год)` });
-  for (let q = 1; q <= 4; q++) {
-    forOptions.push({ value: `q${q}_${y}`, label: `${prefix} ${q} квартал (${q} квартал ${y} года)` });
-  }
-}
-
-export function Setup({ block }: { block: string }) {
+export function Setup({ block: _block }: { block?: string }) {
   const { state, dispatch } = useStore();
   const [editInd, setEditInd] = useState<Indicator | null>(null);
   const [isNew, setIsNew] = useState(false);
   const [editDir, setEditDir] = useState<{ id?: string, num: string, name: string, cioIds: string[], actualFrom: string, actualTo?: string | null } | null>(null);
-  const [showSettings, setShowSettings] = useState(false);
-  const [settingsForm, setSettingsForm] = useState<('omsu' | 'cio' | 'mef')[]>([]);
-  const [settingsRep, setSettingsRep] = useState<string[]>([]);
-  const [settingsEst, setSettingsEst] = useState<string>('none');
-  const [settingsFor, setSettingsFor] = useState<string[]>([]);
-  const [settingsNote, setSettingsNote] = useState<boolean>(false);
   const [treeFilter, setTreeFilter] = useState<TreeFilter>({ ...EMPTY_TREE_FILTER, actualDate: new Date().toISOString().split('T')[0] });
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   // Drag-and-drop: перестановка показателей с автоматической перенумерацией
@@ -154,16 +116,6 @@ export function Setup({ block }: { block: string }) {
     setEditDir(null);
   };
 
-  const openSettings = () => {
-    const s = state.blockSettings[block];
-    setSettingsForm(s?.approvers || []);
-    setSettingsRep(s?.reportingPeriods || []);
-    setSettingsEst(s?.estimatedPeriods?.[0] || 'none');
-    setSettingsFor(s?.forecastPeriods || []);
-    setSettingsNote(s?.hasNote || false);
-    setShowSettings(true);
-  };
-
   const [deleteConfirm, setDeleteConfirm] = useState<{ type: 'dir' | 'ind', id: string, name: string } | null>(null);
 
   const deleteDir = (id: string, name: string) => {
@@ -179,19 +131,6 @@ export function Setup({ block }: { block: string }) {
     setDeleteConfirm({ type: 'ind', id, name });
   };
 
-  const saveSettings = () => {
-    dispatch({
-      type: 'UPDATE_BLOCK_SETTINGS',
-      block,
-      approvers: settingsForm,
-      reportingPeriods: settingsRep,
-      estimatedPeriods: [settingsEst],
-      forecastPeriods: settingsFor,
-      hasNote: settingsNote
-    });
-    setShowSettings(false);
-  };
-
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -202,7 +141,6 @@ export function Setup({ block }: { block: string }) {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={openSettings}><Settings className="h-4 w-4 mr-1" /> Настройки формы сбора</Button>
           <Button variant="outline" onClick={openNewDir}><Plus className="h-4 w-4 mr-1" /> Добавить раздел показателя</Button>
           <Button onClick={openNew}><Plus className="h-4 w-4 mr-1" /> Добавить показатель</Button>
         </div>
@@ -567,94 +505,6 @@ export function Setup({ block }: { block: string }) {
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditDir(null)}>Отмена</Button>
             <Button onClick={saveDir}>Сохранить</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      {/* Модалка настроек блока */}
-      <Dialog open={showSettings} onOpenChange={setShowSettings}>
-        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Настройки формы сбора</DialogTitle>
-          </DialogHeader>
-          <div className="flex flex-col gap-6 py-4">
-            <div className="space-y-2">
-              <Label>Участники процесса</Label>
-              <div className="flex flex-col gap-2 mt-2">
-                {(['omsu', 'cio', 'mef'] as const).map(role => (
-                  <div key={role} className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      id={`role-${role}`}
-                      className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                      checked={settingsForm.includes(role)}
-                      onChange={(e) => {
-                        const c = e.target.checked;
-                        if (c) setSettingsForm([...settingsForm, role]);
-                        else setSettingsForm(settingsForm.filter(r => r !== role));
-                      }}
-                    />
-                    <label htmlFor={`role-${role}`} className="text-sm font-medium leading-none">
-                      {role === 'omsu' ? 'ОМСУ' : role === 'cio' ? 'ЦИО' : 'МЭФ'}
-                    </label>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Отчётные периоды</Label>
-              <select
-                multiple
-                className="w-full h-32 p-2 text-xs border rounded-md"
-                value={settingsRep}
-                onChange={(e) => setSettingsRep(Array.from(e.target.selectedOptions).map(o => o.value))}
-              >
-                {repOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-              </select>
-              <p className="text-[10px] text-muted-foreground mt-1">Зажмите Ctrl (или Cmd) для выбора нескольких элементов</p>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Оценочные периоды</Label>
-              <Select value={settingsEst} onValueChange={setSettingsEst}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent className="max-h-60">
-                  {estOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Прогнозные периоды</Label>
-              <select
-                multiple
-                className="w-full h-32 p-2 text-xs border rounded-md"
-                value={settingsFor}
-                onChange={(e) => setSettingsFor(Array.from(e.target.selectedOptions).map(o => o.value))}
-              >
-                {forOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-              </select>
-              <p className="text-[10px] text-muted-foreground mt-1">Зажмите Ctrl (или Cmd) для выбора нескольких элементов</p>
-            </div>
-
-            <div className="space-y-2 pt-4 border-t">
-              <div className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  id="setting-note"
-                  className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                  checked={settingsNote}
-                  onChange={(e) => setSettingsNote(e.target.checked)}
-                />
-                <label htmlFor="setting-note" className="text-sm font-medium leading-none">
-                  Добавить поле Примечание
-                </label>
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowSettings(false)}>Закрыть</Button>
-            <Button onClick={saveSettings}>Сохранить настройки</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

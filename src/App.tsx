@@ -68,11 +68,11 @@ const getBlocks = (role: RoleId, module: ModuleId, settings: AppState['blockSett
 const NAV: Record<RoleId, { id: PageId; label: string }[]> = {
   admin: [
     { id: 'setup', label: 'Настройка показателей' },
-    { id: 'mef-manage', label: 'Управление' },
+    { id: 'mef-manage', label: 'Управление сбором' },
     { id: 'output-tables', label: 'Выходные таблицы' },
   ],
   mef: [
-    { id: 'mef-manage', label: 'Управление' },
+    { id: 'mef-manage', label: 'Управление сбором' },
     { id: 'output-tables', label: 'Выходные таблицы' },
     { id: 'mef-workspace', label: 'Рабочее место МЭФ' },
   ],
@@ -321,7 +321,7 @@ function Shell({ activeModule, onHome }: { activeModule: ModuleId, onHome: () =>
         {page === 'setup' && <Setup block={block} />}
         {page === 'omsu' && <OmsuForm />}
         {page === 'cio' && <CioWorkspace key={block} block={block} hideOmsuApprove={!(state.blockSettings[block]?.approvers || []).includes('omsu')} />}
-        {page === 'mef-manage' && <MefManage goRating={() => setPage('rating')} goReport={() => setPage('report')} />}
+        {page === 'mef-manage' && <MefManage block={block} goRating={() => setPage('rating')} goReport={() => setPage('report')} />}
         {page === 'rating' && <RatingView />}
         {page === 'rating-setup' && <RatingSetup />}
         {page === 'report' && <ReportView />}

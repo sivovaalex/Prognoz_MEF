@@ -932,10 +932,12 @@ export function buildInitialState(moduleId: string): AppState {
       blockSettings: {
         mun: { approvers: ['omsu', 'cio', 'mef'], reportingPeriods: [], estimatedPeriods: [], forecastPeriods: [], hasNote: false },
         obl: { approvers: ['cio', 'mef'], reportingPeriods: [], estimatedPeriods: [], forecastPeriods: [], hasNote: false },
+        params: { approvers: ['omsu', 'cio', 'mef'], reportingPeriods: [], estimatedPeriods: [], forecastPeriods: [], hasNote: false },
         rating_main: { approvers: ['omsu', 'cio', 'mef'], reportingPeriods: [], estimatedPeriods: [], forecastPeriods: [], hasNote: false },
         ukaz_main: { approvers: ['omsu', 'cio', 'mef'], reportingPeriods: [], estimatedPeriods: [], forecastPeriods: [], hasNote: false },
         form2p: { approvers: ['cio', 'mef'], reportingPeriods: [], estimatedPeriods: [], forecastPeriods: [], hasNote: false },
         long_term: { approvers: ['cio', 'mef'], reportingPeriods: [], estimatedPeriods: [], forecastPeriods: [], hasNote: false },
+        note: { approvers: ['omsu', 'cio', 'mef'], reportingPeriods: [], estimatedPeriods: [], forecastPeriods: [], hasNote: false },
       },
       omsuValues,
       cioValues,

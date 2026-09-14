@@ -8,9 +8,10 @@ import { Badge } from '@/components/ui/badge';
 import { CheckCircle2, PlayCircle, StopCircle, CalendarClock, Send, BarChart3 } from 'lucide-react';
 import { approvalStats, allApproved } from '@/lib/rating';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { CollectionFormSettings } from '@/components/CollectionFormSettings';
 
-/** Вкладка «Управление» МЭФ: управление сбором, сроки, готовность к отчёту */
-export function MefManage({ goRating, goReport }: { goRating: () => void; goReport: () => void }) {
+/** Вкладка «Управление сбором» МЭФ: управление сбором, сроки, готовность к отчёту */
+export function MefManage({ block, goRating, goReport }: { block?: string; goRating: () => void; goReport: () => void }) {
   const { state, dispatch } = useStore();
   const [periodName, setPeriodName] = useState(state.campaign.period ?? '');
   const [startDate, setStartDate] = useState(state.campaign.startDate ?? '2026-07-20');
@@ -32,6 +33,7 @@ export function MefManage({ goRating, goReport }: { goRating: () => void; goRepo
 
   const isRating = state.campaign.module === 'rating';
   const isUkaz = state.campaign.module === 'ukaz';
+  const activeBlock = block || (isUkaz ? 'ukaz_main' : isRating ? 'rating_main' : 'mun');
   const periods = isRating 
     ? [state.campaign.period, '4 квартал 2025 года', '3 квартал 2025 года', '2 квартал 2025 года', '1 квартал 2025 года', 'Итоговый рейтинг за 2025 год']
     : isUkaz
@@ -48,69 +50,73 @@ export function MefManage({ goRating, goReport }: { goRating: () => void; goRepo
         </p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-base">Параметры сбора</CardTitle>
-            <Button variant="outline" size="sm" onClick={() => setHistoryModalOpen(true)}>Историчность сборов</Button>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm">
-            <div className="grid grid-cols-2 items-center gap-2">
-              <Label>Период сбора</Label>
-              <Input
-                type="text"
-                placeholder="Введите период сбора..."
-                value={periodName}
-                onChange={(e) => setPeriodName(e.target.value)}
-              />
-            </div>
-            <div className="grid grid-cols-2 items-center gap-2">
-              <Label>Дата запуска сбора</Label>
-              <Input type="datetime-local" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
-            </div>
-            <div className="grid grid-cols-2 items-center gap-2">
-              <Label>Дата окончания сбора</Label>
-              <Input type="datetime-local" value={dlMef} onChange={(e) => setDlMef(e.target.value)} />
-            </div>
-            <div className="flex gap-2 pt-2">
-              <Button
-                variant="outline"
-                onClick={() =>
-                  dispatch({
-                    type: 'CAMPAIGN_SCHEDULE',
-                    startDate,
-                    deadlineOmsu: state.campaign.deadlineOmsu,
-                    deadlineCio: state.campaign.deadlineCio,
-                    deadlineMef: dlMef,
-                    period: periodName,
-                  })
-                }
-              >
-                <CalendarClock className="h-4 w-4 mr-1" /> Сохранить даты
-              </Button>
-              {state.campaign.status === 'collecting' ? (
-                <>
-                  <Button variant="destructive" onClick={() => dispatch({ type: 'CAMPAIGN_STOP' })}>
-                    <StopCircle className="h-4 w-4 mr-1" /> Остановить сбор
-                  </Button>
-                  <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">
-                    <Send className="h-3.5 w-3.5 mr-1" />
-                    Сбор запущен {state.campaign.launchedAt}
-                  </Badge>
-                </>
-              ) : (
-                state.campaign.status !== 'completed' && (
-                  <Button onClick={() => dispatch({ type: 'CAMPAIGN_LAUNCH' })}>
-                    <PlayCircle className="h-4 w-4 mr-1" /> Запустить сбор
-                  </Button>
-                )
-              )}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              В указанную дату КФ автоматически рассылает уведомления и формы: {state.omsus.length} ОМСУ и {state.cios.length} ЦИО.
-            </p>
-          </CardContent>
-        </Card>
+      <div className="grid gap-4 md:grid-cols-2 items-start">
+        <div className="space-y-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-base">Параметры сбора</CardTitle>
+              <Button variant="outline" size="sm" onClick={() => setHistoryModalOpen(true)}>Историчность сборов</Button>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              <div className="grid grid-cols-2 items-center gap-2">
+                <Label>Период сбора</Label>
+                <Input
+                  type="text"
+                  placeholder="Введите период сбора..."
+                  value={periodName}
+                  onChange={(e) => setPeriodName(e.target.value)}
+                />
+              </div>
+              <div className="grid grid-cols-2 items-center gap-2">
+                <Label>Дата запуска сбора</Label>
+                <Input type="datetime-local" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+              </div>
+              <div className="grid grid-cols-2 items-center gap-2">
+                <Label>Дата окончания сбора</Label>
+                <Input type="datetime-local" value={dlMef} onChange={(e) => setDlMef(e.target.value)} />
+              </div>
+              <div className="flex gap-2 pt-2">
+                <Button
+                  variant="outline"
+                  onClick={() =>
+                    dispatch({
+                      type: 'CAMPAIGN_SCHEDULE',
+                      startDate,
+                      deadlineOmsu: state.campaign.deadlineOmsu,
+                      deadlineCio: state.campaign.deadlineCio,
+                      deadlineMef: dlMef,
+                      period: periodName,
+                    })
+                  }
+                >
+                  <CalendarClock className="h-4 w-4 mr-1" /> Сохранить даты
+                </Button>
+                {state.campaign.status === 'collecting' ? (
+                  <>
+                    <Button variant="destructive" onClick={() => dispatch({ type: 'CAMPAIGN_STOP' })}>
+                      <StopCircle className="h-4 w-4 mr-1" /> Остановить сбор
+                    </Button>
+                    <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">
+                      <Send className="h-3.5 w-3.5 mr-1" />
+                      Сбор запущен {state.campaign.launchedAt}
+                    </Badge>
+                  </>
+                ) : (
+                  state.campaign.status !== 'completed' && (
+                    <Button onClick={() => dispatch({ type: 'CAMPAIGN_LAUNCH' })}>
+                      <PlayCircle className="h-4 w-4 mr-1" /> Запустить сбор
+                    </Button>
+                  )
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                В указанную дату КФ автоматически рассылает уведомления и формы: {state.omsus.length} ОМСУ и {state.cios.length} ЦИО.
+              </p>
+            </CardContent>
+          </Card>
+
+          <CollectionFormSettings block={activeBlock} />
+        </div>
 
         {isRating && (
           <Card>
