@@ -463,18 +463,17 @@ export function Setup({ block: _block }: { block?: string }) {
                       checked={!!editInd.hasRatingParams}
                       onChange={(e) => setEditInd({ ...editInd, hasRatingParams: e.target.checked })}
                     />
-                    <span className="text-sm font-semibold text-slate-900">Параметры рейтинга</span>
+                    <span className="text-sm font-semibold text-slate-900">Отображать показатель в рейтинге</span>
                   </label>
                 </div>
 
-                <div className={!editInd.hasRatingParams ? "grid gap-3 text-sm opacity-50 select-none" : "grid gap-3 text-sm"}>
+                <div className="grid gap-3 text-sm">
                   <div className="grid grid-cols-4 items-center gap-2">
                     <Label className="col-span-3">Закрыть показатель от ввода и согласования</Label>
                     <div className="col-span-1 flex justify-center">
                       <input
                         type="checkbox"
-                        disabled={!editInd.hasRatingParams}
-                        className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 disabled:cursor-not-allowed"
+                        className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                         checked={!!editInd.closed}
                         onChange={(e) => setEditInd({ ...editInd, closed: e.target.checked })}
                       />
@@ -484,11 +483,10 @@ export function Setup({ block: _block }: { block?: string }) {
                   <div className="grid grid-cols-4 items-center gap-2">
                     <Label>Оптимум *</Label>
                     <Select
-                      disabled={!editInd.hasRatingParams}
                       value={editInd.optimum}
                       onValueChange={(v: 'max' | 'min') => setEditInd({ ...editInd, optimum: v })}
                     >
-                      <SelectTrigger className="col-span-3 disabled:cursor-not-allowed disabled:bg-slate-100"><SelectValue /></SelectTrigger>
+                      <SelectTrigger className="col-span-3"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="max">Максимум (max)</SelectItem>
                         <SelectItem value="min">Минимум (min)</SelectItem>
@@ -503,8 +501,7 @@ export function Setup({ block: _block }: { block?: string }) {
                       min={0}
                       max={100}
                       step={0.1}
-                      disabled={!editInd.hasRatingParams}
-                      className="col-span-3 disabled:bg-slate-100 disabled:cursor-not-allowed disabled:text-muted-foreground"
+                      className="col-span-3"
                       value={editInd.weight ?? 0}
                       onChange={(e) => setEditInd({ ...editInd, weight: e.target.value === '' ? 0 : Number(e.target.value) })}
                     />
@@ -515,8 +512,7 @@ export function Setup({ block: _block }: { block?: string }) {
                     <div className="col-span-1 flex justify-center">
                       <input
                         type="checkbox"
-                        disabled={!editInd.hasRatingParams}
-                        className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 disabled:cursor-not-allowed"
+                        className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                         checked={!!editInd.zato}
                         onChange={(e) => setEditInd({ ...editInd, zato: e.target.checked })}
                       />
@@ -528,8 +524,7 @@ export function Setup({ block: _block }: { block?: string }) {
                     <div className="col-span-3 space-y-1">
                       <select
                         multiple
-                        disabled={!editInd.hasRatingParams}
-                        className="w-full h-32 p-2 text-xs border rounded-md disabled:bg-slate-100 disabled:cursor-not-allowed disabled:text-muted-foreground"
+                        className="w-full h-32 p-2 text-xs border rounded-md"
                         value={editInd.closedForOmsuIds || []}
                         onChange={(e) => setEditInd({ ...editInd, closedForOmsuIds: Array.from(e.target.selectedOptions).map(o => o.value) })}
                       >
@@ -544,8 +539,7 @@ export function Setup({ block: _block }: { block?: string }) {
                   <div className="grid grid-cols-4 items-center gap-2">
                     <Label>Исключения расчёта</Label>
                     <Input
-                      disabled={!editInd.hasRatingParams}
-                      className="col-span-3 disabled:bg-slate-100 disabled:cursor-not-allowed disabled:text-muted-foreground"
+                      className="col-span-3"
                       placeholder="Дополнительное правило присвоения баллов или мест"
                       value={editInd.calcException || ''}
                       onChange={(e) => setEditInd({ ...editInd, calcException: e.target.value })}
