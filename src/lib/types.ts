@@ -370,6 +370,7 @@ export interface AppState {
   ratingMode: 'preview' | 'final';
   finalPublished: boolean;
   finalRatingFormula?: string;
+  finalRatingFormulaZato?: string;
   // ── Пояснительная записка (ПЗ) ──────────────────────────────────────
   noteTemplates: NoteTemplate[];
   noteOmsuValues: Record<string, Record<string, NoteOmsuData>>; // munId -> templateId -> data

@@ -794,9 +794,13 @@ function CompareVariants({ sort, period, periodName }: { sort: string; period: n
 // ─────────────────────────────────────────────────────────────────────────────
 // Рейтинг ОМСУ ЗАТО — отдельная страница (подраздел «Рейтинг ОМСУ»)
 // ─────────────────────────────────────────────────────────────────────────────
-export function ZatoRatingView() {
-  const { state } = useStore();
+export function ZatoRatingView({ role }: { role?: RoleId } = {}) {
+  const { state, dispatch } = useStore();
   const mode = state.ratingMode;
+  const canConfigureFormula = role === 'admin' || role === 'mef';
+
+  const [isFormulaModalOpen, setIsFormulaModalOpen] = useState(false);
+  const [formulaInput, setFormulaInput] = useState(state.finalRatingFormulaZato || 'СУММ(Ранг_показателя * Вес)');
 
   const ratingPeriods = useMemo(() => {
     const curName = state.campaign.module === 'rating' && state.campaign.period
@@ -959,14 +963,30 @@ export function ZatoRatingView() {
       {/* Таблицы */}
       <Card>
         <CardContent className="pt-4">
-          <TableMeta periodName={selectedPeriodName} />
+          <TableMeta periodName={selectedPeriodName} formula={state.finalRatingFormulaZato} />
           <Tabs value={tab} onValueChange={setTab}>
-            <TabsList className="mb-4">
-              <TabsTrigger value="zterritory">Сводная оценка по территории</TabsTrigger>
-              <TabsTrigger value="zdirection">Сводная оценка по разделу показателя</TabsTrigger>
-              <TabsTrigger value="zindicators">Сводная оценка по показателям</TabsTrigger>
-              <TabsTrigger value="zcompare">Сравнение вариантов расчёта</TabsTrigger>
-            </TabsList>
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+              <TabsList>
+                <TabsTrigger value="zterritory">Сводная оценка по территории</TabsTrigger>
+                <TabsTrigger value="zdirection">Сводная оценка по разделу показателя</TabsTrigger>
+                <TabsTrigger value="zindicators">Сводная оценка по показателям</TabsTrigger>
+                <TabsTrigger value="zcompare">Сравнение вариантов расчёта</TabsTrigger>
+              </TabsList>
+              {canConfigureFormula && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setFormulaInput(state.finalRatingFormulaZato || 'СУММ(Ранг_показателя * Вес)');
+                    setIsFormulaModalOpen(true);
+                  }}
+                  className="flex items-center gap-1.5 border-blue-200 bg-blue-50/60 text-blue-800 hover:bg-blue-100 hover:text-blue-900 font-medium shadow-xs"
+                >
+                  <Calculator className="h-4 w-4 text-blue-600" />
+                  Настройка итогового рейтинга ЗАТО
+                </Button>
+              )}
+            </div>
 
             {/* ─── По территории ─── */}
             <TabsContent value="zterritory">
@@ -1196,6 +1216,87 @@ export function ZatoRatingView() {
           </Tabs>
         </CardContent>
       </Card>
+
+      {/* Модальное окно «Настройка итогового рейтинга ЗАТО» */}
+      <Dialog open={isFormulaModalOpen} onOpenChange={setIsFormulaModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-base">
+              <Calculator className="h-5 w-5 text-blue-600" />
+              Настройка итогового рейтинга ЗАТО
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground">
+              Задайте математическую формулу расчета итогового рейтинга ОМСУ для закрытых административно-территориальных образований.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="zato-rating-formula" className="text-sm font-semibold">
+                Формула рейтинга ЗАТО
+              </Label>
+              <Input
+                id="zato-rating-formula"
+                value={formulaInput}
+                onChange={(e) => setFormulaInput(e.target.value)}
+                placeholder="СУММ(Ранг_показателя * Вес)"
+                className="font-mono text-xs h-9"
+              />
+              <p className="text-[11px] text-muted-foreground">
+                Формула задает алгоритм расчета итогового рейтинга для ОМСУ ЗАТО.
+              </p>
+            </div>
+
+            <div className="rounded-md border bg-slate-50 p-2.5 text-xs space-y-1.5">
+              <div className="font-medium text-slate-700 flex items-center gap-1">
+                <Info className="h-3.5 w-3.5 text-blue-500" />
+                Примеры и переменные:
+              </div>
+              <div className="flex flex-wrap gap-1">
+                {[
+                  'СУММ(Ранг_показателя * Вес)',
+                  'СУММ(Балл_направления)',
+                  'СРЗНАЧ(Ранг_показателя)',
+                  'Ранг_показателя',
+                  'Вес',
+                ].map((chip) => (
+                  <button
+                    key={chip}
+                    type="button"
+                    onClick={() => setFormulaInput(chip)}
+                    className="rounded bg-white border border-slate-200 px-1.5 py-0.5 text-[10px] font-mono text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
+                    title={`Вставить "${chip}"`}
+                  >
+                    {chip}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsFormulaModalOpen(false)}
+            >
+              Отмена
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => {
+                dispatch({
+                  type: 'SET_FINAL_RATING_FORMULA_ZATO',
+                  formula: formulaInput.trim() || 'СУММ(Ранг_показателя * Вес)',
+                });
+                setIsFormulaModalOpen(false);
+              }}
+            >
+              Сохранить
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

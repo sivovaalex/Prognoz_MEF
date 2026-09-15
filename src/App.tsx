@@ -322,7 +322,7 @@ function Shell({ activeModule, onHome }: { activeModule: ModuleId, onHome: () =>
         {page === 'cio' && <CioWorkspace key={block} block={block} hideOmsuApprove={!(state.blockSettings[block]?.approvers || []).includes('omsu')} />}
         {page === 'mef-manage' && <MefManage block={block} goRating={() => setPage('rating')} goReport={() => setPage('report')} />}
         {page === 'rating' && <RatingView role={role} />}
-        {page === 'rating-zato' && <ZatoRatingView />}
+        {page === 'rating-zato' && <ZatoRatingView role={role} />}
         {page === 'report' && <ReportView />}
         {page === 'output-tables' && <OutputTablesView />}
         {page === 'mef-workspace' && <MefWorkspace key={block} block={block} />}

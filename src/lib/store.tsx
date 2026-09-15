@@ -45,6 +45,7 @@ export type Action =
   | { type: 'CAMPAIGN_STOP' }
   | { type: 'SET_RATING_MODE'; mode: 'preview' | 'final' }
   | { type: 'SET_FINAL_RATING_FORMULA'; formula: string }
+  | { type: 'SET_FINAL_RATING_FORMULA_ZATO'; formula: string }
   | { type: 'PUBLISH_FINAL' }
   | { type: 'ADD_INDICATOR'; indicator: Indicator; afterId?: string }
   | { type: 'UPDATE_INDICATOR'; indicator: Indicator }
@@ -438,6 +439,15 @@ function reducer(state: AppState, a: Action): AppState {
         history: [
           ...state.history,
           { at: now(), actor: 'Администратор / МЭФ', action: `Обновлена формула расчета итогового рейтинга: ${a.formula}` },
+        ],
+      };
+    case 'SET_FINAL_RATING_FORMULA_ZATO':
+      return {
+        ...state,
+        finalRatingFormulaZato: a.formula,
+        history: [
+          ...state.history,
+          { at: now(), actor: 'Администратор / МЭФ', action: `Обновлена формула расчета итогового рейтинга ЗАТО: ${a.formula}` },
         ],
       };
     case 'PUBLISH_FINAL':
