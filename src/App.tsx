@@ -51,7 +51,7 @@ const getBlocks = (role: RoleId, module: ModuleId, settings: AppState['blockSett
   } else if (module === 'rating') {
     if (role === 'admin') blocks = ['rating_main', 'rating_view', 'admin_block'];
     else if (role === 'mef') blocks = ['rating_main', 'rating_view'];
-    else blocks = ['rating_main'];
+    else blocks = ['rating_main', 'rating_view'];
   } else {
     if (role === 'admin') blocks = ['mun', 'obl', 'params', 'form2p', 'long_term', 'admin_block'];
     else if (role === 'mef' || role === 'cio') blocks = ['mun', 'obl', 'params', 'form2p', 'long_term'];
@@ -122,6 +122,10 @@ function Shell({ activeModule, onHome }: { activeModule: ModuleId, onHome: () =>
   const [page, setPage] = useState<PageId>('setup');
   const [block, setBlock] = useState<BlockId>('mun');
   const [subSection, setSubSection] = useState<'ind' | 'note'>('ind');
+  const [currentOmsuId, setCurrentOmsuId] = useState<string>(CURRENT_OMSU);
+
+  const currentOmsu = state.omsus.find((m) => m.id === currentOmsuId) || state.omsus.find((m) => m.id === CURRENT_OMSU);
+  const isZatoOmsu = !!currentOmsu?.isZato;
 
   useEffect(() => {
     dispatch({ type: 'SET_MODULE', module: activeModule });
@@ -137,14 +141,30 @@ function Shell({ activeModule, onHome }: { activeModule: ModuleId, onHome: () =>
 
   const switchRole = (r: RoleId) => {
     setRole(r);
-    setBlock(getBlocks(r, activeModule, state.blockSettings)[0]);
-    setPage(DEFAULT_PAGE[r]);
+    const avail = getBlocks(r, activeModule, state.blockSettings);
+    const targetBlock = avail[0];
+    setBlock(targetBlock);
+    if (targetBlock === 'rating_view' && r === 'omsu') {
+      setPage(isZatoOmsu ? 'rating-zato' : 'rating');
+    } else {
+      setPage(DEFAULT_PAGE[r]);
+    }
     setSubSection('ind');
   };
 
   const switchBlock = (b: BlockId) => {
     setBlock(b);
-    setPage(b === 'admin_block' ? 'users' : b === 'rating_view' ? 'rating' : DEFAULT_PAGE[role]);
+    if (b === 'admin_block') {
+      setPage('users');
+    } else if (b === 'rating_view') {
+      if (role === 'omsu') {
+        setPage(isZatoOmsu ? 'rating-zato' : 'rating');
+      } else {
+        setPage('rating');
+      }
+    } else {
+      setPage(DEFAULT_PAGE[role]);
+    }
     setSubSection('ind');
   };
 
@@ -159,10 +179,15 @@ function Shell({ activeModule, onHome }: { activeModule: ModuleId, onHome: () =>
         { id: 'dicts' as PageId, label: 'Справочники' },
       ]
     : block === 'rating_view'
-      ? [
-          { id: 'rating' as PageId, label: 'Рейтинг ОМСУ' },
-          ...(role === 'admin' || role === 'mef' ? [{ id: 'rating-zato' as PageId, label: 'Рейтинг ОМСУ ЗАТО' }] : []),
-        ]
+      ? (role === 'admin' || role === 'mef'
+          ? [
+              { id: 'rating' as PageId, label: 'Рейтинг ОМСУ' },
+              { id: 'rating-zato' as PageId, label: 'Рейтинг ОМСУ ЗАТО' },
+            ]
+          : isZatoOmsu
+            ? [{ id: 'rating-zato' as PageId, label: 'Рейтинг ОМСУ ЗАТО' }]
+            : [{ id: 'rating' as PageId, label: 'Рейтинг ОМСУ' }]
+        )
       : block === 'mun' && subSection === 'note'
         ? NOTE_NAV[role]
         : NAV[role];
@@ -231,6 +256,33 @@ function Shell({ activeModule, onHome }: { activeModule: ModuleId, onHome: () =>
                 </ul>
               </PopoverContent>
             </Popover>
+
+            {role === 'omsu' && (
+              <div className="flex items-center gap-1.5 rounded-md bg-white/10 px-2 py-1">
+                <span className="text-xs text-white/80 shrink-0 font-medium">ОМСУ:</span>
+                <Select
+                  value={currentOmsuId}
+                  onValueChange={(v) => {
+                    setCurrentOmsuId(v);
+                    const selMun = state.omsus.find((m) => m.id === v);
+                    if (block === 'rating_view') {
+                      setPage(selMun?.isZato ? 'rating-zato' : 'rating');
+                    }
+                  }}
+                >
+                  <SelectTrigger className="h-8 w-[190px] border-0 bg-transparent text-white focus:ring-0 [&>span]:text-white text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {state.omsus.map((m) => (
+                      <SelectItem key={m.id} value={m.id}>
+                        {m.name} {m.isZato ? '(ЗАТО)' : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             <div className="flex items-center gap-2 rounded-md bg-white/10 px-2 py-1">
               <UserRound className="h-4 w-4" />

@@ -501,7 +501,7 @@ export function Setup({ block: _block }: { block?: string }) {
                   </div>
 
                   <div className="grid grid-cols-4 items-center gap-2">
-                    <Label className="col-span-3">ЗАТО (показатель виден только ОМСУ с отметкой ЗАТО)</Label>
+                    <Label className="col-span-3">ЗАТО</Label>
                     <div className="col-span-1 flex justify-center">
                       <input
                         type="checkbox"
