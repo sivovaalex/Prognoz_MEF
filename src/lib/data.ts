@@ -919,6 +919,18 @@ export function buildInitialState(moduleId: string): AppState {
     cios = [...CIOS, ...RATING_EXTRA_CIOS];
   }
 
+  try {
+    if (typeof localStorage !== 'undefined') {
+      const savedZato = localStorage.getItem('prognoz_mef_zato_indicators');
+      if (savedZato) {
+        const zatoMap: Record<string, boolean> = JSON.parse(savedZato);
+        indicators = indicators.map(ind => ind.id in zatoMap ? { ...ind, zato: zatoMap[ind.id] } : ind);
+      }
+    }
+  } catch (e) {
+    // ignore
+  }
+
   const units = Array.from(new Set(indicators.map(i => i.unit).filter(Boolean)));
 
     const cioValues = buildCioValues(indicators);
@@ -1240,19 +1252,19 @@ export const RATING_DIRECTIONS: Direction[] = [
 
 export const RATING_INDICATORS: Indicator[] = [
   // Направление «Доверие к власти коммуникации и политика» (по референсному отчёту)
-  { id: 'rt1', num: '1', name: 'Уровень доверия населения органам власти, %', directionId: 'd_rating_1', cioId: 'c_mininter', unit: '%', optimum: 'max', weight: 3, level: 1, parentId: null, actualFrom: '2024-01-01' },
-  { id: 'rt2', num: '2', name: 'Реализация государственных задач, %', directionId: 'd_rating_1', cioId: 'c_mininter', unit: '%', optimum: 'max', weight: 2, level: 1, parentId: null, actualFrom: '2024-01-01' },
+  { id: 'rt1', num: '1', name: 'Уровень доверия населения органам власти, %', directionId: 'd_rating_1', cioId: 'c_mininter', unit: '%', optimum: 'max', weight: 3, level: 1, parentId: null, actualFrom: '2024-01-01', zato: true },
+  { id: 'rt2', num: '2', name: 'Реализация государственных задач, %', directionId: 'd_rating_1', cioId: 'c_mininter', unit: '%', optimum: 'max', weight: 2, level: 1, parentId: null, actualFrom: '2024-01-01', zato: true },
   { id: 'rt3', num: '3', name: 'Коммуникация и политика, балл/место', directionId: 'd_rating_1', cioId: 'c_minsport', unit: 'балл', optimum: 'max', weight: 2, level: 1, parentId: null, actualFrom: '2024-01-01' },
-  { id: 'rt31', num: '3.1', name: 'Итоговая оценка критерия «Инфоугрозы», место', directionId: 'd_rating_1', cioId: 'c_mimp', unit: 'место', optimum: 'min', weight: 1, level: 2, parentId: 'rt3', actualFrom: '2024-01-01' },
+  { id: 'rt31', num: '3.1', name: 'Итоговая оценка критерия «Инфоугрозы», место', directionId: 'd_rating_1', cioId: 'c_mimp', unit: 'место', optimum: 'min', weight: 1, level: 2, parentId: 'rt3', actualFrom: '2024-01-01', zato: true },
   { id: 'rt32', num: '3.2', name: 'Итоговая оценка критерия «Качественная отработка Повторных касаний», место', directionId: 'd_rating_1', cioId: 'c_mininter', unit: 'место', optimum: 'min', weight: 1, level: 2, parentId: 'rt3', actualFrom: '2024-01-01' },
   { id: 'rt33', num: '3.3', name: 'Итоговая оценка критерия «Безопасный регион», место', directionId: 'd_rating_1', cioId: 'c_gurb', unit: 'место', optimum: 'min', weight: 1, level: 2, parentId: 'rt3', actualFrom: '2024-01-01' },
   { id: 'rt331', num: '3.3.1', name: 'Оценка подкритерия Система видеонаблюдения «Безопасный регион», балл/место', directionId: 'd_rating_1', cioId: 'c_gurb', unit: 'балл', optimum: 'max', weight: 1, level: 3, parentId: 'rt33', actualFrom: '2024-01-01' },
   { id: 'rt332', num: '3.3.2', name: 'Оценка подкритерия «Выявление нарушений с помощью камер в/н», балл/место', directionId: 'd_rating_1', cioId: 'c_mingos', unit: 'балл', optimum: 'max', weight: 1, level: 3, parentId: 'rt33', actualFrom: '2024-01-01' },
   { id: 'rt34', num: '3.4', name: 'Внедрение единого стандарта зон воинских захоронений, место', directionId: 'd_rating_1', cioId: 'c_mimp', unit: 'место', optimum: 'min', weight: 1, level: 2, parentId: 'rt3', actualFrom: '2024-01-01' },
   // Направление «Жизненное пространство»
-  { id: 'r2', num: '1', name: 'Качество дорог', directionId: 'd_rating_2', cioId: 'c1', unit: '%', optimum: 'max', weight: 2, level: 1, parentId: null, actualFrom: '2024-01-01' },
+  { id: 'r2', num: '1', name: 'Качество дорог', directionId: 'd_rating_2', cioId: 'c1', unit: '%', optimum: 'max', weight: 2, level: 1, parentId: null, actualFrom: '2024-01-01', zato: true },
   { id: 'r4', num: '2', name: 'Благоустройство общественных территорий', directionId: 'd_rating_2', cioId: 'c3', unit: '%', optimum: 'max', weight: 1, level: 1, parentId: null, actualFrom: '2024-01-01' },
   // Направление «Экономика и финансы»
-  { id: 'r5', num: '1', name: 'Доходы бюджета ОМСУ', directionId: 'd_rating_3', cioId: 'c1', unit: 'млн руб.', optimum: 'max', weight: 2, level: 1, parentId: null, actualFrom: '2024-01-01' },
+  { id: 'r5', num: '1', name: 'Доходы бюджета ОМСУ', directionId: 'd_rating_3', cioId: 'c1', unit: 'млн руб.', optimum: 'max', weight: 2, level: 1, parentId: null, actualFrom: '2024-01-01', zato: true },
   { id: 'r6', num: '2', name: 'Инвестиции в основной капитал', directionId: 'd_rating_3', cioId: 'c2', unit: 'млн руб.', optimum: 'max', weight: 1, level: 1, parentId: null, actualFrom: '2024-01-01' },
 ];

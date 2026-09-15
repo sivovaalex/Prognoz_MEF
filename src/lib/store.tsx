@@ -84,6 +84,22 @@ function now(): string {
 
 let notifId = 100;
 
+function saveZatoOverrides(indicators: Indicator[]) {
+  try {
+    if (typeof localStorage !== 'undefined') {
+      const zatoMap: Record<string, boolean> = {};
+      indicators.forEach((i) => {
+        if (i.zato !== undefined) {
+          zatoMap[i.id] = !!i.zato;
+        }
+      });
+      localStorage.setItem('prognoz_mef_zato_indicators', JSON.stringify(zatoMap));
+    }
+  } catch (e) {
+    // ignore
+  }
+}
+
 function reducer(state: AppState, a: Action): AppState {
   switch (a.type) {
     case 'OMSU_SET_VALUE': {
@@ -457,6 +473,7 @@ function reducer(state: AppState, a: Action): AppState {
         campaign: { ...state.campaign, status: 'completed' },
         history: [...state.history, { at: now(), actor: 'Куратор МЭФ', action: 'Сформирован и опубликован итоговый сводный рейтинг' }],
       };
+
     case 'ADD_INDICATOR': {
       const date = new Date().toISOString().split('T')[0];
       let next: Indicator[];
@@ -468,14 +485,17 @@ function reducer(state: AppState, a: Action): AppState {
       } else {
         next = [...state.indicators, a.indicator];
       }
+      saveZatoOverrides(next);
       return { ...state, indicators: renumberAll(next, state.directions, date) };
     }
     case 'UPDATE_INDICATOR': {
       const date = new Date().toISOString().split('T')[0];
+      const updated = state.indicators.map((i) => (i.id === a.indicator.id ? a.indicator : i));
+      saveZatoOverrides(updated);
       return {
         ...state,
         indicators: renumberAll(
-          state.indicators.map((i) => (i.id === a.indicator.id ? a.indicator : i)),
+          updated,
           state.directions,
           date,
         ),
