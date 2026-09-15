@@ -86,6 +86,7 @@ export interface Indicator {
   isReference?: boolean;       // Справочно
   hasRatingParams?: boolean;   // Параметры рейтинга включены
   ratingFormula?: string;      // Формула рейтинга
+  ratingFormulaZato?: string;  // Формула рейтинга ЗАТО
 }
 
 /** Заполняемый показатель (не группа) */
