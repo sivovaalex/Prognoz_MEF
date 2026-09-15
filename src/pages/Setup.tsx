@@ -62,6 +62,7 @@ export function Setup({ block: _block }: { block?: string }) {
       isReference: false,
       hasRatingParams: false,
       ratingFormula: '',
+      ratingFormulaZato: '',
     });
   };
 
@@ -289,6 +290,7 @@ export function Setup({ block: _block }: { block?: string }) {
                                       !!ind.ratingFormula
                                     ),
                                     ratingFormula: ind.ratingFormula || '',
+                                    ratingFormulaZato: ind.ratingFormulaZato || '',
                                   });
                                 }}>
                                   <Pencil className="h-4 w-4" />
@@ -558,6 +560,17 @@ export function Setup({ block: _block }: { block?: string }) {
                       placeholder="Формула расчёта рейтинга"
                       value={editInd.ratingFormula || ''}
                       onChange={(e) => setEditInd({ ...editInd, ratingFormula: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-4 items-center gap-2">
+                    <Label>Формула рейтинга ЗАТО</Label>
+                    <Input
+                      disabled={!editInd.hasRatingParams}
+                      className="col-span-3 font-mono text-xs disabled:bg-slate-100 disabled:cursor-not-allowed disabled:text-muted-foreground"
+                      placeholder="Формула расчёта рейтинга для ЗАТО"
+                      value={editInd.ratingFormulaZato || ''}
+                      onChange={(e) => setEditInd({ ...editInd, ratingFormulaZato: e.target.value })}
                     />
                   </div>
                 </div>

@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useStore } from '@/lib/store';
 
-import { computeRating, computeDirectionRatings, rankValues, rankColor, fmt, type RatingCalcType, type MunRating } from '@/lib/rating';
+import { computeRating, computeZatoRating, computeDirectionRatings, rankValues, rankColor, fmt, type RatingCalcType, type MunRating } from '@/lib/rating';
 import { RATING_DEFAULT_PERIODS } from '@/lib/data';
 import { EMPTY_TREE_FILTER, chevronParents, visibleTree } from '@/lib/indTree';
 import { TreeToggle } from '@/components/IndToolbar';
@@ -636,6 +636,7 @@ export function RatingView({ role }: { role?: RoleId } = {}) {
             <TabsContent value="compare">
               <CompareVariants sort={compareSort} period={period} periodName={selectedPeriodName} />
             </TabsContent>
+
           </Tabs>
         </CardContent>
       </Card>
@@ -786,6 +787,415 @@ function CompareVariants({ sort, period, periodName }: { sort: string; period: n
       <p className="text-xs text-muted-foreground mt-2">
         Сравнение позволяет куратору МЭФ оценить чувствительность итогового места к методике расчёта до утверждения итогового рейтинга.
       </p>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Рейтинг ОМСУ ЗАТО — отдельная страница (подраздел «Рейтинг ОМСУ»)
+// ─────────────────────────────────────────────────────────────────────────────
+export function ZatoRatingView() {
+  const { state } = useStore();
+  const mode = state.ratingMode;
+
+  const ratingPeriods = useMemo(() => {
+    const curName = state.campaign.module === 'rating' && state.campaign.period
+      ? state.campaign.period
+      : RATING_DEFAULT_PERIODS[0].name;
+    return [
+      { id: 'cur', name: `${curName} (текущий сбор)`, quarter: 1, isCurrent: true },
+      ...RATING_DEFAULT_PERIODS.slice(1).map((p) => ({ ...p, isCurrent: false })),
+    ];
+  }, [state.campaign.module, state.campaign.period]);
+
+  const [calcType, setCalcType] = useState<RatingCalcType>('base');
+  const [selectedPeriodId, setSelectedPeriodId] = useState<string>('cur');
+  const selectedPeriodObj = ratingPeriods.find((p) => p.id === selectedPeriodId) || ratingPeriods[0];
+  const period = selectedPeriodObj.quarter ?? 1;
+  const selectedPeriodName = selectedPeriodObj.name;
+
+  const [tab, setTab] = useState('zterritory');
+  const [selMun, setSelMun] = useState<string>('m52');
+  const [selInd, setSelInd] = useState<string>('total');
+  const [withDyn, setWithDyn] = useState(false);
+  const [sortDir, setSortDir] = useState<string>('none');
+  const [compareSort, setCompareSort] = useState<string>('none');
+
+  const zatoRows = useMemo(() => computeZatoRating(state, mode, { calcType, period }), [state, mode, calcType, period]);
+  const zatoInds = useMemo(() => state.indicators.filter((i) => !i.isGroup && i.zato), [state.indicators]);
+  const zatoMunsSorted = useMemo(
+    () => zatoRows.slice().sort((a, b) => a.name.localeCompare(b.name, 'ru')),
+    [zatoRows],
+  );
+  const zatoDirRows = useMemo(() => computeDirectionRatings(state, zatoRows, { calcType }), [state, zatoRows, calcType]);
+  const zatoN = zatoRows.length;
+
+  const activeDirections = useMemo(() =>
+    selInd === 'total'
+      ? state.directions.filter((d) => zatoInds.some((i) => i.directionId === d.id))
+      : (state.directions.find((d) => d.id === selInd) ? [state.directions.find((d) => d.id === selInd)!] : []),
+    [state.directions, zatoInds, selInd],
+  );
+
+  const dynPlaces = (key: string) =>
+    rankValues(zatoRows.map((m) => ({ id: m.munId, value: dynDelta(key + m.munId) })), 'max');
+
+  const thCls = 'border border-slate-200 bg-slate-50 px-3 py-2 text-left text-xs font-semibold text-slate-700';
+  const tdCls = 'border border-slate-100 px-3 py-1.5 text-xs text-slate-800';
+
+  if (zatoInds.length === 0) {
+    return (
+      <Card>
+        <CardContent className="pt-6">
+          <div className="rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+            Нет показателей с признаком «ЗАТО». Установите флажок «ЗАТО» в настройках показателя для включения его в рейтинг ЗАТО.
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Фильтры */}
+      <Card>
+        <CardContent className="pt-4">
+          <div className="flex flex-wrap items-end gap-x-6 gap-y-3">
+            <div className="space-y-1">
+              <span className="text-xs font-medium text-muted-foreground">Тип расчёта</span>
+              <Select value={calcType} onValueChange={(v) => setCalcType(v as RatingCalcType)}>
+                <SelectTrigger className="w-64"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="base">Исходный алгоритм (равные веса)</SelectItem>
+                  <SelectItem value="individual">Индивидуальный вес показателей</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <span className="text-xs font-medium text-muted-foreground">Период сбора</span>
+              <Select value={selectedPeriodId} onValueChange={setSelectedPeriodId}>
+                <SelectTrigger className="w-64"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {ratingPeriods.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {(tab === 'zterritory' || tab === 'zdirection') && (
+              <div className="space-y-1">
+                <span className="text-xs font-medium text-muted-foreground">Показатели ЗАТО</span>
+                <Select value={selInd} onValueChange={setSelInd}>
+                  <SelectTrigger className="w-64">
+                    <SelectValue>{selInd === 'total' ? 'Итоговый рейтинг ЗАТО' : (state.directions.find(d => d.id === selInd)?.name ?? '')}</SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="total">Итоговый рейтинг ЗАТО</SelectItem>
+                    {state.directions.filter(d => zatoInds.some(i => i.directionId === d.id)).map((d) => (
+                      <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            {tab === 'zterritory' && (
+              <div className="space-y-1">
+                <span className="text-xs font-medium text-muted-foreground">Территория ЗАТО</span>
+                <Select value={selMun} onValueChange={setSelMun}>
+                  <SelectTrigger className="w-52"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {zatoMunsSorted.map((m) => (
+                      <SelectItem key={m.munId} value={m.munId}>{m.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            {tab === 'zdirection' && (
+              <div className="space-y-1">
+                <span className="text-xs font-medium text-muted-foreground">Сортировка</span>
+                <Select value={sortDir} onValueChange={setSortDir}>
+                  <SelectTrigger className="w-52"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Без сортировки</SelectItem>
+                    <SelectItem value="place-asc">Место по возрастанию</SelectItem>
+                    <SelectItem value="place-desc">Место по убыванию</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            {tab === 'zcompare' && (
+              <div className="space-y-1">
+                <span className="text-xs font-medium text-muted-foreground">Сортировка</span>
+                <Select value={compareSort} onValueChange={setCompareSort}>
+                  <SelectTrigger className="w-52"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">По алфавиту</SelectItem>
+                    <SelectItem value="base-asc">Исх. алгоритм ↑</SelectItem>
+                    <SelectItem value="base-desc">Исх. алгоритм ↓</SelectItem>
+                    <SelectItem value="ind-asc">Инд. вес ↑</SelectItem>
+                    <SelectItem value="ind-desc">Инд. вес ↓</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            {(tab === 'zterritory' || tab === 'zdirection') && (
+              <label className="flex cursor-pointer select-none items-center gap-2 text-sm">
+                <input type="checkbox" className="h-4 w-4 rounded border-gray-300" checked={withDyn} onChange={(e) => setWithDyn(e.target.checked)} />
+                С учётом динамики
+              </label>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Легенда */}
+      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+        <span>min</span>
+        <div className="h-3 w-64 rounded" style={{ background: 'linear-gradient(to right, #b7e4a8, #fff2a0, #ffb3a7)' }} />
+        <span>max</span>
+      </div>
+
+      {/* Таблицы */}
+      <Card>
+        <CardContent className="pt-4">
+          <TableMeta periodName={selectedPeriodName} />
+          <Tabs value={tab} onValueChange={setTab}>
+            <TabsList className="mb-4">
+              <TabsTrigger value="zterritory">Сводная оценка по территории</TabsTrigger>
+              <TabsTrigger value="zdirection">Сводная оценка по разделу показателя</TabsTrigger>
+              <TabsTrigger value="zindicators">Сводная оценка по показателям</TabsTrigger>
+              <TabsTrigger value="zcompare">Сравнение вариантов расчёта</TabsTrigger>
+            </TabsList>
+
+            {/* ─── По территории ─── */}
+            <TabsContent value="zterritory">
+              {(() => {
+                const munRow = zatoRows.find(r => r.munId === selMun);
+                const selDir = selInd === 'total' ? null : state.directions.find(d => d.id === selInd) ?? null;
+                const topScore = selDir ? (zatoDirRows[selDir.id]?.[selMun]?.score ?? null) : (munRow?.score ?? null);
+                const topPlace = selDir ? (zatoDirRows[selDir.id]?.[selMun]?.place ?? null) : (munRow?.place ?? null);
+                return (
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse">
+                      <thead>
+                        <tr>
+                          <th className={thCls}>Разделы/показатели (ЗАТО)</th>
+                          <th className={thCls}>Значение</th>
+                          <th className={thCls}>Место по значению</th>
+                          <th className={thCls}>Динамика</th>
+                          <th className={thCls}>Место по динамике</th>
+                          <th className={thCls}>Итоговое место</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr className="font-semibold bg-blue-50">
+                          <td className={tdCls}>{selDir ? `Итоговый рейтинг ЗАТО: ${selDir.name}` : 'Итоговый рейтинг ЗАТО'}</td>
+                          <td className={tdCls} style={{ background: rankColor(topPlace, zatoN) }}>{fmt(topScore, 0)}</td>
+                          <td className={tdCls} style={{ background: rankColor(topPlace, zatoN) }}>{topPlace ?? '—'}</td>
+                          <td className={tdCls}><DynCell delta={dynDelta(selMun + selInd)} /></td>
+                          <td className={tdCls}>{withDyn ? (dynPlaces(selInd)[selMun] ?? '—') : '—'}</td>
+                          <td className={tdCls} style={{ background: rankColor(topPlace, zatoN) }}>{topPlace ?? '—'}</td>
+                        </tr>
+                        {activeDirections.map((d) => {
+                          const dr = zatoDirRows[d.id]?.[selMun];
+                          const dirInds = zatoInds.filter(i => i.directionId === d.id);
+                          if (!dirInds.length) return null;
+                          return [
+                            <tr key={d.id} className="font-medium bg-slate-50">
+                              <td className={tdCls}>{d.name}</td>
+                              <td className={tdCls} style={{ background: rankColor(dr?.place ?? null, zatoN) }}>{fmt(dr?.score ?? null, 0)}</td>
+                              <td className={tdCls} style={{ background: rankColor(dr?.place ?? null, zatoN) }}>{dr?.place ?? '—'}</td>
+                              <td className={tdCls}><DynCell delta={dynDelta(selMun + d.id)} /></td>
+                              <td className={tdCls}>{withDyn ? (dynPlaces(d.id)[selMun] ?? '—') : '—'}</td>
+                              <td className={tdCls} style={{ background: rankColor(dr?.place ?? null, zatoN) }}>{dr?.place ?? '—'}</td>
+                            </tr>,
+                            ...dirInds.map((ind) => {
+                              const c = munRow?.cells[ind.id];
+                              return (
+                                <tr key={ind.id}>
+                                  <td className={tdCls}><span style={{ paddingLeft: 24 }}>{ind.num} {ind.name}</span></td>
+                                  <td className={tdCls} style={{ background: rankColor(c?.rank ?? null, zatoN) }}>
+                                    {fmt(c?.value ?? null)}{c && !c.approved && c.value !== null && mode === 'preview' ? ' *' : ''}
+                                  </td>
+                                  <td className={tdCls} style={{ background: rankColor(c?.rank ?? null, zatoN) }}>{c?.rank ?? '—'}</td>
+                                  <td className={tdCls}><DynCell delta={dynDelta(selMun + ind.id)} /></td>
+                                  <td className={tdCls}>{withDyn ? (dynPlaces(ind.id)[selMun] ?? '—') : '—'}</td>
+                                  <td className={tdCls} style={{ background: rankColor(c?.rank ?? null, zatoN) }}>{c?.rank ?? '—'}</td>
+                                </tr>
+                              );
+                            }),
+                          ];
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                );
+              })()}
+            </TabsContent>
+
+            {/* ─── По разделу показателя ─── */}
+            <TabsContent value="zdirection">
+              {(() => {
+                let list = zatoMunsSorted.slice();
+                if (sortDir !== 'none') {
+                  const getPlace = (r: typeof list[0]) =>
+                    selInd === 'total' ? r.place : (zatoDirRows[selInd]?.[r.munId]?.place ?? null);
+                  const desc = sortDir.endsWith('-desc');
+                  list.sort((a, b) => {
+                    const va = getPlace(a), vb = getPlace(b);
+                    if (va == null && vb == null) return a.name.localeCompare(b.name, 'ru');
+                    if (va == null) return 1;
+                    if (vb == null) return -1;
+                    return desc ? vb - va : va - vb;
+                  });
+                }
+                return (
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse">
+                      <thead>
+                        <tr>
+                          <th className={thCls}>Территории (ЗАТО)</th>
+                          <th className={thCls}>Значение</th>
+                          <th className={thCls}>Место по значению</th>
+                          <th className={thCls}>Динамика</th>
+                          <th className={thCls}>Место по динамике</th>
+                          <th className={thCls}>Итоговое место</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {list.map((r, idx) => {
+                          const dr = selInd === 'total' ? null : (zatoDirRows[selInd]?.[r.munId] ?? null);
+                          const val = selInd === 'total' ? r.score : (dr?.score ?? null);
+                          const place = selInd === 'total' ? r.place : (dr?.place ?? null);
+                          return (
+                            <tr key={r.munId}>
+                              <td className={tdCls}>{idx + 1}. {r.name}</td>
+                              <td className={tdCls} style={{ background: rankColor(place, zatoN) }}>{fmt(val)}</td>
+                              <td className={tdCls} style={{ background: rankColor(place, zatoN) }}>{place ?? '—'}</td>
+                              <td className={tdCls}><DynCell delta={dynDelta(r.munId + selInd)} /></td>
+                              <td className={tdCls}>{withDyn ? (dynPlaces(selInd)[r.munId] ?? '—') : '—'}</td>
+                              <td className={tdCls} style={{ background: rankColor(place, zatoN) }}>{place ?? '—'}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                );
+              })()}
+            </TabsContent>
+
+            {/* ─── По показателям (матрица) ─── */}
+            <TabsContent value="zindicators">
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr>
+                      <th className={`${mTh} sticky left-0 z-20`} rowSpan={3} style={{ width: 34 }}>
+                        <RotatedHeader text="Показатели ЗАТО" height={340} />
+                      </th>
+                      <th className={`${mTh} sticky left-[34px] z-20`} rowSpan={3} />
+                      <th className={mTh} rowSpan={2}>
+                        <RotatedHeader text="Итоговый рейтинг" height={320} />
+                      </th>
+                      {state.directions.filter(d => zatoInds.some(i => i.directionId === d.id)).map((d) => {
+                        const cnt = zatoInds.filter(i => i.directionId === d.id).length;
+                        return <th key={d.id} className={mTh} colSpan={cnt}>{d.name}</th>;
+                      })}
+                    </tr>
+                    <tr>
+                      {zatoInds.map((ind) => (
+                        <th key={ind.id} className={mTh} title={`${ind.num} ${ind.name}`}>
+                          <RotatedHeader text={`${ind.num} ${ind.name}`} height={280} align="end" />
+                        </th>
+                      ))}
+                    </tr>
+                    <tr>
+                      <th className={mTh}><RotatedHeader text="Место по значению" height={140} /></th>
+                      {zatoInds.map((ind) => (
+                        <th key={ind.id} className={mTh}><RotatedHeader text="Место по значению" height={140} /></th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {zatoMunsSorted.map((r, idx) => (
+                      <tr key={r.munId}>
+                        <td className={`${mTd} sticky left-0 z-10 bg-white`} style={{ width: 34 }} />
+                        <td className={`${mTd} sticky left-[34px] z-10 bg-white font-medium`}>{idx + 1}. {r.name}</td>
+                        <td className={`${mTd} font-semibold`} style={{ background: cellColor(r.place, zatoN) }}>{r.place ?? '—'}</td>
+                        {zatoInds.map((ind) => {
+                          const c = r.cells[ind.id];
+                          return (
+                            <td key={ind.id} className={mTd}
+                              style={{ background: cellColor(c?.rank ?? null, zatoN) }}
+                              title={`${ind.num} ${ind.name}: ${fmt(c?.value ?? null)}`}>
+                              {c?.rank ?? '—'}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">
+                В ячейках — место ОМСУ ЗАТО по значению показателя среди закрытых административно-территориальных образований.
+              </p>
+            </TabsContent>
+
+            {/* ─── Сравнение вариантов ─── */}
+            <TabsContent value="zcompare">
+              {(() => {
+                const baseRows = computeZatoRating(state, mode, { calcType: 'base', period });
+                const indRows = computeZatoRating(state, mode, { calcType: 'individual', period });
+                const indById = new Map(indRows.map(r => [r.munId, r]));
+                let list = baseRows
+                  .map(r => ({ munId: r.munId, name: r.name, basePlace: r.place, indPlace: indById.get(r.munId)?.place ?? null }))
+                  .sort((a, b) => a.name.localeCompare(b.name, 'ru'));
+                if (compareSort !== 'none') {
+                  const key: 'basePlace' | 'indPlace' = compareSort.startsWith('base') ? 'basePlace' : 'indPlace';
+                  const desc = compareSort.endsWith('desc');
+                  list.sort((a, b) => {
+                    const va = a[key], vb = b[key];
+                    if (va == null && vb == null) return a.name.localeCompare(b.name, 'ru');
+                    if (va == null) return 1;
+                    if (vb == null) return -1;
+                    return desc ? vb - va : va - vb;
+                  });
+                }
+                return (
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse">
+                      <thead>
+                        <tr>
+                          <th className={mTh} style={{ width: 34 }} />
+                          <th className={mTh}>Территории (ЗАТО)</th>
+                          <th className={mTh}>Исходный алгоритм</th>
+                          <th className={mTh}>Индивидуальный вес</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {list.map((r, idx) => (
+                          <tr key={r.munId}>
+                            <td className={`${mTd} text-left`}>{idx + 1}.</td>
+                            <td className={`${mTd} text-left`}>{r.name}</td>
+                            <td className={mTd} style={{ background: cellColor(r.basePlace, zatoN) }}>{r.basePlace ?? '—'}</td>
+                            <td className={mTd} style={{ background: cellColor(r.indPlace, zatoN) }}>{r.indPlace ?? '—'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Сравнение позволяет оценить чувствительность итогового места к методике расчёта среди ОМСУ ЗАТО.
+                    </p>
+                  </div>
+                );
+              })()}
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
     </div>
   );
 }
