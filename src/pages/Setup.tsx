@@ -455,16 +455,7 @@ export function Setup({ block: _block }: { block?: string }) {
 
               <>
                 <div className="border-t pt-3 mt-1">
-                  <label className="inline-flex items-center gap-2 cursor-pointer select-none">
-                    <input
-                      type="checkbox"
-                      id="has-rating-params-checkbox"
-                      className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                      checked={!!editInd.hasRatingParams}
-                      onChange={(e) => setEditInd({ ...editInd, hasRatingParams: e.target.checked })}
-                    />
-                    <span className="text-sm font-semibold text-slate-900">Отображать показатель в рейтинге</span>
-                  </label>
+                  <span className="text-sm font-semibold text-slate-900">Параметры рейтинга</span>
                 </div>
 
                 <div className="grid gap-3 text-sm">
@@ -544,6 +535,19 @@ export function Setup({ block: _block }: { block?: string }) {
                       value={editInd.calcException || ''}
                       onChange={(e) => setEditInd({ ...editInd, calcException: e.target.value })}
                     />
+                  </div>
+
+                  <div className="grid grid-cols-4 items-center gap-2">
+                    <label className="col-span-3 inline-flex items-center gap-2 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        id="has-rating-params-checkbox"
+                        className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        checked={!!editInd.hasRatingParams}
+                        onChange={(e) => setEditInd({ ...editInd, hasRatingParams: e.target.checked })}
+                      />
+                      <span className="text-sm font-medium text-slate-900">Отображать показатель в рейтинге</span>
+                    </label>
                   </div>
 
                   <div className="grid grid-cols-4 items-center gap-2">
