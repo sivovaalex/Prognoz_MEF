@@ -919,12 +919,18 @@ export function buildInitialState(moduleId: string): AppState {
     cios = [...CIOS, ...RATING_EXTRA_CIOS];
   }
 
+  let omsus = MUNICIPALITIES.map(m => ({ ...m, isActive: true }));
   try {
     if (typeof localStorage !== 'undefined') {
       const savedZato = localStorage.getItem('prognoz_mef_zato_indicators');
       if (savedZato) {
         const zatoMap: Record<string, boolean> = JSON.parse(savedZato);
         indicators = indicators.map(ind => ind.id in zatoMap ? { ...ind, zato: zatoMap[ind.id] } : ind);
+      }
+      const savedOmsusZato = localStorage.getItem('prognoz_mef_omsus_zato');
+      if (savedOmsusZato) {
+        const omsuZatoMap: Record<string, boolean> = JSON.parse(savedOmsusZato);
+        omsus = omsus.map(m => m.id in omsuZatoMap ? { ...m, isZato: omsuZatoMap[m.id] } : m);
       }
     }
   } catch (e) {
@@ -943,7 +949,7 @@ export function buildInitialState(moduleId: string): AppState {
       indicators,
       directions,
       cios: cios.map(c => ({ ...c, isActive: true })),
-      omsus: MUNICIPALITIES.map(m => ({ ...m, isActive: true })),
+      omsus,
       units: units.map((u, i) => ({ id: `u${i + 1}`, name: u, isActive: true })),
       blockSettings: {
         mun: { approvers: ['omsu', 'cio', 'mef'], reportingPeriods: [], estimatedPeriods: [], forecastPeriods: [], hasNote: false },

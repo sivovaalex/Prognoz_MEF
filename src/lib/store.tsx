@@ -100,6 +100,22 @@ function saveZatoOverrides(indicators: Indicator[]) {
   }
 }
 
+function saveOmsuZatoOverrides(omsus: any[]) {
+  try {
+    if (typeof localStorage !== 'undefined') {
+      const omsuZatoMap: Record<string, boolean> = {};
+      omsus.forEach((m) => {
+        if (m.isZato !== undefined) {
+          omsuZatoMap[m.id] = !!m.isZato;
+        }
+      });
+      localStorage.setItem('prognoz_mef_omsus_zato', JSON.stringify(omsuZatoMap));
+    }
+  } catch (e) {
+    // ignore
+  }
+}
+
 function reducer(state: AppState, a: Action): AppState {
   switch (a.type) {
     case 'OMSU_SET_VALUE': {
@@ -545,13 +561,19 @@ function reducer(state: AppState, a: Action): AppState {
       return { ...state, notifications: [...state.notifications, { id: ++notifId, at: now(), text: a.text, forRoles: a.forRoles }] };
     case 'SET_MODULE':
       return buildInitialState(a.module);
+
     case 'ADD_DICT_ITEM':
       return { ...state, [a.dict]: [...state[a.dict], a.item] };
-    case 'UPDATE_DICT_ITEM':
+    case 'UPDATE_DICT_ITEM': {
+      const updatedDict = state[a.dict].map((x: any) => (x.id === a.item.id ? a.item : x));
+      if (a.dict === 'omsus') {
+        saveOmsuZatoOverrides(updatedDict);
+      }
       return {
         ...state,
-        [a.dict]: state[a.dict].map((x: any) => (x.id === a.item.id ? a.item : x)),
+        [a.dict]: updatedDict,
       };
+    }
     case 'TOGGLE_DICT_ITEM':
       return {
         ...state,
