@@ -86,7 +86,7 @@ export function RatingView({ role }: { role?: RoleId } = {}) {
   const { state, dispatch } = useStore();
   const mode = state.ratingMode;
 
-  const canConfigureFormula = role === 'admin' || role === 'mef';
+  const canConfigureFormula = role === 'admin';
   const [isFormulaModalOpen, setIsFormulaModalOpen] = useState(false);
   const [formulaInput, setFormulaInput] = useState(state.finalRatingFormula || 'СУММ(Ранг_показателя * Вес)');
 
@@ -797,7 +797,7 @@ function CompareVariants({ sort, period, periodName }: { sort: string; period: n
 export function ZatoRatingView({ role }: { role?: RoleId } = {}) {
   const { state, dispatch } = useStore();
   const mode = state.ratingMode;
-  const canConfigureFormula = role === 'admin' || role === 'mef';
+  const canConfigureFormula = role === 'admin';
 
   const [isFormulaModalOpen, setIsFormulaModalOpen] = useState(false);
   const [formulaInput, setFormulaInput] = useState(state.finalRatingFormulaZato || 'СУММ(Ранг_показателя * Вес)');
