@@ -81,21 +81,22 @@ export function rankValues(values: { id: string; value: number }[], optimum: 'ma
   return ranks;
 }
 
-/** Полный расчёт рейтинга */
+/** Полный расчёт рейтинга: только ОМСУ без признака ЗАТО */
 export function computeRating(state: AppState, mode: 'preview' | 'final', opts: RatingOptions = {}): MunRating[] {
   const { calcType = 'base', period = 0 } = opts;
+  const muns = (state.omsus && state.omsus.length > 0 ? state.omsus : MUNICIPALITIES).filter((m) => !m.isZato);
   const inds = state.indicators.filter((i) => !i.isGroup);
   const ranksByInd: Record<string, Record<string, number>> = {};
   inds.forEach((ind) => {
     const vals: { id: string; value: number }[] = [];
-    MUNICIPALITIES.forEach((m) => {
+    muns.forEach((m) => {
       const { value } = pickValue(state, m.id, ind.id, mode, period);
       if (value !== null) vals.push({ id: m.id, value });
     });
     ranksByInd[ind.id] = rankValues(vals, ind.optimum);
   });
 
-  const rows: MunRating[] = MUNICIPALITIES.map((m) => {
+  const rows: MunRating[] = muns.map((m) => {
     const cells: Record<string, CellData> = {};
     let score = 0;
     let missing = 0;
@@ -131,7 +132,7 @@ export function computeRating(state: AppState, mode: 'preview' | 'final', opts: 
  */
 export function computeZatoRating(state: AppState, mode: 'preview' | 'final', opts: RatingOptions = {}): MunRating[] {
   const { calcType = 'base', period = 0 } = opts;
-  const zatoMuns = MUNICIPALITIES.filter((m) => m.isZato);
+  const zatoMuns = (state.omsus && state.omsus.length > 0 ? state.omsus : MUNICIPALITIES).filter((m) => m.isZato);
   const inds = state.indicators.filter((i) => !i.isGroup && i.zato);
 
   const ranksByInd: Record<string, Record<string, number>> = {};

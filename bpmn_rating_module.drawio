@@ -1,0 +1,174 @@
+<mxfile host="app.diagrams.net" agent="Antigravity BPMN Generator">
+  <diagram id="rating_process_bpmn" name="Формирование и работа с Рейтингом ОМСУ">
+    <mxGraphModel dx="511" dy="328" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1920" pageHeight="1200" background="#F8FAFC" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="pool_main" parent="1" style="swimlane;html=1;childLayout=stackLayout;resizeParent=1;resizeParentMax=0;startSize=30;horizontal=0;horizontalFlip=0;fillColor=#1E293B;fontColor=#FFFFFF;strokeColor=#0F172A;fontStyle=1;fontSize=14;" value="ГАС «Управление» МО: Модуль «Формирование Рейтинга ОМСУ и ОМСУ ЗАТО»" vertex="1">
+          <mxGeometry height="1000" width="8880" x="40" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="lane_admin" parent="pool_main" style="swimlane;html=1;startSize=30;horizontal=0;fillColor=#F1F5F9;strokeColor=#CBD5E1;fontColor=#0F172A;fontStyle=1;fontSize=12;" value="Администратор&#xa;системы&#xa;(Конфигурация)" vertex="1">
+          <mxGeometry height="1000" width="1770" x="30" as="geometry" />
+        </mxCell>
+        <mxCell id="start_event" parent="lane_admin" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;fillColor=#22C55E;strokeColor=#15803D;fontColor=#FFFFFF;fontStyle=1;fontSize=10;" value="&lt;font style=&quot;font-size: 6px; color: rgb(21, 21, 21);&quot; face=&quot;Helvetica&quot;&gt;Старт кампании сбора рейтинга&lt;/font&gt;" vertex="1">
+          <mxGeometry height="45" width="45" x="50" y="70" as="geometry" />
+        </mxCell>
+        <mxCell id="task_omsu_conf" parent="lane_admin" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#64748B;fontColor=#1E293B;fontSize=11;arcSize=15;shadow=1;" value="1. Актуализация статусов ЗАТО (isZato) в справочнике ОМСУ" vertex="1">
+          <mxGeometry height="75" width="170" x="130" y="55" as="geometry" />
+        </mxCell>
+        <mxCell id="task_indicators_conf" parent="lane_admin" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#64748B;fontColor=#1E293B;fontSize=11;align=left;spacingLeft=8;arcSize=15;shadow=1;" value="2. Настройка показателей:&lt;br&gt;• Чекбокс «ЗАТО»&lt;br&gt;• Веса и оптимум (max/min)&lt;br&gt;• Формулы-надстройки показателя" vertex="1">
+          <mxGeometry height="85" width="200" x="330" y="50" as="geometry" />
+        </mxCell>
+        <mxCell id="task_formula_conf" parent="lane_admin" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#64748B;fontColor=#1E293B;fontSize=11;align=left;spacingLeft=8;arcSize=15;shadow=1;" value="3. Настройка итоговых формул:&#xa;• finalRatingFormula (Общий)&#xa;• finalRatingFormulaZato (ЗАТО)" vertex="1">
+          <mxGeometry height="85" width="190" x="560" y="50" as="geometry" />
+        </mxCell>
+        <mxCell id="lane_collectors" parent="pool_main" style="swimlane;html=1;startSize=30;horizontal=0;fillColor=#FFFFFF;strokeColor=#CBD5E1;fontColor=#0F172A;fontStyle=1;fontSize=12;" value="Участники сбора&#xa;(ОМСУ / Отраслевые ЦИО)&#xa;(Ввод и верификация)" vertex="1">
+          <mxGeometry height="1000" width="1770" x="1800" as="geometry" />
+        </mxCell>
+        <mxCell id="task_input" parent="lane_collectors" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#64748B;fontColor=#1E293B;fontSize=11;arcSize=15;shadow=1;" value="4. Ввод фактических значений показателей и первичное согласование ЦИО" vertex="1">
+          <mxGeometry height="80" width="190" x="560" y="50" as="geometry" />
+        </mxCell>
+        <mxCell id="task_rework" parent="lane_collectors" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FEF2F2;strokeColor=#EF4444;fontColor=#991B1B;fontSize=11;arcSize=15;" value="Доработка и исправление значений по замечаниям" vertex="1">
+          <mxGeometry height="80" width="170" x="780" y="50" as="geometry" />
+        </mxCell>
+        <mxCell id="lane_mef" parent="pool_main" style="swimlane;html=1;startSize=30;horizontal=0;fillColor=#F8FAFC;strokeColor=#CBD5E1;fontColor=#0F172A;fontStyle=1;fontSize=12;" value="Куратор МЭФ МО&#xa;(РМ МЭФ, Анализ,&#xa;Публикация)" vertex="1">
+          <mxGeometry height="1000" width="1770" x="3570" as="geometry" />
+        </mxCell>
+        <mxCell id="task_mef_review" parent="lane_mef" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#3B82F6;fontColor=#1E293B;fontSize=11;arcSize=15;shadow=1;" value="5. Экспертный контроль в «Рабочем месте МЭФ» (внесение правок МЭФ)" vertex="1">
+          <mxGeometry height="80" width="190" x="560" y="60" as="geometry" />
+        </mxCell>
+        <mxCell id="gw_mef_approve" parent="lane_mef" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FEF08A;strokeColor=#CA8A04;fontColor=#854D0E;fontStyle=1;fontSize=11;" value="Данные согласованы?" vertex="1">
+          <mxGeometry height="80" width="100" x="815" y="60" as="geometry" />
+        </mxCell>
+        <mxCell id="task_mef_analysis" parent="lane_mef" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#3B82F6;fontColor=#1E293B;fontSize=11;align=left;spacingLeft=8;arcSize=15;shadow=1;" value="8. Анализ предварительного рейтинга:&#xa;• Сводка по территории / разделу&#xa;• Сравнение методик весов&#xa;• Проверка рангов и динамики" vertex="1">
+          <mxGeometry height="90" width="210" x="1170" y="55" as="geometry" />
+        </mxCell>
+        <mxCell id="gw_mef_publish" parent="lane_mef" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FEF08A;strokeColor=#CA8A04;fontColor=#854D0E;fontStyle=1;fontSize=11;" value="Рейтинг утвержден?" vertex="1">
+          <mxGeometry height="80" width="100" x="1420" y="60" as="geometry" />
+        </mxCell>
+        <mxCell id="task_publish" parent="lane_mef" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DCFCE7;strokeColor=#16A34A;fontColor=#166534;fontStyle=1;fontSize=11;arcSize=15;shadow=1;" value="9. Публикация итогового рейтинга&#xa;(Кнопка «Опубликовать итоговый рейтинг»)" vertex="1">
+          <mxGeometry height="90" width="180" x="1560" y="55" as="geometry" />
+        </mxCell>
+        <mxCell id="lane_engine" parent="pool_main" style="swimlane;html=1;startSize=30;horizontal=0;fillColor=#F0FDF4;strokeColor=#CBD5E1;fontColor=#0F172A;fontStyle=1;fontSize=12;" value="Расчетное ядро&#xa;(Автоматический&#xa;сервис ГАС)" vertex="1">
+          <mxGeometry height="1000" width="1770" x="5340" as="geometry" />
+        </mxCell>
+        <mxCell id="gw_calc_fork" parent="lane_engine" style="rhombus;whiteSpace=wrap;html=1;fillColor=#E2E8F0;strokeColor=#64748B;fontColor=#0F172A;fontStyle=1;fontSize=20;" value="+" vertex="1">
+          <mxGeometry height="50" width="50" x="840" y="85" as="geometry" />
+        </mxCell>
+        <mxCell id="task_calc_gen" parent="lane_engine" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F0FDF4;strokeColor=#16A34A;fontColor=#166534;fontSize=11;arcSize=15;shadow=1;" value="6a. Расчет «Рейтинг ОМСУ»&#xa;(55 территорий МО, все показатели, по формуле finalRatingFormula)" vertex="1">
+          <mxGeometry height="70" width="200" x="920" y="25" as="geometry" />
+        </mxCell>
+        <mxCell id="task_calc_zato" parent="lane_engine" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F0FDF4;strokeColor=#16A34A;fontColor=#166534;fontSize=11;arcSize=15;shadow=1;" value="6b. Расчет «Рейтинг ОМСУ ЗАТО»&#xa;(территории с isZato=1, показатели zato=1, по формуле finalRatingFormulaZato)" vertex="1">
+          <mxGeometry height="75" width="200" x="920" y="125" as="geometry" />
+        </mxCell>
+        <mxCell id="gw_calc_join" parent="lane_engine" style="rhombus;whiteSpace=wrap;html=1;fillColor=#E2E8F0;strokeColor=#64748B;fontColor=#0F172A;fontStyle=1;fontSize=20;" value="+" vertex="1">
+          <mxGeometry height="50" width="50" x="1150" y="85" as="geometry" />
+        </mxCell>
+        <mxCell id="task_aggregate" parent="lane_engine" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#16A34A;fontColor=#1E293B;fontSize=11;arcSize=15;shadow=1;" value="7. Формирование матриц рангов, расчет динамики (+/-) и альтернативных весов" vertex="1">
+          <mxGeometry height="80" width="180" x="1230" y="70" as="geometry" />
+        </mxCell>
+        <mxCell id="task_snapshot" parent="lane_engine" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#16A34A;fontColor=#1E293B;fontSize=11;arcSize=15;shadow=1;" value="10. Фиксация итогового рейтинга" vertex="1">
+          <mxGeometry height="80" width="190" x="1555" y="70" as="geometry" />
+        </mxCell>
+        <mxCell id="lane_consumers" parent="pool_main" style="swimlane;html=1;startSize=30;horizontal=0;fillColor=#EFF6FF;strokeColor=#CBD5E1;fontColor=#0F172A;fontStyle=1;fontSize=12;" value="Потребители аналитики&#xa;(ОМСУ / ЗАТО / ЦИО)&#xa;(Работа с рейтингом)" vertex="1">
+          <mxGeometry height="1000" width="1770" x="7110" as="geometry" />
+        </mxCell>
+        <mxCell id="gw_role_filter" parent="lane_consumers" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FEF08A;strokeColor=#CA8A04;fontColor=#854D0E;fontStyle=1;fontSize=10;" value="Роль / Статус ОМСУ?" vertex="1">
+          <mxGeometry height="80" width="100" x="1600" y="60" as="geometry" />
+        </mxCell>
+        <mxCell id="task_view_general" parent="lane_consumers" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#2563EB;fontColor=#1E293B;fontSize=11;align=left;spacingLeft=8;arcSize=15;shadow=1;" value="11a. Работа с «Рейтинг ОМСУ»&#xa;(Обычные ОМСУ isZato=0, ЦИО, МЭФ)&#xa;• Сводная таблица 55 ОМСУ&#xa;• Матрица рангов и срезы" vertex="1">
+          <mxGeometry height="75" width="210" x="1340" y="25" as="geometry" />
+        </mxCell>
+        <mxCell id="task_view_zato" parent="lane_consumers" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#2563EB;fontColor=#1E293B;fontSize=11;align=left;spacingLeft=8;arcSize=15;shadow=1;" value="11b. Работа с «Рейтинг ОМСУ ЗАТО»&#xa;(ОМСУ ЗАТО isZato=1, ЦИО, МЭФ)&#xa;• Срез по когорте 5 ЗАТО&#xa;• Специализированные показатели" vertex="1">
+          <mxGeometry height="75" width="210" x="1340" y="110" as="geometry" />
+        </mxCell>
+        <mxCell id="task_export" parent="lane_consumers" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#2563EB;fontColor=#1E293B;fontSize=11;arcSize=15;shadow=1;" value="12. Аналитика, фильтрация, декомпозиция и экспорт отчетов (Excel / PDF)" vertex="1">
+          <mxGeometry height="70" width="190" x="1100" y="65" as="geometry" />
+        </mxCell>
+        <mxCell id="end_event" parent="lane_consumers" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;fillColor=#EF4444;strokeColor=#B91C1C;fontColor=#FFFFFF;fontStyle=1;fontSize=10;" value="Рейтинг сформирован, аналитика проведена" vertex="1">
+          <mxGeometry height="50" width="50" x="980" y="75" as="geometry" />
+        </mxCell>
+        <mxCell id="e1" edge="1" parent="1" source="start_event" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#475569;strokeWidth=2;" target="task_omsu_conf">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e2" edge="1" parent="1" source="task_omsu_conf" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#475569;strokeWidth=2;" target="task_indicators_conf">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e3" edge="1" parent="1" source="task_indicators_conf" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#475569;strokeWidth=2;" target="task_formula_conf">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e4" edge="1" parent="1" source="task_formula_conf" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#475569;strokeWidth=2;" target="task_input">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e5" edge="1" parent="1" source="task_input" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#475569;strokeWidth=2;" target="task_mef_review">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e6" edge="1" parent="1" source="task_mef_review" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#475569;strokeWidth=2;" target="gw_mef_approve">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e7_approve" edge="1" parent="1" source="gw_mef_approve" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#16A34A;strokeWidth=2;fontColor=#166534;fontStyle=1;" target="gw_calc_fork" value="Да">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e7_reject" edge="1" parent="1" source="gw_mef_approve" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#DC2626;strokeWidth=2;fontColor=#991B1B;fontStyle=1;" target="task_rework" value="На доработку">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e7_rework_to_input" edge="1" parent="1" source="task_rework" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#475569;strokeWidth=2;" target="task_input">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e8_fork_gen" edge="1" parent="1" source="gw_calc_fork" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#16A34A;strokeWidth=2;" target="task_calc_gen">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e8_fork_zato" edge="1" parent="1" source="gw_calc_fork" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#16A34A;strokeWidth=2;" target="task_calc_zato">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e9_join_gen" edge="1" parent="1" source="task_calc_gen" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#16A34A;strokeWidth=2;" target="gw_calc_join">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e9_join_zato" edge="1" parent="1" source="task_calc_zato" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#16A34A;strokeWidth=2;" target="gw_calc_join">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e10" edge="1" parent="1" source="gw_calc_join" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#16A34A;strokeWidth=2;" target="task_aggregate">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e11" edge="1" parent="1" source="task_aggregate" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#475569;strokeWidth=2;" target="task_mef_analysis">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e12" edge="1" parent="1" source="task_mef_analysis" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#475569;strokeWidth=2;" target="gw_mef_publish">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e13_publish_yes" edge="1" parent="1" source="gw_mef_publish" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#16A34A;strokeWidth=2;fontColor=#166534;fontStyle=1;" target="task_publish" value="Да">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e13_publish_no" edge="1" parent="1" source="gw_mef_publish" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#DC2626;strokeWidth=2;fontColor=#991B1B;fontStyle=1;" target="task_mef_review" value="Требует правок">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1470" y="390" />
+              <mxPoint x="655" y="390" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e14" edge="1" parent="1" source="task_publish" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#16A34A;strokeWidth=2;" target="task_snapshot">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e15" edge="1" parent="1" source="task_snapshot" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#2563EB;strokeWidth=2;" target="gw_role_filter">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e16_role_gen" edge="1" parent="1" source="gw_role_filter" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#2563EB;strokeWidth=2;fontColor=#1E40AF;fontSize=10;" target="task_view_general" value="isZato = 0&#xa;(Обычный ОМСУ)">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e16_role_zato" edge="1" parent="1" source="gw_role_filter" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#2563EB;strokeWidth=2;fontColor=#1E40AF;fontSize=10;" target="task_view_zato" value="isZato = 1&#xa;(ОМСУ ЗАТО)">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e17_gen_to_export" edge="1" parent="1" source="task_view_general" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#2563EB;strokeWidth=2;" target="task_export">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e17_zato_to_export" edge="1" parent="1" source="task_view_zato" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#2563EB;strokeWidth=2;" target="task_export">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e18" edge="1" parent="1" source="task_export" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#475569;strokeWidth=2;" target="end_event">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

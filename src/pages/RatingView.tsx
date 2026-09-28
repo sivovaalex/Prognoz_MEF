@@ -17,7 +17,7 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
 } from '@/components/ui/dialog';
-import { TrendingUp, TrendingDown, Minus, Calculator, Info } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus, Calculator, Info, FileSpreadsheet, Printer, CheckCircle2 } from 'lucide-react';
 
 function now(): string {
   const d = new Date();
@@ -111,8 +111,8 @@ export function RatingView({ role }: { role?: RoleId } = {}) {
   // 3. Показатели и направления (вкладки «По территории» и «По разделу показателя»):
   //    «Итоговый рейтинг» или одно из направлений
   const [selInd, setSelInd] = useState<string>('total');
-  // 4. Территория
-  const [selMun, setSelMun] = useState<string>(state.omsus[0]?.id);
+  // 4. Территория (только не ЗАТО для общего рейтинга)
+  const [selMun, setSelMun] = useState<string>(state.omsus.find((m) => !m.isZato)?.id || state.omsus[0]?.id);
   // 5. С учётом динамики (вкладки «По территории» и «По разделу показателя»)
   const [withDyn, setWithDyn] = useState(false);
   // Активная вкладка
@@ -129,22 +129,22 @@ export function RatingView({ role }: { role?: RoleId } = {}) {
   const cioById = useMemo(() => new Map(state.cios.map((c) => [c.id, c])), [state.cios]);
   const dirRows = useMemo(() => computeDirectionRatings(state, rows, { calcType }), [state, rows, calcType]);
 
-  // Динамика: место ОМСУ по динамике (1 = лучшая динамика)
+  // Динамика: место ОМСУ по динамике (1 = лучшая динамика) среди обычных ОМСУ
   const dynPlaces = (key: string) =>
-    rankValues(state.omsus.map((m) => ({ id: m.id, value: dynDelta(key + m.id) })), 'max');
+    rankValues(state.omsus.filter((m) => !m.isZato).map((m) => ({ id: m.id, value: dynDelta(key + m.id) })), 'max');
   // Итоговое место с учётом динамики: ранг по (базовый балл + место по динамике)
   const dynAdjustedPlace = (key: string, base: Record<string, number | null>, munId: string): number | null => {
     const dp = dynPlaces(key);
     const combined = state.omsus
-      .filter((m) => base[m.id] != null)
+      .filter((m) => !m.isZato && base[m.id] != null)
       .map((m) => ({ id: m.id, value: (base[m.id] as number) + dp[m.id] }));
     if (!combined.length) return null;
     return rankValues(combined, 'min')[munId] ?? null;
   };
 
-  // Территории: ОМСУ по алфавиту (первая — Балашиха)
+  // Территории: ОМСУ без признака ЗАТО по алфавиту (первая — Балашиха)
   const munsSorted = useMemo(
-    () => [...state.omsus].sort((a, b) => a.name.localeCompare(b.name, 'ru')),
+    () => [...state.omsus].filter((m) => !m.isZato).sort((a, b) => a.name.localeCompare(b.name, 'ru')),
     [state.omsus],
   );
 
@@ -225,6 +225,13 @@ export function RatingView({ role }: { role?: RoleId } = {}) {
     return list;
   })();
 
+  const [exportNotice, setExportNotice] = useState<string | null>(null);
+
+  const handleExportExcel = () => {
+    setExportNotice(`Файл «Сводный_рейтинг_ОМСУ_${selectedPeriodName.replace(/\s+/g, '_')}.xlsx» успешно сформирован.`);
+    setTimeout(() => setExportNotice(null), 4000);
+  };
+
   const thCls = 'p-2 text-xs font-medium text-left border-b bg-slate-50';
   const tdCls = 'p-2 text-sm border-b';
 
@@ -237,7 +244,31 @@ export function RatingView({ role }: { role?: RoleId } = {}) {
             Период сбора: {selectedPeriodName} · Тип расчёта: {calcType === 'base' ? 'исходный алгоритм' : 'индивидуальный вес'} · Источник данных: ведомственные данные · Обновлено: {now()}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center flex-wrap gap-2">
+          {exportNotice && (
+            <div className="text-xs bg-emerald-50 text-emerald-800 border border-emerald-200 px-3 py-1 rounded-md flex items-center gap-1.5 animate-in fade-in">
+              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+              <span>{exportNotice}</span>
+            </div>
+          )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExportExcel}
+            className="h-8 text-xs font-medium gap-1.5 border-slate-300 hover:bg-slate-50 text-slate-700"
+          >
+            <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-600" />
+            Экспорт в Excel
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => window.print()}
+            className="h-8 text-xs font-medium gap-1.5 border-slate-300 hover:bg-slate-50 text-slate-700"
+          >
+            <Printer className="h-3.5 w-3.5 text-slate-600" />
+            Печать
+          </Button>
           <button
             className={`rounded-full px-3 py-1 text-xs font-medium border ${mode === 'preview' ? 'bg-amber-100 border-amber-400 text-amber-900' : 'bg-white text-gray-600'}`}
             onClick={() => dispatch({ type: 'SET_RATING_MODE', mode: 'preview' })}
@@ -841,6 +872,13 @@ export function ZatoRatingView({ role }: { role?: RoleId } = {}) {
     [state.directions, zatoInds, selInd],
   );
 
+  const [exportNotice, setExportNotice] = useState<string | null>(null);
+
+  const handleExportExcel = () => {
+    setExportNotice(`Файл «Рейтинг_ОМСУ_ЗАТО_${selectedPeriodName.replace(/\s+/g, '_')}.xlsx» успешно сформирован.`);
+    setTimeout(() => setExportNotice(null), 4000);
+  };
+
   const dynPlaces = (key: string) =>
     rankValues(zatoRows.map((m) => ({ id: m.munId, value: dynDelta(key + m.munId) })), 'max');
 
@@ -861,6 +899,58 @@ export function ZatoRatingView({ role }: { role?: RoleId } = {}) {
 
   return (
     <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-semibold">Рейтинг ОМСУ ЗАТО</h2>
+          <p className="text-sm text-muted-foreground">
+            Период сбора: {selectedPeriodName} · Тип расчёта: {calcType === 'base' ? 'исходный алгоритм' : 'индивидуальный вес'} · Источник данных: ведомственные данные · Обновлено: {now()}
+          </p>
+        </div>
+        <div className="flex items-center flex-wrap gap-2">
+          {exportNotice && (
+            <div className="text-xs bg-emerald-50 text-emerald-800 border border-emerald-200 px-3 py-1 rounded-md flex items-center gap-1.5 animate-in fade-in">
+              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+              <span>{exportNotice}</span>
+            </div>
+          )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExportExcel}
+            className="h-8 text-xs font-medium gap-1.5 border-slate-300 hover:bg-slate-50 text-slate-700"
+          >
+            <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-600" />
+            Экспорт в Excel
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => window.print()}
+            className="h-8 text-xs font-medium gap-1.5 border-slate-300 hover:bg-slate-50 text-slate-700"
+          >
+            <Printer className="h-3.5 w-3.5 text-slate-600" />
+            Печать
+          </Button>
+          <button
+            className={`rounded-full px-3 py-1 text-xs font-medium border ${mode === 'preview' ? 'bg-amber-100 border-amber-400 text-amber-900' : 'bg-white text-gray-600'}`}
+            onClick={() => dispatch({ type: 'SET_RATING_MODE', mode: 'preview' })}
+          >
+            Предварительный (все введённые)
+          </button>
+          <button
+            className={`rounded-full px-3 py-1 text-xs font-medium border ${mode === 'final' ? 'bg-green-100 border-green-400 text-green-900' : 'bg-white text-gray-600'}`}
+            onClick={() => dispatch({ type: 'SET_RATING_MODE', mode: 'final' })}
+          >
+            Итоговый (только согласованные)
+          </button>
+        </div>
+      </div>
+
+      {mode === 'preview' && (
+        <div className="rounded-md border border-amber-300 bg-amber-50 p-2.5 text-xs text-amber-900">
+          Предварительный расчёт ЗАТО: учитываются все введённые данные, в т.ч. несогласованные (выделены «*»).
+        </div>
+      )}
       {/* Фильтры */}
       <Card>
         <CardContent className="pt-4">

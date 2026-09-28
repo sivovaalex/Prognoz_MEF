@@ -1,0 +1,515 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+             xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+             xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             id="Definitions_RatingModule"
+             targetNamespace="http://bpmn.io/schema/bpmn"
+             exporter="Antigravity BPMN Modeler"
+             exporterVersion="1.0">
+
+  <!-- Collaboration: Process with Lanes -->
+  <collaboration id="Collaboration_Rating">
+    <participant id="Participant_System" name="ГАС «Управление» МО: Модуль «Формирование Рейтинга ОМСУ»" processRef="Process_Rating_Workflow" />
+  </collaboration>
+
+  <!-- Process Definition -->
+  <process id="Process_Rating_Workflow" isExecutable="false">
+    <!-- Lanes -->
+    <laneSet id="LaneSet_Rating">
+      <lane id="Lane_Admin" name="Администратор системы">
+        <flowNodeRef>StartEvent_1</flowNodeRef>
+        <flowNodeRef>Task_Config_OMSU</flowNodeRef>
+        <flowNodeRef>Task_Config_Indicators</flowNodeRef>
+        <flowNodeRef>Task_Config_Formulas</flowNodeRef>
+      </lane>
+      <lane id="Lane_Collectors" name="Участники сбора (ОМСУ / Отраслевые ЦИО)">
+        <flowNodeRef>Task_Input_Data</flowNodeRef>
+        <flowNodeRef>Task_Correct_Data</flowNodeRef>
+      </lane>
+      <lane id="Lane_MEF" name="Куратор МЭФ МО">
+        <flowNodeRef>Task_MEF_Review</flowNodeRef>
+        <flowNodeRef>Gateway_Data_Approved</flowNodeRef>
+        <flowNodeRef>Task_MEF_Analysis</flowNodeRef>
+        <flowNodeRef>Gateway_Rating_Ready</flowNodeRef>
+        <flowNodeRef>Task_Publish_Rating</flowNodeRef>
+      </lane>
+      <lane id="Lane_Engine" name="Расчетное ядро (Автоматический сервис)">
+        <flowNodeRef>Gateway_Fork_Calc</flowNodeRef>
+        <flowNodeRef>Task_Calc_General</flowNodeRef>
+        <flowNodeRef>Task_Calc_ZATO</flowNodeRef>
+        <flowNodeRef>Gateway_Join_Calc</flowNodeRef>
+        <flowNodeRef>Task_Aggregate_Dynamics</flowNodeRef>
+        <flowNodeRef>Task_Notify_Snapshot</flowNodeRef>
+      </lane>
+      <lane id="Lane_Consumers" name="Потребители аналитики (ОМСУ / ЗАТО / ЦИО)">
+        <flowNodeRef>Gateway_Role_Filter</flowNodeRef>
+        <flowNodeRef>Task_View_General</flowNodeRef>
+        <flowNodeRef>Task_View_ZATO</flowNodeRef>
+        <flowNodeRef>Task_Export_Reports</flowNodeRef>
+        <flowNodeRef>EndEvent_1</flowNodeRef>
+      </lane>
+    </laneSet>
+
+    <!-- Start Event -->
+    <startEvent id="StartEvent_1" name="Старт отчетной кампании">
+      <outgoing>Flow_1</outgoing>
+    </startEvent>
+
+    <!-- Admin Configuration Phase -->
+    <userTask id="Task_Config_OMSU" name="1. Настройка территорий ЗАТО (isZato в справочнике ОМСУ)">
+      <incoming>Flow_1</incoming>
+      <outgoing>Flow_2</outgoing>
+    </userTask>
+
+    <userTask id="Task_Config_Indicators" name="2. Настройка показателей (флаг ЗАТО, веса, max/min, формулы-надстройки)">
+      <incoming>Flow_2</incoming>
+      <outgoing>Flow_3</outgoing>
+    </userTask>
+
+    <userTask id="Task_Config_Formulas" name="3. Настройка итоговых формул (finalRatingFormula и finalRatingFormulaZato)">
+      <incoming>Flow_3</incoming>
+      <outgoing>Flow_4</outgoing>
+    </userTask>
+
+    <!-- Data Input Phase -->
+    <userTask id="Task_Input_Data" name="4. Ввод фактических значений и согласование ЦИО">
+      <incoming>Flow_4</incoming>
+      <incoming>Flow_Fix</incoming>
+      <outgoing>Flow_5</outgoing>
+    </userTask>
+
+    <!-- MEF Verification -->
+    <userTask id="Task_MEF_Review" name="5. Контроль и проверка данных в РМ МЭФ">
+      <incoming>Flow_5</incoming>
+      <outgoing>Flow_6</outgoing>
+    </userTask>
+
+    <exclusiveGateway id="Gateway_Data_Approved" name="Данные согласованы МЭФ?">
+      <incoming>Flow_6</incoming>
+      <outgoing>Flow_Approved</outgoing>
+      <outgoing>Flow_Reject</outgoing>
+    </exclusiveGateway>
+
+    <userTask id="Task_Correct_Data" name="Доработка показателей по замечаниям МЭФ">
+      <incoming>Flow_Reject</incoming>
+      <outgoing>Flow_Fix</outgoing>
+    </userTask>
+
+    <!-- Calculation Core Phase -->
+    <parallelGateway id="Gateway_Fork_Calc" name="Разделение контуров расчета">
+      <incoming>Flow_Approved</incoming>
+      <outgoing>Flow_Calc_Gen</outgoing>
+      <outgoing>Flow_Calc_Zato</outgoing>
+    </parallelGateway>
+
+    <serviceTask id="Task_Calc_General" name="6a. Расчет общего рейтинга 55 ОМСУ по finalRatingFormula">
+      <incoming>Flow_Calc_Gen</incoming>
+      <outgoing>Flow_Join_Gen</outgoing>
+    </serviceTask>
+
+    <serviceTask id="Task_Calc_ZATO" name="6b. Расчет рейтинга ЗАТО (isZato=1, zato=1) по finalRatingFormulaZato">
+      <incoming>Flow_Calc_Zato</incoming>
+      <outgoing>Flow_Join_Zato</outgoing>
+    </serviceTask>
+
+    <parallelGateway id="Gateway_Join_Calc" name="Объединение результатов">
+      <incoming>Flow_Join_Gen</incoming>
+      <incoming>Flow_Join_Zato</incoming>
+      <outgoing>Flow_7</outgoing>
+    </parallelGateway>
+
+    <serviceTask id="Task_Aggregate_Dynamics" name="7. Формирование матриц рангов, динамики (+/-) и вариантов весов">
+      <incoming>Flow_7</incoming>
+      <outgoing>Flow_8</outgoing>
+    </serviceTask>
+
+    <!-- MEF Analysis Phase -->
+    <userTask id="Task_MEF_Analysis" name="8. Анализ предварительного рейтинга (по территориям, разделам, весам)">
+      <incoming>Flow_8</incoming>
+      <outgoing>Flow_9</outgoing>
+    </userTask>
+
+    <exclusiveGateway id="Gateway_Rating_Ready" name="Рейтинг проверен и готов к фиксации?">
+      <incoming>Flow_9</incoming>
+      <outgoing>Flow_Ready</outgoing>
+      <outgoing>Flow_NotReady</outgoing>
+    </exclusiveGateway>
+
+    <!-- Publication -->
+    <userTask id="Task_Publish_Rating" name="9. Переключение в «Итоговый рейтинг» и Публикация">
+      <incoming>Flow_Ready</incoming>
+      <outgoing>Flow_10</outgoing>
+    </userTask>
+
+    <serviceTask id="Task_Notify_Snapshot" name="10. Фиксация эталонного слепка данных и рассылка уведомлений">
+      <incoming>Flow_10</incoming>
+      <outgoing>Flow_11</outgoing>
+    </serviceTask>
+
+    <!-- Analytics & Consumption Phase -->
+    <exclusiveGateway id="Gateway_Role_Filter" name="Ролевое разграничение доступа">
+      <incoming>Flow_11</incoming>
+      <outgoing>Flow_Role_General</outgoing>
+      <outgoing>Flow_Role_ZATO</outgoing>
+      <outgoing>Flow_Role_All</outgoing>
+    </exclusiveGateway>
+
+    <userTask id="Task_View_General" name="11a. Просмотр «Рейтинг ОМСУ» (обычные ОМСУ, isZato=0)">
+      <incoming>Flow_Role_General</incoming>
+      <incoming>Flow_Role_All</incoming>
+      <outgoing>Flow_To_Export_1</outgoing>
+    </userTask>
+
+    <userTask id="Task_View_ZATO" name="11b. Просмотр «Рейтинг ОМСУ ЗАТО» (территории ЗАТО, isZato=1)">
+      <incoming>Flow_Role_ZATO</incoming>
+      <outgoing>Flow_To_Export_2</outgoing>
+    </userTask>
+
+    <userTask id="Task_Export_Reports" name="12. Детализация, фильтрация и экспорт аналитических отчетов">
+      <incoming>Flow_To_Export_1</incoming>
+      <incoming>Flow_To_Export_2</incoming>
+      <outgoing>Flow_End</outgoing>
+    </userTask>
+
+    <endEvent id="EndEvent_1" name="Рейтинг утвержден, отчеты выгружены">
+      <incoming>Flow_End</incoming>
+    </endEvent>
+
+    <!-- Sequence Flows -->
+    <sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="Task_Config_OMSU" />
+    <sequenceFlow id="Flow_2" sourceRef="Task_Config_OMSU" targetRef="Task_Config_Indicators" />
+    <sequenceFlow id="Flow_3" sourceRef="Task_Config_Indicators" targetRef="Task_Config_Formulas" />
+    <sequenceFlow id="Flow_4" sourceRef="Task_Config_Formulas" targetRef="Task_Input_Data" />
+    <sequenceFlow id="Flow_5" sourceRef="Task_Input_Data" targetRef="Task_MEF_Review" />
+    <sequenceFlow id="Flow_6" sourceRef="Task_MEF_Review" targetRef="Gateway_Data_Approved" />
+    <sequenceFlow id="Flow_Approved" name="Да" sourceRef="Gateway_Data_Approved" targetRef="Gateway_Fork_Calc" />
+    <sequenceFlow id="Flow_Reject" name="На доработку" sourceRef="Gateway_Data_Approved" targetRef="Task_Correct_Data" />
+    <sequenceFlow id="Flow_Fix" sourceRef="Task_Correct_Data" targetRef="Task_Input_Data" />
+    <sequenceFlow id="Flow_Calc_Gen" sourceRef="Gateway_Fork_Calc" targetRef="Task_Calc_General" />
+    <sequenceFlow id="Flow_Calc_Zato" sourceRef="Gateway_Fork_Calc" targetRef="Task_Calc_ZATO" />
+    <sequenceFlow id="Flow_Join_Gen" sourceRef="Task_Calc_General" targetRef="Gateway_Join_Calc" />
+    <sequenceFlow id="Flow_Join_Zato" sourceRef="Task_Calc_ZATO" targetRef="Gateway_Join_Calc" />
+    <sequenceFlow id="Flow_7" sourceRef="Gateway_Join_Calc" targetRef="Task_Aggregate_Dynamics" />
+    <sequenceFlow id="Flow_8" sourceRef="Task_Aggregate_Dynamics" targetRef="Task_MEF_Analysis" />
+    <sequenceFlow id="Flow_9" sourceRef="Task_MEF_Analysis" targetRef="Gateway_Rating_Ready" />
+    <sequenceFlow id="Flow_Ready" name="Да" sourceRef="Gateway_Rating_Ready" targetRef="Task_Publish_Rating" />
+    <sequenceFlow id="Flow_NotReady" name="Требует уточнения" sourceRef="Gateway_Rating_Ready" targetRef="Task_MEF_Review" />
+    <sequenceFlow id="Flow_10" sourceRef="Task_Publish_Rating" targetRef="Task_Notify_Snapshot" />
+    <sequenceFlow id="Flow_11" sourceRef="Task_Notify_Snapshot" targetRef="Gateway_Role_Filter" />
+    <sequenceFlow id="Flow_Role_General" name="isZato = 0" sourceRef="Gateway_Role_Filter" targetRef="Task_View_General" />
+    <sequenceFlow id="Flow_Role_ZATO" name="isZato = 1" sourceRef="Gateway_Role_Filter" targetRef="Task_View_ZATO" />
+    <sequenceFlow id="Flow_Role_All" name="МЭФ / ЦИО / Админ" sourceRef="Gateway_Role_Filter" targetRef="Task_View_General" />
+    <sequenceFlow id="Flow_To_Export_1" sourceRef="Task_View_General" targetRef="Task_Export_Reports" />
+    <sequenceFlow id="Flow_To_Export_2" sourceRef="Task_View_ZATO" targetRef="Task_Export_Reports" />
+    <sequenceFlow id="Flow_End" sourceRef="Task_Export_Reports" targetRef="EndEvent_1" />
+  </process>
+
+  <!-- BPMN Diagram Graphical Interchange (BPMNDI) -->
+  <bpmndi:BPMNDiagram id="BPMNDiagram_Rating">
+    <bpmndi:BPMNPlane id="BPMNPlane_Rating" bpmnElement="Collaboration_Rating">
+      
+      <!-- Pool & Lanes -->
+      <bpmndi:BPMNShape id="Participant_System_di" bpmnElement="Participant_System" isHorizontal="true">
+        <dc:Bounds x="160" y="80" width="1680" height="980" />
+      </bpmndi:BPMNShape>
+      
+      <bpmndi:BPMNShape id="Lane_Admin_di" bpmnElement="Lane_Admin" isHorizontal="true">
+        <dc:Bounds x="190" y="80" width="1650" height="180" />
+      </bpmndi:BPMNShape>
+      
+      <bpmndi:BPMNShape id="Lane_Collectors_di" bpmnElement="Lane_Collectors" isHorizontal="true">
+        <dc:Bounds x="190" y="260" width="1650" height="180" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Lane_MEF_di" bpmnElement="Lane_MEF" isHorizontal="true">
+        <dc:Bounds x="190" y="440" width="1650" height="200" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Lane_Engine_di" bpmnElement="Lane_Engine" isHorizontal="true">
+        <dc:Bounds x="190" y="640" width="1650" height="220" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Lane_Consumers_di" bpmnElement="Lane_Consumers" isHorizontal="true">
+        <dc:Bounds x="190" y="860" width="1650" height="200" />
+      </bpmndi:BPMNShape>
+
+      <!-- Shapes: Admin Lane -->
+      <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
+        <dc:Bounds x="230" y="142" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="210" y="185" width="76" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Task_Config_OMSU_di" bpmnElement="Task_Config_OMSU">
+        <dc:Bounds x="300" y="120" width="140" height="80" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Task_Config_Indicators_di" bpmnElement="Task_Config_Indicators">
+        <dc:Bounds x="470" y="120" width="150" height="80" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Task_Config_Formulas_di" bpmnElement="Task_Config_Formulas">
+        <dc:Bounds x="650" y="120" width="150" height="80" />
+      </bpmndi:BPMNShape>
+
+      <!-- Shapes: Collectors Lane -->
+      <bpmndi:BPMNShape id="Task_Input_Data_di" bpmnElement="Task_Input_Data">
+        <dc:Bounds x="650" y="310" width="150" height="80" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Task_Correct_Data_di" bpmnElement="Task_Correct_Data">
+        <dc:Bounds x="840" y="310" width="140" height="80" />
+      </bpmndi:BPMNShape>
+
+      <!-- Shapes: MEF Lane -->
+      <bpmndi:BPMNShape id="Task_MEF_Review_di" bpmnElement="Task_MEF_Review">
+        <dc:Bounds x="650" y="500" width="150" height="80" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Gateway_Data_Approved_di" bpmnElement="Gateway_Data_Approved" isMarkerVisible="true">
+        <dc:Bounds x="885" y="515" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="872" y="572" width="76" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Task_MEF_Analysis_di" bpmnElement="Task_MEF_Analysis">
+        <dc:Bounds x="1190" y="500" width="150" height="80" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Gateway_Rating_Ready_di" bpmnElement="Gateway_Rating_Ready" isMarkerVisible="true">
+        <dc:Bounds x="1380" y="515" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1360" y="572" width="90" height="40" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Task_Publish_Rating_di" bpmnElement="Task_Publish_Rating">
+        <dc:Bounds x="1470" y="500" width="140" height="80" />
+      </bpmndi:BPMNShape>
+
+      <!-- Shapes: Engine Lane -->
+      <bpmndi:BPMNShape id="Gateway_Fork_Calc_di" bpmnElement="Gateway_Fork_Calc">
+        <dc:Bounds x="885" y="725" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="825" y="715" width="70" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Task_Calc_General_di" bpmnElement="Task_Calc_General">
+        <dc:Bounds x="970" y="660" width="140" height="70" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Task_Calc_ZATO_di" bpmnElement="Task_Calc_ZATO">
+        <dc:Bounds x="970" y="770" width="140" height="70" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Gateway_Join_Calc_di" bpmnElement="Gateway_Join_Calc">
+        <dc:Bounds x="1145" y="725" width="50" height="50" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Task_Aggregate_Dynamics_di" bpmnElement="Task_Aggregate_Dynamics">
+        <dc:Bounds x="1220" y="710" width="150" height="80" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Task_Notify_Snapshot_di" bpmnElement="Task_Notify_Snapshot">
+        <dc:Bounds x="1470" y="710" width="140" height="80" />
+      </bpmndi:BPMNShape>
+
+      <!-- Shapes: Consumers Lane -->
+      <bpmndi:BPMNShape id="Gateway_Role_Filter_di" bpmnElement="Gateway_Role_Filter" isMarkerVisible="true">
+        <dc:Bounds x="1515" y="935" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1450" y="980" width="80" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Task_View_General_di" bpmnElement="Task_View_General">
+        <dc:Bounds x="1340" y="890" width="140" height="70" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Task_View_ZATO_di" bpmnElement="Task_View_ZATO">
+        <dc:Bounds x="1340" y="980" width="140" height="70" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Task_Export_Reports_di" bpmnElement="Task_Export_Reports">
+        <dc:Bounds x="1160" y="930" width="140" height="80" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="EndEvent_1_di" bpmnElement="EndEvent_1">
+        <dc:Bounds x="1060" y="952" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1035" y="995" width="87" height="40" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- Edges -->
+      <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
+        <di:waypoint x="266" y="160" />
+        <di:waypoint x="300" y="160" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2">
+        <di:waypoint x="440" y="160" />
+        <di:waypoint x="470" y="160" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_3_di" bpmnElement="Flow_3">
+        <di:waypoint x="620" y="160" />
+        <di:waypoint x="650" y="160" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_4_di" bpmnElement="Flow_4">
+        <di:waypoint x="725" y="200" />
+        <di:waypoint x="725" y="310" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_5_di" bpmnElement="Flow_5">
+        <di:waypoint x="725" y="390" />
+        <di:waypoint x="725" y="500" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_6_di" bpmnElement="Flow_6">
+        <di:waypoint x="800" y="540" />
+        <di:waypoint x="885" y="540" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_Approved_di" bpmnElement="Flow_Approved">
+        <di:waypoint x="910" y="565" />
+        <di:waypoint x="910" y="725" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="918" y="630" width="14" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_Reject_di" bpmnElement="Flow_Reject">
+        <di:waypoint x="910" y="515" />
+        <di:waypoint x="910" y="390" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="915" y="450" width="69" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_Fix_di" bpmnElement="Flow_Fix">
+        <di:waypoint x="840" y="350" />
+        <di:waypoint x="800" y="350" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_Calc_Gen_di" bpmnElement="Flow_Calc_Gen">
+        <di:waypoint x="910" y="725" />
+        <di:waypoint x="910" y="695" />
+        <di:waypoint x="970" y="695" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_Calc_Zato_di" bpmnElement="Flow_Calc_Zato">
+        <di:waypoint x="910" y="775" />
+        <di:waypoint x="910" y="805" />
+        <di:waypoint x="970" y="805" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_Join_Gen_di" bpmnElement="Flow_Join_Gen">
+        <di:waypoint x="1110" y="695" />
+        <di:waypoint x="1170" y="695" />
+        <di:waypoint x="1170" y="725" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_Join_Zato_di" bpmnElement="Flow_Join_Zato">
+        <di:waypoint x="1110" y="805" />
+        <di:waypoint x="1170" y="805" />
+        <di:waypoint x="1170" y="775" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_7_di" bpmnElement="Flow_7">
+        <di:waypoint x="1195" y="750" />
+        <di:waypoint x="1220" y="750" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_8_di" bpmnElement="Flow_8">
+        <di:waypoint x="1295" y="710" />
+        <di:waypoint x="1295" y="580" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_9_di" bpmnElement="Flow_9">
+        <di:waypoint x="1340" y="540" />
+        <di:waypoint x="1380" y="540" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_Ready_di" bpmnElement="Flow_Ready">
+        <di:waypoint x="1430" y="540" />
+        <di:waypoint x="1470" y="540" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1443" y="522" width="14" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_NotReady_di" bpmnElement="Flow_NotReady">
+        <di:waypoint x="1405" y="515" />
+        <di:waypoint x="1405" y="470" />
+        <di:waypoint x="750" y="470" />
+        <di:waypoint x="750" y="500" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1040" y="450" width="70" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_10_di" bpmnElement="Flow_10">
+        <di:waypoint x="1540" y="580" />
+        <di:waypoint x="1540" y="710" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_11_di" bpmnElement="Flow_11">
+        <di:waypoint x="1540" y="790" />
+        <di:waypoint x="1540" y="935" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_Role_General_di" bpmnElement="Flow_Role_General">
+        <di:waypoint x="1515" y="960" />
+        <di:waypoint x="1445" y="960" />
+        <di:waypoint x="1445" y="925" />
+        <di:waypoint x="1480" y="925" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1470" y="907" width="51" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_Role_ZATO_di" bpmnElement="Flow_Role_ZATO">
+        <di:waypoint x="1540" y="985" />
+        <di:waypoint x="1540" y="1015" />
+        <di:waypoint x="1480" y="1015" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1485" y="995" width="51" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_Role_All_di" bpmnElement="Flow_Role_All">
+        <di:waypoint x="1565" y="960" />
+        <di:waypoint x="1590" y="960" />
+        <di:waypoint x="1590" y="870" />
+        <di:waypoint x="1410" y="870" />
+        <di:waypoint x="1410" y="890" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1475" y="852" width="70" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_To_Export_1_di" bpmnElement="Flow_To_Export_1">
+        <di:waypoint x="1340" y="925" />
+        <di:waypoint x="1300" y="950" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_To_Export_2_di" bpmnElement="Flow_To_Export_2">
+        <di:waypoint x="1340" y="1015" />
+        <di:waypoint x="1300" y="970" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_End_di" bpmnElement="Flow_End">
+        <di:waypoint x="1160" y="970" />
+        <di:waypoint x="1096" y="970" />
+      </bpmndi:BPMNEdge>
+
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</definitions>
