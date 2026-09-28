@@ -12,7 +12,7 @@ import {
 import {
   Calendar, Search, Printer, FileSpreadsheet,
   Building2, MapPin, CheckCircle2, ArrowUpDown, ArrowUp, ArrowDown,
-  Layers, Info
+  Info
 } from 'lucide-react';
 
 export interface TerritoryMonitoringRow {
@@ -346,55 +346,6 @@ export function RatingMonitoringView(_props: { role?: RoleId } = {}) {
 
   return (
     <div className="space-y-4 text-slate-800">
-      {/* Верхний статус-бар и действия */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-white p-3.5 rounded-lg border shadow-sm">
-        <div className="flex items-center gap-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-sky-100 text-sky-700 font-bold">
-            <Layers className="h-5 w-5" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                Модуль «Формирование рейтинга ОМСУ»
-              </span>
-              <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-300 text-[11px] font-medium">
-                <CheckCircle2 className="h-3 w-3 mr-1 inline" /> Сбор данных открыт
-              </Badge>
-            </div>
-            <div className="text-sm font-semibold text-slate-900">
-              Мониторинг хода сбора данных
-            </div>
-          </div>
-        </div>
-
-        <div className="flex items-center flex-wrap gap-2">
-          {exportNotice && (
-            <div className="text-xs bg-emerald-50 text-emerald-800 border border-emerald-200 px-3 py-1.5 rounded-md flex items-center gap-1.5 animate-in fade-in">
-              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
-              <span>{exportNotice}</span>
-            </div>
-          )}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => handleExport('xlsx')}
-            className="h-8 text-xs font-medium gap-1.5 border-slate-300 hover:bg-slate-50 text-slate-700"
-          >
-            <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-600" />
-            Экспорт в Excel
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => window.print()}
-            className="h-8 text-xs font-medium gap-1.5 border-slate-300 hover:bg-slate-50 text-slate-700"
-          >
-            <Printer className="h-3.5 w-3.5 text-slate-600" />
-            Печать
-          </Button>
-        </div>
-      </div>
-
       {/* ── КОМПАКТНАЯ ПАНЕЛЬ ФИЛЬТРОВ ─────────────────────────────────────── */}
       <div className="bg-white rounded-lg border border-slate-200 shadow-sm px-3.5 py-2">
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
@@ -559,11 +510,31 @@ export function RatingMonitoringView(_props: { role?: RoleId } = {}) {
             </button>
           </div>
 
-          <div className="flex items-center gap-2 text-xs text-slate-600">
-            <span className="font-semibold text-slate-700">Отображение:</span>
-            <span className="inline-flex items-center px-2.5 py-1 rounded bg-slate-100 text-slate-800 border border-slate-200">
-              {viewMode === 'territory' ? 'По муниципальным образованиям' : 'По отраслевым ведомствам (ОИВ)'}
-            </span>
+          <div className="flex items-center flex-wrap gap-2">
+            {exportNotice && (
+              <div className="text-xs bg-emerald-50 text-emerald-800 border border-emerald-200 px-3 py-1 rounded-md flex items-center gap-1.5 animate-in fade-in">
+                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                <span>{exportNotice}</span>
+              </div>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleExport('xlsx')}
+              className="h-8 text-xs font-medium gap-1.5 border-slate-300 hover:bg-slate-50 text-slate-700"
+            >
+              <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-600" />
+              Экспорт в Excel
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => window.print()}
+              className="h-8 text-xs font-medium gap-1.5 border-slate-300 hover:bg-slate-50 text-slate-700"
+            >
+              <Printer className="h-3.5 w-3.5 text-slate-600" />
+              Печать
+            </Button>
           </div>
         </div>
 
