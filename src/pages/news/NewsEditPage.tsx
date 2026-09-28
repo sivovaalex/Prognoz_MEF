@@ -162,7 +162,7 @@ export const NewsEditPage: React.FC<NewsEditPageProps> = ({
   // If user role does NOT have full access (OMSU or CIO)
   if (!hasFullAccess) {
     return (
-      <div className="w-full space-y-4">
+      <div className="max-w-4xl mx-auto w-full space-y-4 py-2">
         <nav className="text-xs text-slate-500 font-medium flex items-center gap-1.5 px-1 pt-1">
           <span>Московская область</span>
           <span className="text-slate-400">/</span>
@@ -196,7 +196,7 @@ export const NewsEditPage: React.FC<NewsEditPageProps> = ({
   }
 
   return (
-    <div className="w-full space-y-4">
+    <div className="max-w-4xl mx-auto w-full space-y-4 py-2">
       {/* Хлебные крошки */}
       <nav className="text-xs text-slate-500 font-medium flex items-center gap-1.5 px-1 pt-1">
         <span>Московская область</span>

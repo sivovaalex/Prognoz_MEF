@@ -84,7 +84,7 @@ export const NewsListPage: React.FC<NewsListPageProps> = ({
   };
 
   return (
-    <div className="w-full space-y-4">
+    <div className="max-w-4xl mx-auto w-full space-y-4 py-2">
       {/* Хлебные крошки */}
       <nav className="text-xs text-slate-500 font-medium flex items-center gap-1.5 px-1 pt-1">
         <span>Московская область</span>
