@@ -17,7 +17,7 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
 } from '@/components/ui/dialog';
-import { TrendingUp, TrendingDown, Minus, Calculator, Info, FileSpreadsheet, Printer, CheckCircle2 } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus, Calculator, Info, FileSpreadsheet, CheckCircle2 } from 'lucide-react';
 
 function now(): string {
   const d = new Date();
@@ -259,15 +259,6 @@ export function RatingView({ role }: { role?: RoleId } = {}) {
           >
             <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-600" />
             Экспорт в Excel
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => window.print()}
-            className="h-8 text-xs font-medium gap-1.5 border-slate-300 hover:bg-slate-50 text-slate-700"
-          >
-            <Printer className="h-3.5 w-3.5 text-slate-600" />
-            Печать
           </Button>
           <button
             className={`rounded-full px-3 py-1 text-xs font-medium border ${mode === 'preview' ? 'bg-amber-100 border-amber-400 text-amber-900' : 'bg-white text-gray-600'}`}
@@ -921,15 +912,6 @@ export function ZatoRatingView({ role }: { role?: RoleId } = {}) {
           >
             <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-600" />
             Экспорт в Excel
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => window.print()}
-            className="h-8 text-xs font-medium gap-1.5 border-slate-300 hover:bg-slate-50 text-slate-700"
-          >
-            <Printer className="h-3.5 w-3.5 text-slate-600" />
-            Печать
           </Button>
           <button
             className={`rounded-full px-3 py-1 text-xs font-medium border ${mode === 'preview' ? 'bg-amber-100 border-amber-400 text-amber-900' : 'bg-white text-gray-600'}`}

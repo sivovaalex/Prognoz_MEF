@@ -7,7 +7,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel,
 } from '@/components/ui/select';
 import {
-  Calendar, Search, Printer, FileSpreadsheet,
+  Calendar, Search, FileSpreadsheet,
   Building2, MapPin, CheckCircle2, ArrowUpDown, ArrowUp, ArrowDown,
   Info
 } from 'lucide-react';
@@ -519,15 +519,6 @@ export function RatingMonitoringView(_props: { role?: RoleId } = {}) {
             >
               <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-600" />
               Экспорт в Excel
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => window.print()}
-              className="h-8 text-xs font-medium gap-1.5 border-slate-300 hover:bg-slate-50 text-slate-700"
-            >
-              <Printer className="h-3.5 w-3.5 text-slate-600" />
-              Печать
             </Button>
           </div>
         </div>
