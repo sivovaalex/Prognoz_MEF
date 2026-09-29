@@ -7,9 +7,6 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel,
 } from '@/components/ui/select';
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
-} from '@/components/ui/dialog';
-import {
   Calendar, Search, Printer, FileSpreadsheet,
   Building2, MapPin, CheckCircle2, ArrowUpDown, ArrowUp, ArrowDown,
   Info
@@ -171,9 +168,6 @@ export function RatingMonitoringView(_props: { role?: RoleId } = {}) {
   const [sortField, setSortField] = useState<'name' | 'moEntered' | 'moApproved' | 'cioEntered' | 'cioApproved'>('name');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
-  // Модальное окно детализации территории / ведомства
-  const [detailTerritory, setDetailTerritory] = useState<TerritoryMonitoringRow | null>(null);
-  const [detailDepartment, setDetailDepartment] = useState<DepartmentMonitoringRow | null>(null);
   const [exportNotice, setExportNotice] = useState<string | null>(null);
 
   const selectedPeriod = useMemo(
@@ -656,8 +650,7 @@ export function RatingMonitoringView(_props: { role?: RoleId } = {}) {
                     filteredTerritories.map((row, idx) => (
                       <tr
                         key={row.id}
-                        onClick={() => setDetailTerritory(row)}
-                        className={`hover:bg-sky-50/70 transition-colors cursor-pointer ${
+                        className={`hover:bg-sky-50/50 transition-colors ${
                           idx % 2 === 1 ? 'bg-slate-50/50' : 'bg-white'
                         }`}
                       >
@@ -665,7 +658,7 @@ export function RatingMonitoringView(_props: { role?: RoleId } = {}) {
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
                               <span className="text-slate-400 text-[11px] w-5 text-right font-mono">{idx + 1}.</span>
-                              <span className="hover:text-[#1e5c8f] transition-colors">{row.name}</span>
+                              <span>{row.name}</span>
                             </div>
                             {row.isZato && (
                               <Badge className="bg-amber-100 text-amber-800 border-amber-300 text-[10px] px-1.5 py-0">
@@ -709,8 +702,7 @@ export function RatingMonitoringView(_props: { role?: RoleId } = {}) {
                     filteredDepartments.map((row, idx) => (
                       <tr
                         key={row.id}
-                        onClick={() => setDetailDepartment(row)}
-                        className={`hover:bg-amber-50/70 transition-colors cursor-pointer ${
+                        className={`hover:bg-amber-50/50 transition-colors ${
                           idx % 2 === 1 ? 'bg-slate-50/50' : 'bg-white'
                         }`}
                       >
@@ -718,7 +710,7 @@ export function RatingMonitoringView(_props: { role?: RoleId } = {}) {
                           <div className="flex items-center gap-2">
                             <span className="text-slate-400 text-[11px] w-5 text-right font-mono">{idx + 1}.</span>
                             <div>
-                              <div className="font-semibold text-slate-900 hover:text-[#1e5c8f] transition-colors">
+                              <div className="font-semibold text-slate-900">
                                 {row.name}
                               </div>
                               <div className="text-[11px] text-muted-foreground flex items-center gap-2 mt-0.5">
@@ -793,149 +785,8 @@ export function RatingMonitoringView(_props: { role?: RoleId } = {}) {
             <span>·</span>
             <span>Символ «—» означает отсутствие данных / отсутствие согласования на текущем этапе</span>
           </div>
-          <div className="text-slate-500">
-            Для детального просмотра нажмите на любую строку таблицы
-          </div>
         </div>
       </div>
-
-      {/* ── МОДАЛЬНОЕ ОКНО ДЕТАЛИЗАЦИИ ТЕРРИТОРИИ ──────────────────────────── */}
-      <Dialog open={!!detailTerritory} onOpenChange={(open) => !open && setDetailTerritory(null)}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle className="flex items-center justify-between text-base">
-              <span>Карточка хода сбора: {detailTerritory?.name}</span>
-              {detailTerritory?.isZato && (
-                <Badge className="bg-amber-100 text-amber-800 border-amber-300">ЗАТО</Badge>
-              )}
-            </DialogTitle>
-            <DialogDescription className="text-xs">
-              Период сбора: {selectedPeriod.label} · Всего показателей для занесения: {detailTerritory?.totalIndicators}
-            </DialogDescription>
-          </DialogHeader>
-
-          {detailTerritory && (
-            <div className="space-y-4 text-xs">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="p-3 rounded-lg border border-slate-200 bg-slate-50 space-y-2">
-                  <div className="font-semibold text-slate-800">Данные муниципального образования</div>
-                  <div className="flex justify-between py-1 border-b border-slate-200">
-                    <span className="text-muted-foreground">Занесено показаний:</span>
-                    <span className="font-bold font-mono text-slate-900">{formatPct(detailTerritory.moEnteredPct)}%</span>
-                  </div>
-                  <div className="flex justify-between py-1">
-                    <span className="text-muted-foreground">Утверждено ОМСУ:</span>
-                    <span className="font-bold font-mono text-emerald-700">{formatPct(detailTerritory.moApprovedPct)}%</span>
-                  </div>
-                </div>
-
-                <div className="p-3 rounded-lg border border-slate-200 bg-slate-50 space-y-2">
-                  <div className="font-semibold text-slate-800">Ведомственные данные (ЦИО)</div>
-                  <div className="flex justify-between py-1 border-b border-slate-200">
-                    <span className="text-muted-foreground">Занесено ведомством:</span>
-                    <span className="font-bold font-mono text-slate-900">{formatPct(detailTerritory.cioEnteredPct)}%</span>
-                  </div>
-                  <div className="flex justify-between py-1">
-                    <span className="text-muted-foreground">Утверждено ведомством:</span>
-                    <span className="font-bold font-mono text-purple-700">{formatPct(detailTerritory.cioApprovedPct)}%</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="border rounded-md p-3 bg-white space-y-2">
-                <div className="font-semibold text-slate-800">Разбивка по ключевым сферам:</div>
-                <div className="space-y-2">
-                  {[
-                    { dir: '1. Демография и социальная сфера', cio: 'МЭФ / Минсоц', mo: detailTerritory.moEnteredPct, cioPct: detailTerritory.cioEnteredPct },
-                    { dir: '2. Промышленное производство и МСП', cio: 'Мининвест', mo: Math.max(0, detailTerritory.moEnteredPct - 0.1), cioPct: detailTerritory.cioEnteredPct },
-                    { dir: '3. Инвестиции и градостроительство', cio: 'Минжилпол / МЭФ', mo: detailTerritory.moEnteredPct, cioPct: detailTerritory.cioEnteredPct },
-                    { dir: '4. ЖКХ и благоустройство', cio: 'МинЖКХ / ГУСТ', mo: Math.max(0, detailTerritory.moEnteredPct - 0.2), cioPct: detailTerritory.cioEnteredPct },
-                  ].map((s, i) => (
-                    <div key={i} className="flex items-center justify-between p-2 rounded bg-slate-50 border border-slate-100">
-                      <div>
-                        <div className="font-medium text-slate-900">{s.dir}</div>
-                        <div className="text-[10px] text-muted-foreground">Ответственный: {s.cio}</div>
-                      </div>
-                      <div className="text-right">
-                        <div className="font-mono font-semibold text-sky-800">МО: {formatPct(s.mo)}%</div>
-                        <div className="text-[10px] font-mono text-purple-700">ЦИО: {formatPct(s.cioPct)}%</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-
-          <DialogFooter>
-            <Button variant="outline" size="sm" onClick={() => setDetailTerritory(null)}>
-              Закрыть
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* ── МОДАЛЬНОЕ ОКНО ДЕТАЛИЗАЦИИ ВЕДОМСТВА ───────────────────────────── */}
-      <Dialog open={!!detailDepartment} onOpenChange={(open) => !open && setDetailDepartment(null)}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle className="text-base">
-              {detailDepartment?.name}
-            </DialogTitle>
-            <DialogDescription className="text-xs">
-              Код ведомства: {detailDepartment?.code} · Закреплено показателей: {detailDepartment?.curatedIndicatorsCount} шт.
-            </DialogDescription>
-          </DialogHeader>
-
-          {detailDepartment && (
-            <div className="space-y-4 text-xs">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="p-3 rounded-lg border border-slate-200 bg-slate-50 space-y-1.5">
-                  <div className="text-[11px] text-muted-foreground font-medium">Данные МО (Занесено / Утверждено)</div>
-                  <div className="text-lg font-bold font-mono text-slate-900">
-                    {formatPct(detailDepartment.moEnteredPct)}% / {formatPct(detailDepartment.moApprovedPct)}%
-                  </div>
-                </div>
-
-                <div className="p-3 rounded-lg border border-slate-200 bg-slate-50 space-y-1.5">
-                  <div className="text-[11px] text-muted-foreground font-medium">Ведомственные данные (Занесено / Утверждено)</div>
-                  <div className="text-lg font-bold font-mono text-purple-900">
-                    {formatPct(detailDepartment.cioEnteredPct)}% / {formatPct(detailDepartment.cioApprovedPct)}%
-                  </div>
-                </div>
-              </div>
-
-              <div className="p-3 rounded-lg border border-slate-200 bg-white space-y-2">
-                <div className="font-semibold text-slate-800">Статус сбора по закреплённым показателям:</div>
-                <div className="text-slate-600 text-xs leading-relaxed">
-                  Ведомство осуществляет постоянный мониторинг и верификацию значений, подаваемых ОМСУ Московской области.
-                  Все несогласованные значения подлежат проверке отраслевыми экспертами до закрытия кампании сбора.
-                </div>
-              </div>
-            </div>
-          )}
-
-          <DialogFooter>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                if (detailDepartment) {
-                  setSelectedCioId(detailDepartment.id);
-                  setViewMode('territory');
-                  setDetailDepartment(null);
-                }
-              }}
-              className="bg-sky-50 text-sky-800 border-sky-200 hover:bg-sky-100"
-            >
-              Фильтровать территории по данному ведомству
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => setDetailDepartment(null)}>
-              Закрыть
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
