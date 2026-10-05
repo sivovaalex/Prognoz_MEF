@@ -18,15 +18,19 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Pencil, Settings2, PowerOff } from 'lucide-react';
+import { Plus, Pencil, Settings2, Settings, PowerOff } from 'lucide-react';
+import { CollectionFormSettings } from '@/components/CollectionFormSettings';
 
-export function Setup({ block: _block }: { block?: string }) {
+export function Setup({ block = 'mun' }: { block?: string }) {
   const { state, dispatch } = useStore();
   const [editInd, setEditInd] = useState<Indicator | null>(null);
   const [isNew, setIsNew] = useState(false);
   const [editDir, setEditDir] = useState<{ id?: string, num: string, name: string, cioIds: string[], actualFrom: string, actualTo?: string | null } | null>(null);
   const [treeFilter, setTreeFilter] = useState<TreeFilter>({ ...EMPTY_TREE_FILTER, actualDate: new Date().toISOString().split('T')[0] });
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [dirError, setDirError] = useState<string | null>(null);
+
   // Drag-and-drop: перестановка показателей с автоматической перенумерацией
   const [dragId, setDragId] = useState<string | null>(null);
   const [dropHint, setDropHint] = useState<{ targetId: string; before: boolean } | null>(null);
@@ -35,7 +39,21 @@ export function Setup({ block: _block }: { block?: string }) {
   const visible = visibleTree(state.indicators, collapsed, treeFilter);
   const parents = chevronParents(state.indicators);
   const toggleNode = (id: string) => setCollapsed((p) => ({ ...p, [id]: !p[id] }));
-  const uniqueUnits = Array.from(new Set(state.indicators.map((i) => i.unit).filter((u) => typeof u === 'string' && u.trim().length > 0))).sort();
+  const uniqueUnits = Array.from(
+    new Set([
+      ...(state.units || []).map((u) => u.name),
+      ...state.indicators.map((i) => i.unit),
+      '%',
+      'человек',
+      'рубль',
+      'млн. рублей',
+      'тыс. кв. м общей площади',
+      'единица',
+      'число родившихся на 1000 человек населения',
+      'на 1000 человек населения',
+      'процент к предыдущему году',
+    ].filter((u) => typeof u === 'string' && u.trim().length > 0))
+  ).sort();
 
   const openNew = () => {
     setIsNew(true);
@@ -67,7 +85,8 @@ export function Setup({ block: _block }: { block?: string }) {
   };
 
   const openNewDir = () => {
-    setEditDir({ num: '', name: '', cioIds: [], actualFrom: new Date().toISOString().split('T')[0] });
+    setDirError(null);
+    setEditDir({ num: '', name: '', cioIds: state.cios[0] ? [state.cios[0].id] : [], actualFrom: new Date().toISOString().split('T')[0] });
   };
 
   const save = () => {
@@ -92,8 +111,17 @@ export function Setup({ block: _block }: { block?: string }) {
   };
 
   const saveDir = () => {
-    if (!editDir) return;
-    const nameStr = editDir.num ? `${editDir.num}. ${editDir.name}` : editDir.name;
+    if (!editDir || !editDir.name.trim()) return;
+    const cleanName = editDir.name.trim();
+    const isDuplicate = state.directions.some(
+      (d) => d.id !== editDir.id && d.name.replace(/^[0-9.]+\s*/, '').toLowerCase() === cleanName.toLowerCase() && !d.actualTo
+    );
+    if (isDuplicate) {
+      setDirError('Имя направления уже существует');
+      return;
+    }
+    const nameStr = editDir.num ? `${editDir.num}. ${cleanName}` : cleanName;
+    const cIds = editDir.cioIds.length > 0 ? editDir.cioIds : (state.cios[0] ? [state.cios[0].id] : []);
     if (editDir.id) {
       const oldDir = state.directions.find(d => d.id === editDir.id);
       if (oldDir) {
@@ -104,7 +132,7 @@ export function Setup({ block: _block }: { block?: string }) {
         direction: {
           id: 'd' + Date.now(),
           name: nameStr,
-          cioIds: editDir.cioIds,
+          cioIds: cIds,
           actualFrom: editDir.actualFrom,
           actualTo: null
         }
@@ -115,13 +143,14 @@ export function Setup({ block: _block }: { block?: string }) {
         direction: {
           id: 'd' + Date.now(),
           name: nameStr,
-          cioIds: editDir.cioIds,
+          cioIds: cIds,
           actualFrom: editDir.actualFrom,
           actualTo: null
         }
       });
     }
     setEditDir(null);
+    setDirError(null);
   };
 
   const [deleteConfirm, setDeleteConfirm] = useState<{ type: 'dir' | 'ind', id: string, name: string } | null>(null);
@@ -149,8 +178,15 @@ export function Setup({ block: _block }: { block?: string }) {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={openNewDir}><Plus className="h-4 w-4 mr-1" /> Добавить раздел показателя</Button>
-          <Button onClick={openNew}><Plus className="h-4 w-4 mr-1" /> Добавить показатель</Button>
+          <Button variant="outline" onClick={() => setIsSettingsOpen(true)}>
+            <Settings className="h-4 w-4 mr-1" /> Настройки
+          </Button>
+          <Button variant="outline" onClick={openNewDir}>
+            <Plus className="h-4 w-4 mr-1" /> Добавить раздел показателя
+          </Button>
+          <Button onClick={openNew} className="bg-blue-600 hover:bg-blue-700 text-white">
+            <Plus className="h-4 w-4 mr-1" /> Добавить показатель
+          </Button>
         </div>
       </div>
 
@@ -250,7 +286,25 @@ export function Setup({ block: _block }: { block?: string }) {
                             dispatch({ type: 'MOVE_INDICATOR', id: dragId, newParentId: ind.parentId, index: idx });
                             setDragId(null); setDropHint(null); setTopDropDir(null);
                           }}
-                          className={`border-b ${ind.isGroup ? 'bg-slate-50/80' : 'hover:bg-slate-50'} cursor-grab active:cursor-grabbing ${
+                          onClick={(e) => {
+                            if ((e.target as HTMLElement).closest('button') || (e.target as HTMLElement).closest('input')) return;
+                            setIsNew(false);
+                            setEditInd({
+                              ...ind,
+                              isReference: ind.isReference ?? ind.name.startsWith('Справочно: '),
+                              hasRatingParams: ind.hasRatingParams ?? (
+                                (ind.weight ?? 0) > 0 ||
+                                !!ind.closed ||
+                                !!ind.zato ||
+                                (ind.closedForOmsuIds && ind.closedForOmsuIds.length > 0) ||
+                                !!ind.calcException ||
+                                !!ind.ratingFormula
+                              ),
+                              ratingFormula: ind.ratingFormula || '',
+                              ratingFormulaZato: ind.ratingFormulaZato || '',
+                            });
+                          }}
+                          className={`border-b ${ind.isGroup ? 'bg-slate-50/80' : 'hover:bg-slate-50 cursor-pointer'} ${
                             dropHint?.targetId === ind.id
                               ? dropHint.before ? 'shadow-[inset_0_2px_0_0_#2563eb]' : 'shadow-[inset_0_-2px_0_0_#2563eb]'
                               : ''
@@ -316,7 +370,10 @@ export function Setup({ block: _block }: { block?: string }) {
       <Dialog open={!!editInd} onOpenChange={(v) => !v && setEditInd(null)}>
         <DialogContent className="w-[70vw] max-w-[70vw] sm:max-w-[70vw] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{isNew ? 'Новый показатель' : 'Редактирование показателя'}</DialogTitle>
+            <DialogTitle className="text-lg flex items-center gap-2">
+              <Settings2 className="h-5 w-5 text-blue-600" />
+              {isNew ? 'Показатели и формулы: Новый показатель' : `Показатели и формулы: Редактирование показателя`}
+            </DialogTitle>
           </DialogHeader>
           {editInd && (
             <div className="grid gap-3 text-sm">
@@ -379,7 +436,7 @@ export function Setup({ block: _block }: { block?: string }) {
               <div className="grid grid-cols-4 items-center gap-2">
                 <Label>Раздел показателя *</Label>
                 <Select value={editInd.directionId} onValueChange={(v) => setEditInd({ ...editInd, directionId: v })}>
-                  <SelectTrigger className="col-span-3"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="col-span-3"><SelectValue placeholder="Выберите раздел показателя" /></SelectTrigger>
                   <SelectContent>
                     {state.directions.map((d) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
                   </SelectContent>
@@ -389,12 +446,13 @@ export function Setup({ block: _block }: { block?: string }) {
               <div className="grid grid-cols-4 items-center gap-2">
                 <Label>ЦИО *</Label>
                 <Select value={editInd.cioId} onValueChange={(v) => setEditInd({ ...editInd, cioId: v })}>
-                  <SelectTrigger className="col-span-3"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="col-span-3"><SelectValue placeholder="Выберите ЦИО" /></SelectTrigger>
                   <SelectContent>
-                    {state.directions.find(d => d.id === editInd.directionId)?.cioIds?.map((cId) => {
-                      const c = state.cios.find(x => x.id === cId);
-                      return c ? <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem> : null;
-                    })}
+                    {state.cios.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name} ({c.short})
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -407,7 +465,7 @@ export function Setup({ block: _block }: { block?: string }) {
               <div className="grid grid-cols-4 items-center gap-2">
                 <Label>Родительский показатель</Label>
                 <Select value={editInd.parentId || 'none'} onValueChange={(v) => setEditInd({ ...editInd, parentId: v === 'none' ? null : v })}>
-                  <SelectTrigger className="col-span-3"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="col-span-3"><SelectValue placeholder="Выберите родительский показатель" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">Нет (верхний уровень)</SelectItem>
                     {state.indicators
@@ -585,27 +643,60 @@ export function Setup({ block: _block }: { block?: string }) {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={!!editDir} onOpenChange={(v) => !v && setEditDir(null)}>
+      <Dialog open={!!editDir} onOpenChange={(v) => { if (!v) { setEditDir(null); setDirError(null); } }}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Новый раздел показателя</DialogTitle>
+            <DialogTitle>{editDir?.id ? 'Редактирование раздела' : 'Новый раздел показателя'}</DialogTitle>
           </DialogHeader>
           {editDir && (
             <div className="grid gap-3 text-sm">
+              {dirError && (
+                <div className="p-2 text-xs bg-red-50 text-red-600 border border-red-200 rounded">
+                  {dirError}
+                </div>
+              )}
               <div className="grid grid-cols-4 items-center gap-2">
                 <Label>№</Label>
                 <Input className="col-span-3" value={editDir.num} onChange={(e) => setEditDir({ ...editDir, num: e.target.value })} />
               </div>
               <div className="grid grid-cols-4 items-center gap-2">
                 <Label>Название *</Label>
-                <Input className="col-span-3" value={editDir.name} onChange={(e) => setEditDir({ ...editDir, name: e.target.value })} />
+                <Input className="col-span-3" value={editDir.name} onChange={(e) => { setEditDir({ ...editDir, name: e.target.value }); setDirError(null); }} />
               </div>
-
+              <div className="grid grid-cols-4 items-center gap-2">
+                <Label>ЦИО *</Label>
+                <Select
+                  value={editDir.cioIds?.[0] || state.cios[0]?.id}
+                  onValueChange={(v) => setEditDir({ ...editDir, cioIds: [v] })}
+                >
+                  <SelectTrigger className="col-span-3"><SelectValue placeholder="Выберите ЦИО" /></SelectTrigger>
+                  <SelectContent>
+                    {state.cios.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>{c.name} ({c.short})</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditDir(null)}>Отмена</Button>
+            <Button variant="outline" onClick={() => { setEditDir(null); setDirError(null); }}>Отмена</Button>
             <Button onClick={saveDir}>Сохранить</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Модальное окно настроек формы сбора (роли/участники) */}
+      <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Настройки формы сбора и прав доступа</DialogTitle>
+          </DialogHeader>
+          <div className="py-2">
+            <CollectionFormSettings block={block || 'mun'} />
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setIsSettingsOpen(false)}>Закрыть</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

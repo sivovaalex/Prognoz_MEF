@@ -52,8 +52,8 @@ export const DIRECTIONS: Direction[] = [
   { id: 'd2', name: '3. Промышленное производство', cioIds: ['c2'], actualFrom: '2024-01-01' },
   { id: 'd3', name: '7. Малое и среднее предпринимательство', cioIds: ['c2'], actualFrom: '2024-01-01' },
   { id: 'd4', name: '8. Инвестиции', cioIds: ['c2'], actualFrom: '2024-01-01' },
-  { id: 'd5', name: '9. Строительство', cioIds: ['c6'], actualFrom: '2024-01-01' },
-  { id: 'd6', name: '11. Труд и заработная плата', cioIds: ['c7'], actualFrom: '2024-01-01' },
+  { id: 'd5', name: '9. Строительство', cioIds: ['c3'], actualFrom: '2024-01-01' },
+  { id: 'd6', name: '11. Труд и заработная плата', cioIds: ['c1', 'c2', 'c4'], actualFrom: '2024-01-01' },
   { id: 'd7', name: '13. Торговля и услуги', cioIds: ['c5'], actualFrom: '2024-01-01' },
 ];
 
