@@ -31,7 +31,7 @@ jobs:
       - name: Upload static files
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ./out # Next.js при экспорте кладет файлы в папку out
+          path: ./dist # Next.js при экспорте кладет файлы в папку out
 
   deploy:
     environment:
