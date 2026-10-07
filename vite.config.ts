@@ -7,6 +7,7 @@ import { inspectAttr } from 'kimi-plugin-inspect-react'
 export default defineConfig({
   base: './',
   plugins: [inspectAttr(), react()],
+  base: '/Prognoz_MEF/',
   server: {
     port: 3000,
   },
