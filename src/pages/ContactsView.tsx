@@ -28,6 +28,23 @@ interface ContactsViewProps {
   role: RoleId;
 }
 
+function renderFormattedIndicatorName(name: string, isTopLevel: boolean = false) {
+  const match = name.match(/^([^(]+)(\(.*\))$/s);
+  if (match) {
+    return (
+      <div>
+        <span className={isTopLevel ? "font-bold text-slate-900" : "font-medium text-slate-900"}>
+          {match[1].trim()}
+        </span>
+        <span className="italic text-slate-700 font-normal block mt-0.5 leading-snug">
+          {match[2].trim()}
+        </span>
+      </div>
+    );
+  }
+  return <span className={isTopLevel ? "font-bold text-slate-900" : "font-medium text-slate-900"}>{name}</span>;
+}
+
 export function ContactsView({ activeTab, role }: ContactsViewProps) {
   // Проверка прав доступа к вкладке
   const isOmsuAllowed = role === 'admin' || role === 'mef' || role === 'omsu';
@@ -43,6 +60,8 @@ export function ContactsView({ activeTab, role }: ContactsViewProps) {
   const canEdit = role === 'admin' || role === 'mef';
 
   const isCioTab = activeTab === 'contacts-cio';
+  const isMefTab = activeTab === 'contacts-mef';
+  const isIndicatorTab = isCioTab || isMefTab;
 
   // Хранилище контактов для каждой вкладки в localStorage
   const storageKey = `contacts_rating_${activeTab}`;
@@ -98,6 +117,7 @@ export function ContactsView({ activeTab, role }: ContactsViewProps) {
   const tabConfig = {
     'contacts-omsu': {
       title: 'Список ответственных сотрудников ОМСУ городских округов Московской области за Рейтинг-2026',
+      subtitle: '',
       shortTitle: 'Контакты ОМСУ по Рейтингу',
       orgColTitle: 'Наименование городского округа',
       badge: 'ОМСУ МО',
@@ -113,6 +133,7 @@ export function ContactsView({ activeTab, role }: ContactsViewProps) {
     },
     'contacts-cio': {
       title: 'Ответственные сотрудники ЦИО за показатели Рейтинга-2026',
+      subtitle: '',
       shortTitle: 'Контакты ЦИО по Рейтингу',
       orgColTitle: 'Наименование показателя / критерия',
       badge: 'ЦИО МО',
@@ -127,32 +148,30 @@ export function ContactsView({ activeTab, role }: ContactsViewProps) {
       ],
     },
     'contacts-mef': {
-      title: 'Список сотрудников Министерства экономики и финансов Московской области, курирующих Рейтинг-2026',
+      title: 'Ответственные сотрудники МЭФ МО по показателям Рейтинга - 2026',
+      subtitle: '(Заведующий отделом -Григорьева О.В. 8 (498) 602-85-00, доб. 45-287)',
       shortTitle: 'Контакты МЭФ',
-      orgColTitle: 'Управление / Отдел / Служба',
+      orgColTitle: 'Показатель/критерии',
       badge: 'МЭФ МО',
       icon: Landmark,
       iconBg: 'bg-purple-50 text-purple-700 border-purple-200',
       allowedRoles: ['Администратор', 'МЭФ'],
-      defaultOrgs: Array.from(new Set(INITIAL_MEF_CONTACTS.map((c) => c.orgName))),
+      defaultOrgs: Array.from(new Set(INITIAL_MEF_CONTACTS.map((c) => c.cioName || c.orgName))).filter(Boolean),
       roleOptions: [
+        'Ответственный сотрудник МЭФ',
         'Руководитель, курирующий данное направление',
-        'Руководитель структурного подразделения, курирующий данное направление',
-        'Ответственный исполнитель (куратор расчета и валидации Рейтинга)',
-        'Ответственный исполнитель (методологическое сопровождение формул и показателей)',
-        'Ответственный исполнитель (технический администратор системы)',
-        'Служба технической поддержки',
+        'Заведующий отделом',
       ],
     },
   }[activeTab];
 
   // Список всех организаций/ведомств для селекта
   const allOrgNames = useMemo(() => {
-    if (isCioTab) {
+    if (isIndicatorTab) {
       return Array.from(new Set(contacts.map((c) => c.cioName || c.orgName))).filter(Boolean);
     }
     return Array.from(new Set(contacts.map((c) => c.orgName))).filter(Boolean);
-  }, [contacts, isCioTab]);
+  }, [contacts, isIndicatorTab]);
 
   // Фильтрация контактов
   const filteredContacts = useMemo(() => {
@@ -174,18 +193,18 @@ export function ContactsView({ activeTab, role }: ContactsViewProps) {
 
       const matchOrg =
         selectedOrg === 'all' ||
-        (isCioTab ? (c.cioName || c.orgName) === selectedOrg : c.orgName === selectedOrg);
+        (isIndicatorTab ? (c.cioName || c.orgName) === selectedOrg : c.orgName === selectedOrg);
 
       const matchRole =
         selectedRoleCat === 'all' || c.roleCategory === selectedRoleCat;
 
       return matchSearch && matchOrg && matchRole;
     });
-  }, [contacts, search, selectedOrg, selectedRoleCat, isCioTab]);
+  }, [contacts, search, selectedOrg, selectedRoleCat, isIndicatorTab]);
 
-  // Группировка для вкладок ОМСУ и МЭФ
+  // Группировка для вкладки ОМСУ
   const groupedOrgs = useMemo(() => {
-    if (isCioTab) return [];
+    if (isIndicatorTab) return [];
     const map = new Map<string, ContactItem[]>();
     filteredContacts.forEach((c) => {
       if (!map.has(c.orgName)) {
@@ -204,7 +223,7 @@ export function ContactsView({ activeTab, role }: ContactsViewProps) {
       });
     });
     return result;
-  }, [filteredContacts, isCioTab]);
+  }, [filteredContacts, isIndicatorTab]);
 
   // Обработчики CRUD
   const handleAddClick = () => {
@@ -235,6 +254,31 @@ export function ContactsView({ activeTab, role }: ContactsViewProps) {
 
   // Экспорт в CSV / Excel
   const handleExportCsv = () => {
+    if (isMefTab) {
+      const header = ['№', 'Показатель/критерии', 'отв. ЦИО', 'Ответственные сотрудники МЭФ', 'Телефон', 'Email'];
+      const rows = filteredContacts.map((c) => [
+        c.num || '',
+        c.indicatorName || c.orgName,
+        (c.cioName || '').replace(/\n/g, ' / '),
+        c.fio,
+        getContactPhoneLines(c).join('; '),
+        c.email || '',
+      ]);
+
+      const csvContent =
+        'data:text/csv;charset=utf-8,\uFEFF' +
+        [tabConfig.title, tabConfig.subtitle || '', '', header.join(';'), ...rows.map((e) => e.map((val) => `"${val.replace(/"/g, '""')}"`).join(';'))].join('\n');
+
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement('a');
+      link.setAttribute('href', encodedUri);
+      link.setAttribute('download', `${activeTab}_2026.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      return;
+    }
+
     if (isCioTab) {
       const header = ['№', 'Наименование показателя / критерия', 'ЦИО', 'Ответственный исполнитель ФИО', 'Должность', 'Контактный телефон рабочий / мобильный', 'Электронная почта'];
       const rows = filteredContacts.map((c) => [
@@ -456,10 +500,184 @@ export function ContactsView({ activeTab, role }: ContactsViewProps) {
           <h2 className="text-xs sm:text-sm md:text-base font-bold text-slate-900 leading-snug tracking-tight">
             {tabConfig.title}
           </h2>
+          {tabConfig.subtitle && (
+            <div className="text-xs sm:text-sm font-semibold text-slate-800 mt-0.5">
+              {tabConfig.subtitle}
+            </div>
+          )}
         </div>
 
         <div className="overflow-x-auto">
-          {isCioTab ? (
+          {isMefTab ? (
+            /* Таблица для вкладки МЭФ по приложенному образцу */
+            <table className="w-full border-collapse text-xs sm:text-sm">
+              <thead>
+                <tr className="bg-[#dce6c8] border-b border-slate-400 text-slate-900 font-semibold text-center divide-x divide-slate-300">
+                  <th className="py-2.5 px-2 w-12 text-center">№</th>
+                  <th className="py-2.5 px-3 w-[40%] text-center">
+                    Показатель/критерии
+                  </th>
+                  <th className="py-2.5 px-2 w-[18%] text-center">отв. ЦИО</th>
+                  <th className="py-2.5 px-3 w-[22%] text-center">
+                    Ответственные сотрудники МЭФ
+                  </th>
+                  <th className="py-2.5 px-3 w-[20%] text-center">Телефон</th>
+                  {canEdit && (
+                    <th className="py-2.5 px-2 w-16 text-center print:hidden">Действия</th>
+                  )}
+                </tr>
+              </thead>
+
+              <tbody className="divide-y divide-slate-300">
+                {filteredContacts.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={canEdit ? 6 : 5}
+                      className="py-12 px-4 text-center text-slate-400 bg-white"
+                    >
+                      <div className="flex flex-col items-center justify-center gap-2">
+                        <Search className="h-8 w-8 text-slate-300" />
+                        <span className="text-sm font-medium text-slate-600">Контакты не найдены</span>
+                        <span className="text-xs text-slate-400">Попробуйте изменить параметры поиска или фильтрации</span>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  filteredContacts.map((contact, idx) => {
+                    const phoneLines = getContactPhoneLines(contact);
+                    const isTopNum = contact.num && !contact.num.includes('.');
+
+                    // Если это строка-заголовок группы/направления
+                    if (contact.isGroupHeader) {
+                      return (
+                        <tr
+                          key={contact.id || idx}
+                          className="bg-slate-100/90 font-bold border-b border-slate-300 divide-x divide-slate-300 text-slate-900 text-xs sm:text-sm"
+                        >
+                          <td className="py-2 px-2 text-center align-middle font-bold">
+                            {contact.num}
+                          </td>
+                          <td className="py-2 px-3 align-middle font-bold">
+                            {contact.indicatorName || contact.orgName}
+                          </td>
+                          <td className="py-2 px-2 text-center align-middle font-bold whitespace-pre-line leading-tight">
+                            {contact.cioName || contact.orgName}
+                          </td>
+                          <td className="py-2 px-3 align-middle text-slate-400"></td>
+                          <td className="py-2 px-3 align-middle text-slate-400"></td>
+                          {canEdit && (
+                            <td className="py-2 px-2 text-center align-middle print:hidden">
+                              <div className="flex items-center justify-center gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleEditClick(contact)}
+                                  title="Редактировать запись"
+                                  className="h-7 w-7 text-slate-500 hover:text-blue-700 hover:bg-blue-50"
+                                >
+                                  <Pencil className="h-3.5 w-3.5" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleDeleteClick(contact.id, contact.indicatorName || '')}
+                                  title="Удалить запись"
+                                  className="h-7 w-7 text-slate-400 hover:text-red-600 hover:bg-red-50"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                              </div>
+                            </td>
+                          )}
+                        </tr>
+                      );
+                    }
+
+                    return (
+                      <tr
+                        key={contact.id || idx}
+                        className="hover:bg-sky-50/40 transition-colors border-b border-slate-300 divide-x divide-slate-300 text-xs sm:text-sm text-slate-800"
+                      >
+                        {/* 1. № */}
+                        <td className={`py-2 px-2 text-center align-top ${isTopNum ? 'font-bold' : 'font-normal'} text-slate-900`}>
+                          {contact.num || idx + 1}
+                        </td>
+
+                        {/* 2. Показатель/критерии */}
+                        <td className="py-2 px-3 align-top leading-snug">
+                          {renderFormattedIndicatorName(contact.indicatorName || contact.orgName, !!isTopNum)}
+                        </td>
+
+                        {/* 3. отв. ЦИО */}
+                        <td className="py-2 px-2 text-center align-top font-semibold text-slate-800 whitespace-pre-line leading-tight">
+                          {contact.cioName || contact.orgName}
+                        </td>
+
+                        {/* 4. Ответственные сотрудники МЭФ */}
+                        <td className="py-2 px-3 align-top font-medium text-slate-900 leading-snug">
+                          {contact.fio || <span className="text-slate-400 italic">—</span>}
+                        </td>
+
+                        {/* 5. Телефон */}
+                        <td className="py-2 px-3 align-top leading-tight text-slate-800">
+                          <div className="space-y-1">
+                            {phoneLines.length > 0 ? (
+                              phoneLines.map((ph, pIdx) => (
+                                <div key={pIdx} className="font-mono text-xs text-slate-800 flex items-center gap-1.5">
+                                  <Phone className="h-3 w-3 text-slate-400 shrink-0 print:hidden" />
+                                  <span>{ph}</span>
+                                </div>
+                              ))
+                            ) : (
+                              !contact.email && <span className="text-slate-400 italic">—</span>
+                            )}
+
+                            {contact.email && (
+                              <div className="pt-0.5">
+                                <a
+                                  href={`mailto:${contact.email}`}
+                                  className="text-xs text-blue-700 hover:text-blue-900 hover:underline flex items-center gap-1.5 font-sans break-all"
+                                >
+                                  <Mail className="h-3 w-3 text-blue-600 shrink-0 print:hidden" />
+                                  <span>{contact.email}</span>
+                                </a>
+                              </div>
+                            )}
+                          </div>
+                        </td>
+
+                        {/* 6. Действия (для Админа и МЭФ) */}
+                        {canEdit && (
+                          <td className="py-2 px-2 text-center align-middle print:hidden">
+                            <div className="flex items-center justify-center gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleEditClick(contact)}
+                                title="Редактировать запись"
+                                className="h-7 w-7 text-slate-500 hover:text-blue-700 hover:bg-blue-50"
+                              >
+                                <Pencil className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleDeleteClick(contact.id, contact.fio || contact.indicatorName || '')}
+                                title="Удалить запись"
+                                className="h-7 w-7 text-slate-400 hover:text-red-600 hover:bg-red-50"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
+                          </td>
+                        )}
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          ) : isCioTab ? (
             /* Таблица для вкладки ЦИО по образцу */
             <table className="w-full border-collapse text-xs sm:text-sm">
               <thead>
@@ -611,7 +829,7 @@ export function ContactsView({ activeTab, role }: ContactsViewProps) {
               </tbody>
             </table>
           ) : (
-            /* Таблица для ОМСУ и МЭФ с группировкой по округам/подразделениям */
+            /* Таблица для ОМСУ с группировкой по округам */
             <table className="w-full border-collapse text-xs sm:text-sm">
               <thead>
                 <tr className="bg-[#dce6c8] border-b border-slate-400 text-slate-900 font-semibold text-center divide-x divide-slate-300">
@@ -669,6 +887,7 @@ export function ContactsView({ activeTab, role }: ContactsViewProps) {
           orgTitleLabel={tabConfig.orgColTitle}
           defaultOrgNames={tabConfig.defaultOrgs}
           roleOptions={tabConfig.roleOptions}
+          tabType={activeTab}
           isCioTab={isCioTab}
         />
       )}

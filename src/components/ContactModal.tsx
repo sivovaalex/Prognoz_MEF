@@ -20,6 +20,7 @@ interface ContactModalProps {
   orgTitleLabel: string;
   defaultOrgNames?: string[];
   roleOptions?: string[];
+  tabType?: 'contacts-omsu' | 'contacts-cio' | 'contacts-mef';
   isCioTab?: boolean;
 }
 
@@ -162,8 +163,12 @@ export function ContactModal({
     'Ответственный исполнитель (куратор расчета и валидации Рейтинга)',
     'Служба технической поддержки',
   ],
+  tabType = 'contacts-omsu',
   isCioTab = false,
 }: ContactModalProps) {
+  const isIndicatorMode = isCioTab || tabType === 'contacts-cio' || tabType === 'contacts-mef';
+  const isMefTab = tabType === 'contacts-mef';
+
   const [formData, setFormData] = useState<Partial<ContactItem>>({
     num: '',
     indicatorName: '',
@@ -173,6 +178,7 @@ export function ContactModal({
     fio: '',
     position: '',
     email: '',
+    isGroupHeader: false,
   });
 
   // Раздельные состояния для каждого поля телефона
@@ -194,6 +200,7 @@ export function ContactModal({
         fio: contact.fio || '',
         position: contact.position || '',
         email: contact.email || '',
+        isGroupHeader: contact.isGroupHeader || false,
       });
 
       const parsed = parseInitialPhones(contact);
@@ -209,17 +216,18 @@ export function ContactModal({
         cioName: defaultOrgNames[0] || '',
         orgId: '',
         orgName: defaultOrgNames[0] || '',
-        roleCategory: roleOptions[0] || '',
+        roleCategory: isMefTab ? 'Ответственный сотрудник МЭФ' : (roleOptions[0] || ''),
         fio: '',
         position: '',
         email: '',
+        isGroupHeader: false,
       });
       setWorkPhone('');
       setWorkPhoneExt('');
       setMobilePhone('');
       setAdditionalPhones([]);
     }
-  }, [contact, open]);
+  }, [contact, open, isMefTab]);
 
   // Обработчики ввода номеров с маской
   const handleWorkPhoneChange = (val: string) => {
@@ -264,7 +272,7 @@ export function ContactModal({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (isCioTab) {
+    if (isIndicatorMode) {
       if (!formData.indicatorName?.trim()) {
         alert('Пожалуйста, укажите наименование показателя / критерия');
         return;
@@ -293,7 +301,7 @@ export function ContactModal({
       }
     });
 
-    const orgName = isCioTab
+    const orgName = isIndicatorMode
       ? formData.indicatorName?.trim() || ''
       : formData.orgName?.trim() || '';
 
@@ -302,11 +310,12 @@ export function ContactModal({
     const item: ContactItem = {
       id: formData.id || `contact-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
       num: formData.num?.trim() || undefined,
-      indicatorName: isCioTab ? formData.indicatorName?.trim() : undefined,
-      cioName: isCioTab ? formData.cioName?.trim() : undefined,
+      indicatorName: isIndicatorMode ? formData.indicatorName?.trim() : undefined,
+      cioName: isIndicatorMode ? formData.cioName?.trim() : undefined,
+      isGroupHeader: formData.isGroupHeader || false,
       orgId,
       orgName,
-      roleCategory: formData.roleCategory?.trim() || roleOptions[0],
+      roleCategory: formData.roleCategory?.trim() || (isMefTab ? 'Ответственный сотрудник МЭФ' : roleOptions[0]),
       fio: formData.fio?.trim() || '',
       position: formData.position?.trim() || '',
       // Раздельные структурированные поля
@@ -324,19 +333,23 @@ export function ContactModal({
     onOpenChange(false);
   };
 
+  const modalTitle = contact?.id
+    ? (isMefTab ? 'Редактирование показателя / контакта МЭФ' : (isCioTab ? 'Редактирование контакта ЦИО' : 'Редактирование контакта'))
+    : (isMefTab ? 'Добавление показателя / контакта МЭФ' : (isCioTab ? 'Добавление нового показателя ЦИО' : 'Добавление нового контакта'));
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[92vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-base sm:text-lg font-semibold text-slate-800 flex items-center gap-2">
             <User className="h-5 w-5 text-[#1e5c8f]" />
-            <span>{contact?.id ? 'Редактирование контакта' : 'Добавление нового контакта'}</span>
+            <span>{modalTitle}</span>
           </DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4 py-2">
-          {/* Специфические поля для ЦИО: № показателя, Наименование показателя, ЦИО */}
-          {isCioTab ? (
+          {/* Специфические поля для ЦИО и МЭФ: № показателя, Наименование показателя, ЦИО */}
+          {isIndicatorMode ? (
             <div className="space-y-3">
               <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
                 <div className="space-y-1.5 sm:col-span-1">
@@ -346,7 +359,7 @@ export function ContactModal({
                   </Label>
                   <Input
                     id="num"
-                    placeholder="1. / 3.1."
+                    placeholder={isMefTab ? "1 / 3.1" : "1. / 3.1."}
                     value={formData.num || ''}
                     onChange={(e) => setFormData({ ...formData, num: e.target.value })}
                     className="h-9 text-xs sm:text-sm font-mono text-center"
@@ -356,7 +369,7 @@ export function ContactModal({
                 <div className="space-y-1.5 sm:col-span-3">
                   <Label htmlFor="indicatorName" className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
                     <Layers className="h-3.5 w-3.5 text-slate-500" />
-                    <span>Наименование показателя / критерия</span>
+                    <span>Показатель / критерии</span>
                     <span className="text-red-500">*</span>
                   </Label>
                   <Input
@@ -373,13 +386,13 @@ export function ContactModal({
               <div className="space-y-1.5">
                 <Label htmlFor="cioName" className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
                   <Building className="h-3.5 w-3.5 text-slate-500" />
-                  <span>Курирующий ЦИО</span>
+                  <span>{isMefTab ? 'отв. ЦИО' : 'Курирующий ЦИО'}</span>
                   <span className="text-red-500">*</span>
                 </Label>
                 <Input
                   id="cioName"
                   list="cio-list"
-                  placeholder="Минтер / ГУРБ / МИМП / Мингос..."
+                  placeholder="Минтер / ГУРБ / МИМП / Минчистоты / Минэнерго..."
                   value={formData.cioName || ''}
                   onChange={(e) => setFormData({ ...formData, cioName: e.target.value })}
                   className="h-9 text-xs sm:text-sm font-medium"
@@ -391,9 +404,22 @@ export function ContactModal({
                   ))}
                 </datalist>
               </div>
+
+              <div className="flex items-center gap-2 pt-1">
+                <input
+                  type="checkbox"
+                  id="isGroupHeader"
+                  checked={formData.isGroupHeader || false}
+                  onChange={(e) => setFormData({ ...formData, isGroupHeader: e.target.checked })}
+                  className="rounded border-slate-300 text-[#1e5c8f] focus:ring-[#1e5c8f]"
+                />
+                <Label htmlFor="isGroupHeader" className="text-xs text-slate-600 font-normal cursor-pointer">
+                  Строка-заголовок направления (группы) без ответственного сотрудника
+                </Label>
+              </div>
             </div>
           ) : (
-            /* Поля для ОМСУ / МЭФ: Организация + Роль */
+            /* Поля для ОМСУ: Организация + Роль */
             <div className="space-y-3">
               <div className="space-y-1.5">
                 <Label htmlFor="orgName" className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
@@ -454,34 +480,40 @@ export function ContactModal({
             </div>
           )}
 
-          {/* ФИО и Должность */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="fio" className="text-xs font-semibold text-slate-700">
-                {isCioTab ? 'Ответственный исполнитель ФИО' : 'ФИО сотрудника'}
-              </Label>
-              <Input
-                id="fio"
-                placeholder="Иванов Иван Иванович"
-                value={formData.fio || ''}
-                onChange={(e) => setFormData({ ...formData, fio: e.target.value })}
-                className="h-9 text-xs sm:text-sm"
-              />
-            </div>
+          {/* ФИО и Должность (для всех или если не заголовок) */}
+          {!formData.isGroupHeader && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="fio" className="text-xs font-semibold text-slate-700">
+                  {isMefTab
+                    ? 'Ответственные сотрудники МЭФ (ФИО)'
+                    : isCioTab
+                    ? 'Ответственный исполнитель ФИО'
+                    : 'ФИО сотрудника'}
+                </Label>
+                <Input
+                  id="fio"
+                  placeholder="Иванов Иван Иванович"
+                  value={formData.fio || ''}
+                  onChange={(e) => setFormData({ ...formData, fio: e.target.value })}
+                  className="h-9 text-xs sm:text-sm"
+                />
+              </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="position" className="text-xs font-semibold text-slate-700">
-                Должность
-              </Label>
-              <Input
-                id="position"
-                placeholder="Заведующий отделом / Начальник управления..."
-                value={formData.position || ''}
-                onChange={(e) => setFormData({ ...formData, position: e.target.value })}
-                className="h-9 text-xs sm:text-sm"
-              />
+              <div className="space-y-1.5">
+                <Label htmlFor="position" className="text-xs font-semibold text-slate-700">
+                  Должность
+                </Label>
+                <Input
+                  id="position"
+                  placeholder="Заведующий отделом / Консультант..."
+                  value={formData.position || ''}
+                  onChange={(e) => setFormData({ ...formData, position: e.target.value })}
+                  className="h-9 text-xs sm:text-sm"
+                />
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Блок контактных телефонов с отдельными полями ввода */}
           <div className="space-y-3 rounded-lg border border-slate-200 bg-slate-50/70 p-3.5">
