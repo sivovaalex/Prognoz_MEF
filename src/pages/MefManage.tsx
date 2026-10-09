@@ -5,17 +5,17 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle2, PlayCircle, StopCircle, CalendarClock, Send, BarChart3 } from 'lucide-react';
-import { approvalStats, allApproved } from '@/lib/rating';
+import { PlayCircle, StopCircle, CalendarClock, Send } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { CollectionFormSettings } from '@/components/CollectionFormSettings';
 
-/** Вкладка «Управление сбором» МЭФ: управление сбором, сроки, готовность к отчёту */
-export function MefManage({ block, goRating, goReport }: { block?: string; goRating: () => void; goReport: () => void }) {
+/** Вкладка «Управление сбором» МЭФ: управление сбором, сроки, настройки форм */
+export function MefManage({ block }: { block?: string; goRating?: () => void; goReport?: () => void }) {
   const { state, dispatch } = useStore();
   const [periodName, setPeriodName] = useState(state.campaign.period ?? '');
   const [startDate, setStartDate] = useState(state.campaign.startDate ?? '2026-07-20');
   const [dlMef, setDlMef] = useState(state.campaign.deadlineMef);
+  const [historyModalOpen, setHistoryModalOpen] = useState(false);
 
   useEffect(() => {
     setPeriodName(state.campaign.period ?? '');
@@ -23,218 +23,83 @@ export function MefManage({ block, goRating, goReport }: { block?: string; goRat
     setDlMef(state.campaign.deadlineMef);
   }, [state.campaign.module, state.campaign.period, state.campaign.startDate, state.campaign.deadlineMef]);
 
-  const stats = approvalStats(state);
-  const complete = allApproved(state);
-  const [reportModalOpen, setReportModalOpen] = useState(false);
-  const [historyModalOpen, setHistoryModalOpen] = useState(false);
-  const [reportIntent, setReportIntent] = useState<'pre' | 'final'>('final');
-  const [reportType, setReportType] = useState('ind');
-  const [period, setPeriod] = useState(state.campaign.period || '2024');
-
   const isRating = state.campaign.module === 'rating';
   const isUkaz = state.campaign.module === 'ukaz';
   const activeBlock = block || (isUkaz ? 'ukaz_main' : isRating ? 'rating_main' : 'mun');
-  const periods = isRating 
-    ? [state.campaign.period, '4 квартал 2025 года', '3 квартал 2025 года', '2 квартал 2025 года', '1 квартал 2025 года', 'Итоговый рейтинг за 2025 год']
-    : isUkaz
-    ? [state.campaign.period, 'Мониторинг исполнения Указа №607 за 2024 год', 'Мониторинг исполнения Указа №607 за 2023 год']
-    : [state.campaign.period, 'Прогноз СЭР на 2026–2028 годы (оценка 2025)', 'Прогноз СЭР на 2025–2027 годы (оценка 2024)', 'Прогноз СЭР на 2024–2026 годы (оценка 2023)'];
-  const uniquePeriods = Array.from(new Set(periods.filter(Boolean)));
 
   return (
     <div className="space-y-4">
       <div>
         <h2 className="text-lg font-semibold">Управление сбором</h2>
         <p className="text-sm text-muted-foreground">
-          Куратор отчёта: запуск сбора, контроль сроков, предварительный и итоговый отчёт
+          Куратор отчёта: запуск сбора, контроль сроков и параметров кампании сбора данных
         </p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 items-start">
-        <div className="space-y-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-base">Параметры сбора</CardTitle>
-              <Button variant="outline" size="sm" onClick={() => setHistoryModalOpen(true)}>Историчность сборов</Button>
-            </CardHeader>
-            <CardContent className="space-y-3 text-sm">
-              <div className="grid grid-cols-2 items-center gap-2">
-                <Label>Период сбора</Label>
-                <Input
-                  type="text"
-                  placeholder="Введите период сбора..."
-                  value={periodName}
-                  onChange={(e) => setPeriodName(e.target.value)}
-                />
-              </div>
-              <div className="grid grid-cols-2 items-center gap-2">
-                <Label>Дата запуска сбора</Label>
-                <Input type="datetime-local" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
-              </div>
-              <div className="grid grid-cols-2 items-center gap-2">
-                <Label>Дата окончания сбора</Label>
-                <Input type="datetime-local" value={dlMef} onChange={(e) => setDlMef(e.target.value)} />
-              </div>
-              <div className="flex gap-2 pt-2">
-                <Button
-                  variant="outline"
-                  onClick={() =>
-                    dispatch({
-                      type: 'CAMPAIGN_SCHEDULE',
-                      startDate,
-                      deadlineOmsu: state.campaign.deadlineOmsu,
-                      deadlineCio: state.campaign.deadlineCio,
-                      deadlineMef: dlMef,
-                      period: periodName,
-                    })
-                  }
-                >
-                  <CalendarClock className="h-4 w-4 mr-1" /> Сохранить даты
-                </Button>
-                {state.campaign.status === 'collecting' ? (
-                  <>
-                    <Button variant="destructive" onClick={() => dispatch({ type: 'CAMPAIGN_STOP' })}>
-                      <StopCircle className="h-4 w-4 mr-1" /> Остановить сбор
-                    </Button>
-                    <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">
-                      <Send className="h-3.5 w-3.5 mr-1" />
-                      Сбор запущен {state.campaign.launchedAt}
-                    </Badge>
-                  </>
-                ) : (
-                  state.campaign.status !== 'completed' && (
-                    <Button onClick={() => dispatch({ type: 'CAMPAIGN_LAUNCH' })}>
-                      <PlayCircle className="h-4 w-4 mr-1" /> Запустить сбор
-                    </Button>
-                  )
-                )}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                В указанную дату КФ автоматически рассылает уведомления и формы: {state.omsus.length} ОМСУ и {state.cios.length} ЦИО.
-              </p>
-            </CardContent>
-          </Card>
-
-          <CollectionFormSettings block={activeBlock} />
-        </div>
-
-        {isRating && (
-          <Card>
-            <CardHeader><CardTitle className="text-base">Готовность к итоговому отчёту</CardTitle></CardHeader>
-            <CardContent className="space-y-3 text-sm">
-              <div className="flex flex-wrap gap-2 text-xs">
-                <Badge variant="outline" className="text-green-700 border-green-300">Согласовано ЦИО: {stats.approved}/{stats.total}</Badge>
-                <Badge variant="outline" className="text-amber-700 border-amber-300">На согласовании: {stats.pending}</Badge>
-                <Badge variant="outline" className="text-gray-600">Не заполнено/черновики: {stats.empty + stats.draft}</Badge>
-              </div>
-              <div className="rounded-md border p-3">
-                <div className="font-medium">Предварительный отчёт</div>
-                <p className="text-xs text-muted-foreground mb-2">
-                  Доступен в любой момент: рассчитывается по введённым данным (согласованным и несогласованным).
-                </p>
-                <Button variant="outline" size="sm" onClick={() => { setReportIntent('pre'); setReportModalOpen(true); }}>
-                  <BarChart3 className="h-4 w-4 mr-1" /> Сформировать предварительный отчёт
-                </Button>
-              </div>
-              
-              <div className="rounded-md border p-3">
-                <div className="font-medium">Итоговый отчёт</div>
-                <p className="text-xs text-muted-foreground mb-2">
-                  {complete
-                    ? 'Все показатели согласованы. Можно формировать итоговый сводный отчёт.'
-                    : 'Обычно доступен после согласования всех показателей, но для тестирования кнопка разблокирована.'}
-                </p>
-                <Button size="sm" onClick={() => { setReportIntent('final'); setReportModalOpen(true); }}>
-                  <CheckCircle2 className="h-4 w-4 mr-1" /> Сформировать итоговый отчёт
-                </Button>
-                {state.finalPublished && (
-                  <Badge className="ml-2 bg-green-100 text-green-700 hover:bg-green-100">Опубликован</Badge>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-      </div>
-
-      <Dialog open={reportModalOpen} onOpenChange={setReportModalOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>
-              {reportIntent === 'pre' ? 'Формирование предварительного отчёта' : 'Формирование итогового отчёта'}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="py-4 space-y-4">
-            <div className="space-y-2">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-base">Параметры сбора</CardTitle>
+            <Button variant="outline" size="sm" onClick={() => setHistoryModalOpen(true)}>Историчность сборов</Button>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm">
+            <div className="grid grid-cols-2 items-center gap-2">
               <Label>Период сбора</Label>
-              <select 
-                className="flex h-9 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                value={period}
-                onChange={e => setPeriod(e.target.value)}
-              >
-                {uniquePeriods.map(p => (
-                  <option key={p} value={p}>{p}</option>
-                ))}
-              </select>
+              <Input
+                type="text"
+                placeholder="Введите период сбора..."
+                value={periodName}
+                onChange={(e) => setPeriodName(e.target.value)}
+              />
             </div>
-            {isRating && (
-              <div className="space-y-2">
-                <Label>Выберите тип отчёта:</Label>
-                <div className="space-y-2 text-sm">
-                  <label className="flex items-center gap-2 cursor-not-allowed opacity-50">
-                    <input
-                      type="radio"
-                      name="reportType"
-                      value="cio"
-                      checked={reportType === 'cio'}
-                      disabled
-                      onChange={(e) => setReportType(e.target.value)}
-                      className="w-4 h-4 text-[#1e5c8f] border-gray-300"
-                    />
-                    ЦИО
-                  </label>
-                  <label className="flex items-center gap-2 cursor-not-allowed opacity-50">
-                    <input
-                      type="radio"
-                      name="reportType"
-                      value="omsu"
-                      checked={reportType === 'omsu'}
-                      disabled
-                      onChange={(e) => setReportType(e.target.value)}
-                      className="w-4 h-4 text-[#1e5c8f] border-gray-300"
-                    />
-                    ОМСУ
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="reportType"
-                      value="ind"
-                      checked={reportType === 'ind'}
-                      onChange={(e) => setReportType(e.target.value)}
-                      className="w-4 h-4 text-[#1e5c8f] border-gray-300"
-                    />
-                    показатель
-                  </label>
-                </div>
-              </div>
-            )}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setReportModalOpen(false)}>Отмена</Button>
-            <Button onClick={() => {
-              if (reportIntent === 'final') {
-                dispatch({ type: 'PUBLISH_FINAL' });
-              }
-              setReportModalOpen(false);
-              if (reportType === 'ind') {
-                goReport();
-              } else {
-                goRating();
-              }
-            }}>Сформировать</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            <div className="grid grid-cols-2 items-center gap-2">
+              <Label>Дата запуска сбора</Label>
+              <Input type="datetime-local" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+            </div>
+            <div className="grid grid-cols-2 items-center gap-2">
+              <Label>Дата окончания сбора</Label>
+              <Input type="datetime-local" value={dlMef} onChange={(e) => setDlMef(e.target.value)} />
+            </div>
+            <div className="flex gap-2 pt-2">
+              <Button
+                variant="outline"
+                onClick={() =>
+                  dispatch({
+                    type: 'CAMPAIGN_SCHEDULE',
+                    startDate,
+                    deadlineOmsu: state.campaign.deadlineOmsu,
+                    deadlineCio: state.campaign.deadlineCio,
+                    deadlineMef: dlMef,
+                    period: periodName,
+                  })
+                }
+              >
+                <CalendarClock className="h-4 w-4 mr-1" /> Сохранить даты
+              </Button>
+              {state.campaign.status === 'collecting' ? (
+                <>
+                  <Button variant="destructive" onClick={() => dispatch({ type: 'CAMPAIGN_STOP' })}>
+                    <StopCircle className="h-4 w-4 mr-1" /> Завершить сбор
+                  </Button>
+                  <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">
+                    <Send className="h-3.5 w-3.5 mr-1" />
+                    Сбор запущен {state.campaign.launchedAt}
+                  </Badge>
+                </>
+              ) : (
+                <Button onClick={() => dispatch({ type: 'CAMPAIGN_LAUNCH' })}>
+                  <PlayCircle className="h-4 w-4 mr-1" /> {state.campaign.status === 'completed' ? 'Запустить новый сбор' : 'Запустить сбор'}
+                </Button>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              В указанную дату КФ автоматически рассылает уведомления и формы: {state.omsus.length} ОМСУ и {state.cios.length} ЦИО. Предварительный отчёт формируется автоматически по мере занесения данных, а итоговый отчёт — автоматически при завершении кампании.
+            </p>
+          </CardContent>
+        </Card>
+
+        <CollectionFormSettings block={activeBlock} />
+      </div>
 
       <Dialog open={historyModalOpen} onOpenChange={setHistoryModalOpen}>
         <DialogContent className="max-w-3xl">

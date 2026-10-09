@@ -24,6 +24,7 @@ import { NoteOmsuWorkspace } from '@/pages/note/NoteOmsuWorkspace';
 import { NoteCioWorkspace } from '@/pages/note/NoteCioWorkspace';
 import { NoteOutputTables } from '@/pages/note/NoteOutputTables';
 import { RatingMonitoringView } from '@/pages/RatingMonitoringView';
+import { ContactsView } from '@/pages/ContactsView';
 import { NewsListPage } from '@/pages/news/NewsListPage';
 import { NewsEditPage } from '@/pages/news/NewsEditPage';
 import {
@@ -34,8 +35,9 @@ import { Bell, Landmark, UserRound, Home as HomeIcon, LogOut } from 'lucide-reac
 
 type PageId = 'setup' | 'omsu' | 'cio' | 'mef-manage' | 'rating' | 'rating-zato' | 'report' | 'about' | 'users' | 'dicts' | 'output-tables' | 'mef-workspace'
   | 'note-admin' | 'note-collection' | 'note-omsu' | 'note-cio' | 'note-output'
-  | 'rating-monitoring' | 'news' | 'news-create' | 'news-edit';
-type BlockId = 'mun' | 'obl' | 'params' | 'form2p' | 'long_term' | 'news_block' | 'admin_block' | 'ukaz_main' | 'rating_monitoring' | 'rating_main' | 'rating_view';
+  | 'rating-monitoring' | 'news' | 'news-create' | 'news-edit'
+  | 'contacts-omsu' | 'contacts-cio' | 'contacts-mef';
+type BlockId = 'mun' | 'obl' | 'params' | 'form2p' | 'long_term' | 'news_block' | 'admin_block' | 'ukaz_main' | 'rating_monitoring' | 'rating_main' | 'rating_view' | 'rating_contacts';
 
 const BLOCK_LABELS: Record<BlockId, string> = {
   mun: 'Муниципальный прогноз',
@@ -49,6 +51,7 @@ const BLOCK_LABELS: Record<BlockId, string> = {
   rating_monitoring: 'Мониторинг хода сбора',
   rating_main: 'Показатели',
   rating_view: 'Рейтинг ОМСУ',
+  rating_contacts: 'Контакты',
 };
 
 const getBlocks = (role: RoleId, module: ModuleId, settings: AppState['blockSettings']): BlockId[] => {
@@ -56,10 +59,10 @@ const getBlocks = (role: RoleId, module: ModuleId, settings: AppState['blockSett
   if (module === 'ukaz') {
     blocks = role === 'admin' ? ['ukaz_main', 'news_block', 'admin_block'] : ['ukaz_main', 'news_block'];
   } else if (module === 'rating') {
-    if (role === 'admin') blocks = ['rating_monitoring', 'rating_main', 'rating_view', 'news_block', 'admin_block'];
-    else if (role === 'mef') blocks = ['rating_monitoring', 'rating_main', 'rating_view', 'news_block'];
-    else if (role === 'cio') blocks = ['rating_monitoring', 'rating_main', 'rating_view', 'news_block'];
-    else blocks = ['rating_main', 'rating_view', 'news_block']; // В личном кабинете ОМСУ ход сбора не отображается
+    if (role === 'admin') blocks = ['rating_monitoring', 'rating_main', 'rating_view', 'rating_contacts', 'news_block', 'admin_block'];
+    else if (role === 'mef') blocks = ['rating_monitoring', 'rating_main', 'rating_view', 'rating_contacts', 'news_block'];
+    else if (role === 'cio') blocks = ['rating_monitoring', 'rating_main', 'rating_view', 'rating_contacts', 'news_block'];
+    else blocks = ['rating_main', 'rating_view', 'rating_contacts', 'news_block']; // В личном кабинете ОМСУ ход сбора не отображается
   } else {
     if (role === 'admin') blocks = ['mun', 'obl', 'params', 'form2p', 'long_term', 'news_block', 'admin_block'];
     else if (role === 'mef' || role === 'cio') blocks = ['mun', 'obl', 'params', 'form2p', 'long_term', 'news_block'];
@@ -68,7 +71,7 @@ const getBlocks = (role: RoleId, module: ModuleId, settings: AppState['blockSett
   
   if (role !== 'admin' && role !== 'mef') {
     blocks = blocks.filter(b => {
-      if (b === 'news_block') return true;
+      if (b === 'news_block' || b === 'rating_contacts') return true;
       if (b === 'rating_monitoring') return role !== 'omsu';
       if (b === 'rating_view' || b === 'admin_block') return true;
       return settings[b] && settings[b].approvers.includes(role);
@@ -179,14 +182,18 @@ function Shell({
     setRole(r);
     setNewsRole(r);
     const avail = getBlocks(r, activeModule, state.blockSettings);
-    const targetBlock = avail[0];
+    const targetBlock = avail.includes(block) ? block : avail[0];
     setBlock(targetBlock);
     if (targetBlock === 'rating_monitoring') {
       setPage('rating-monitoring');
     } else if (targetBlock === 'news_block') {
       setPage('news');
+    } else if (targetBlock === 'rating_contacts') {
+      setPage(r === 'cio' ? 'contacts-cio' : 'contacts-omsu');
     } else if (targetBlock === 'rating_view' && r === 'omsu') {
       setPage(isZatoOmsu ? 'rating-zato' : 'rating');
+    } else if (targetBlock === 'admin_block') {
+      setPage('users');
     } else {
       setPage(DEFAULT_PAGE[r]);
     }
@@ -201,6 +208,8 @@ function Shell({
       setPage('news');
     } else if (b === 'rating_monitoring') {
       setPage('rating-monitoring');
+    } else if (b === 'rating_contacts') {
+      setPage(role === 'cio' ? 'contacts-cio' : 'contacts-omsu');
     } else if (b === 'rating_view') {
       if (role === 'omsu') {
         setPage(isZatoOmsu ? 'rating-zato' : 'rating');
@@ -232,6 +241,17 @@ function Shell({
       ? [
           { id: 'rating-monitoring' as PageId, label: 'Мониторинг хода сбора данных' },
         ]
+    : block === 'rating_contacts'
+      ? (role === 'cio'
+          ? [{ id: 'contacts-cio' as PageId, label: 'Контакты ЦИО по Рейтингу' }]
+          : role === 'omsu'
+            ? [{ id: 'contacts-omsu' as PageId, label: 'Контакты ОМСУ по Рейтингу' }]
+            : [
+                { id: 'contacts-omsu' as PageId, label: 'Контакты ОМСУ по Рейтингу' },
+                { id: 'contacts-cio' as PageId, label: 'Контакты ЦИО по Рейтингу' },
+                { id: 'contacts-mef' as PageId, label: 'Контакты МЭФ' },
+              ]
+        )
     : block === 'rating_view'
       ? (role === 'admin' || role === 'mef'
           ? [
@@ -247,7 +267,7 @@ function Shell({
         : NAV[role];
 
   // Filter NAV tabs based on block settings
-  if (block !== 'admin_block' && block !== 'news_block' && block !== 'rating_view' && block !== 'rating_monitoring') {
+  if (block !== 'admin_block' && block !== 'news_block' && block !== 'rating_view' && block !== 'rating_monitoring' && block !== 'rating_contacts') {
     const approvers = state.blockSettings[block]?.approvers || [];
     activeNav = activeNav.filter(item => {
       if (item.id === 'omsu' || item.id === 'note-omsu') return approvers.includes('omsu');
@@ -438,6 +458,9 @@ function Shell({
 
       <main className="w-full pb-10">
         {page === 'rating-monitoring' && <div className="px-4"><RatingMonitoringView role={role} /></div>}
+        {(page === 'contacts-omsu' || page === 'contacts-cio' || page === 'contacts-mef') && (
+          <div className="px-4"><ContactsView activeTab={page} role={role} /></div>
+        )}
         {page === 'setup' && <div className="px-4"><Setup block={block} /></div>}
         {page === 'omsu' && <div className="px-4"><OmsuForm /></div>}
         {page === 'cio' && <div className="px-4"><CioWorkspace key={block} block={block} hideOmsuApprove={!(state.blockSettings[block]?.approvers || []).includes('omsu')} /></div>}

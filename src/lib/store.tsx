@@ -451,16 +451,20 @@ function reducer(state: AppState, a: Action): AppState {
     case 'CAMPAIGN_LAUNCH':
       return {
         ...state,
+        finalPublished: false,
+        ratingMode: 'preview',
         campaign: { ...state.campaign, status: 'collecting', launchedAt: now() },
-        notifications: [...state.notifications, { id: ++notifId, at: now(), text: `Начат сбор данных «${state.campaign.name} — ${state.campaign.period}». Формы разосланы ОМСУ и ЦИО`, forRoles: ['omsu', 'cio', 'mef'] }],
+        notifications: [...state.notifications, { id: ++notifId, at: now(), text: `Начат сбор данных «${state.campaign.name} — ${state.campaign.period}». Предварительный отчёт формируется автоматически по мере занесения данных`, forRoles: ['omsu', 'cio', 'mef'] }],
         history: [...state.history, { at: now(), actor: 'КФ (автоматически)', action: 'Разосланы уведомления и формы ОМСУ и ЦИО' }],
       };
     case 'CAMPAIGN_STOP':
       return {
         ...state,
-        campaign: { ...state.campaign, status: 'scheduled' },
-        notifications: [...state.notifications, { id: ++notifId, at: now(), text: `Сбор данных «${state.campaign.name} — ${state.campaign.period}» остановлен куратором МЭФ`, forRoles: ['omsu', 'cio', 'mef'] }],
-        history: [...state.history, { at: now(), actor: 'Куратор МЭФ', action: 'Остановлен сбор данных' }],
+        campaign: { ...state.campaign, status: 'completed' },
+        finalPublished: true,
+        ratingMode: 'final',
+        notifications: [...state.notifications, { id: ++notifId, at: now(), text: `Кампания сбора «${state.campaign.name} — ${state.campaign.period}» завершена. Итоговый отчёт сформирован автоматически`, forRoles: ['omsu', 'cio', 'mef'] }],
+        history: [...state.history, { at: now(), actor: 'Куратор МЭФ', action: 'Завершена кампания сбора, автоматически сформирован итоговый отчёт' }],
       };
     case 'SET_RATING_MODE':
       return { ...state, ratingMode: a.mode };
