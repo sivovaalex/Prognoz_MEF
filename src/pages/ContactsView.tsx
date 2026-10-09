@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import {
   type ContactItem,
+  getContactPhoneLines,
   INITIAL_OMSU_CONTACTS,
   INITIAL_CIO_CONTACTS,
   INITIAL_MEF_CONTACTS,
@@ -40,6 +41,8 @@ export function ContactsView({ activeTab, role }: ContactsViewProps) {
 
   // Права на редактирование: только Администратор и МЭФ
   const canEdit = role === 'admin' || role === 'mef';
+
+  const isCioTab = activeTab === 'contacts-cio';
 
   // Хранилище контактов для каждой вкладки в localStorage
   const storageKey = `contacts_rating_${activeTab}`;
@@ -109,18 +112,18 @@ export function ContactsView({ activeTab, role }: ContactsViewProps) {
       ],
     },
     'contacts-cio': {
-      title: 'Список кураторов и ответственных сотрудников ЦИО Московской области за Рейтинг-2026',
+      title: 'Ответственные сотрудники ЦИО за показатели Рейтинга-2026',
       shortTitle: 'Контакты ЦИО по Рейтингу',
-      orgColTitle: 'Наименование ЦИО',
+      orgColTitle: 'Наименование показателя / критерия',
       badge: 'ЦИО МО',
       icon: Building2,
       iconBg: 'bg-blue-50 text-blue-700 border-blue-200',
       allowedRoles: ['Администратор', 'МЭФ', 'ЦИО'],
-      defaultOrgs: Array.from(new Set(INITIAL_CIO_CONTACTS.map((c) => c.orgName))),
+      defaultOrgs: Array.from(new Set(INITIAL_CIO_CONTACTS.map((c) => c.cioName || c.orgName))).filter(Boolean),
       roleOptions: [
+        'Ответственный исполнитель',
         'Руководитель, курирующий данное направление',
         'Руководитель структурного подразделения, курирующий данное направление',
-        'Ответственный исполнитель (ввод и верификация ведомственных значений)',
       ],
     },
     'contacts-mef': {
@@ -143,33 +146,46 @@ export function ContactsView({ activeTab, role }: ContactsViewProps) {
     },
   }[activeTab];
 
-  // Список всех организаций для селекта
+  // Список всех организаций/ведомств для селекта
   const allOrgNames = useMemo(() => {
+    if (isCioTab) {
+      return Array.from(new Set(contacts.map((c) => c.cioName || c.orgName))).filter(Boolean);
+    }
     return Array.from(new Set(contacts.map((c) => c.orgName))).filter(Boolean);
-  }, [contacts]);
+  }, [contacts, isCioTab]);
 
   // Фильтрация контактов
   const filteredContacts = useMemo(() => {
     const q = search.trim().toLowerCase();
     return contacts.filter((c) => {
+      const phoneStr = (c.phones || '') + ' ' + (c.workPhone || '') + ' ' + (c.mobilePhone || '') + ' ' + (c.workPhoneExt || '') + ' ' + (c.additionalPhones || []).map(a => a.phone).join(' ');
+
       const matchSearch =
         !q ||
+        (c.num && c.num.toLowerCase().includes(q)) ||
+        (c.indicatorName && c.indicatorName.toLowerCase().includes(q)) ||
+        (c.cioName && c.cioName.toLowerCase().includes(q)) ||
         c.orgName.toLowerCase().includes(q) ||
         c.fio.toLowerCase().includes(q) ||
         c.position.toLowerCase().includes(q) ||
         c.roleCategory.toLowerCase().includes(q) ||
-        c.phones.toLowerCase().includes(q) ||
+        phoneStr.toLowerCase().includes(q) ||
         (c.email && c.email.toLowerCase().includes(q));
 
-      const matchOrg = selectedOrg === 'all' || c.orgName === selectedOrg;
-      const matchRole = selectedRoleCat === 'all' || c.roleCategory === selectedRoleCat;
+      const matchOrg =
+        selectedOrg === 'all' ||
+        (isCioTab ? (c.cioName || c.orgName) === selectedOrg : c.orgName === selectedOrg);
+
+      const matchRole =
+        selectedRoleCat === 'all' || c.roleCategory === selectedRoleCat;
 
       return matchSearch && matchOrg && matchRole;
     });
-  }, [contacts, search, selectedOrg, selectedRoleCat]);
+  }, [contacts, search, selectedOrg, selectedRoleCat, isCioTab]);
 
-  // Группировка по организациям с сохранением порядка и сквозной нумерацией
+  // Группировка для вкладок ОМСУ и МЭФ
   const groupedOrgs = useMemo(() => {
+    if (isCioTab) return [];
     const map = new Map<string, ContactItem[]>();
     filteredContacts.forEach((c) => {
       if (!map.has(c.orgName)) {
@@ -188,7 +204,7 @@ export function ContactsView({ activeTab, role }: ContactsViewProps) {
       });
     });
     return result;
-  }, [filteredContacts]);
+  }, [filteredContacts, isCioTab]);
 
   // Обработчики CRUD
   const handleAddClick = () => {
@@ -219,6 +235,32 @@ export function ContactsView({ activeTab, role }: ContactsViewProps) {
 
   // Экспорт в CSV / Excel
   const handleExportCsv = () => {
+    if (isCioTab) {
+      const header = ['№', 'Наименование показателя / критерия', 'ЦИО', 'Ответственный исполнитель ФИО', 'Должность', 'Контактный телефон рабочий / мобильный', 'Электронная почта'];
+      const rows = filteredContacts.map((c) => [
+        c.num || '',
+        c.indicatorName || c.orgName,
+        (c.cioName || '').replace(/\n/g, ' / '),
+        c.fio,
+        c.position,
+        getContactPhoneLines(c).join('; '),
+        c.email || '',
+      ]);
+
+      const csvContent =
+        'data:text/csv;charset=utf-8,\uFEFF' +
+        [tabConfig.title, '', header.join(';'), ...rows.map((e) => e.map((val) => `"${val.replace(/"/g, '""')}"`).join(';'))].join('\n');
+
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement('a');
+      link.setAttribute('href', encodedUri);
+      link.setAttribute('download', `${activeTab}_2026.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      return;
+    }
+
     const header = ['№', tabConfig.orgColTitle, 'Роль', 'ФИО', 'Должность', 'Контактный телефон', 'Email'];
     const rows: string[][] = [];
 
@@ -230,7 +272,7 @@ export function ContactsView({ activeTab, role }: ContactsViewProps) {
           c.roleCategory,
           c.fio,
           c.position,
-          c.phones.replace(/\n/g, '; '),
+          getContactPhoneLines(c).join('; '),
           c.email || '',
         ]);
       });
@@ -296,7 +338,7 @@ export function ContactsView({ activeTab, role }: ContactsViewProps) {
               )}
             </div>
             <div className="text-xs text-muted-foreground mt-0.5">
-              Всего организаций: <b className="text-slate-700">{allOrgNames.length}</b> · Контактов в базе: <b className="text-slate-700">{contacts.length}</b>
+              Всего записей: <b className="text-slate-700">{contacts.length}</b> · Ведомств / категорий: <b className="text-slate-700">{allOrgNames.length}</b>
             </div>
           </div>
         </div>
@@ -342,7 +384,7 @@ export function ContactsView({ activeTab, role }: ContactsViewProps) {
         <div className="relative flex-1 min-w-[220px]">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
           <Input
-            placeholder="Поиск по ФИО, организации, должности, телефону или email..."
+            placeholder={isCioTab ? "Поиск по показателю, ЦИО, ФИО, должности, телефону или email..." : "Поиск по ФИО, организации, должности, телефону или email..."}
             className="pl-8 h-8 text-xs"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -360,10 +402,10 @@ export function ContactsView({ activeTab, role }: ContactsViewProps) {
         <div className="w-full sm:w-[220px]">
           <Select value={selectedOrg} onValueChange={setSelectedOrg}>
             <SelectTrigger className="h-8 text-xs">
-              <SelectValue placeholder="Все организации" />
+              <SelectValue placeholder={isCioTab ? "Все ЦИО" : "Все организации"} />
             </SelectTrigger>
             <SelectContent className="max-h-64">
-              <SelectItem value="all">Все ({allOrgNames.length})</SelectItem>
+              <SelectItem value="all">{isCioTab ? "Все ЦИО" : "Все организации"} ({allOrgNames.length})</SelectItem>
               {allOrgNames.map((name) => (
                 <SelectItem key={name} value={name}>
                   {name}
@@ -373,21 +415,23 @@ export function ContactsView({ activeTab, role }: ContactsViewProps) {
           </Select>
         </div>
 
-        <div className="w-full sm:w-[240px]">
-          <Select value={selectedRoleCat} onValueChange={setSelectedRoleCat}>
-            <SelectTrigger className="h-8 text-xs">
-              <SelectValue placeholder="Все роли" />
-            </SelectTrigger>
-            <SelectContent className="max-h-64">
-              <SelectItem value="all">Все роли</SelectItem>
-              {tabConfig.roleOptions.map((roleOpt) => (
-                <SelectItem key={roleOpt} value={roleOpt}>
-                  {roleOpt}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        {!isCioTab && (
+          <div className="w-full sm:w-[240px]">
+            <Select value={selectedRoleCat} onValueChange={setSelectedRoleCat}>
+              <SelectTrigger className="h-8 text-xs">
+                <SelectValue placeholder="Все роли" />
+              </SelectTrigger>
+              <SelectContent className="max-h-64">
+                <SelectItem value="all">Все роли</SelectItem>
+                {tabConfig.roleOptions.map((roleOpt) => (
+                  <SelectItem key={roleOpt} value={roleOpt}>
+                    {roleOpt}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
 
         {(search || selectedOrg !== 'all' || selectedRoleCat !== 'all') && (
           <Button
@@ -407,7 +451,7 @@ export function ContactsView({ activeTab, role }: ContactsViewProps) {
 
       {/* Основная таблица контактов в стиле документа / отчёта */}
       <div className="bg-white rounded-lg border shadow-sm overflow-hidden">
-        {/* Заголовок документа по центру над таблицей (как на скриншоте) */}
+        {/* Заголовок документа по центру над таблицей */}
         <div className="py-3 px-4 text-center border-b bg-slate-50/50">
           <h2 className="text-xs sm:text-sm md:text-base font-bold text-slate-900 leading-snug tracking-tight">
             {tabConfig.title}
@@ -415,50 +459,203 @@ export function ContactsView({ activeTab, role }: ContactsViewProps) {
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full border-collapse text-xs sm:text-sm">
-            {/* Шапка таблицы (оливково-зеленоватый фон по скриншоту) */}
-            <thead>
-              <tr className="bg-[#dce6c8] border-b border-slate-400 text-slate-900 font-semibold text-center divide-x divide-slate-300">
-                <th className="py-2.5 px-2 w-10 sm:w-12 text-center">№</th>
-                <th className="py-2.5 px-3 w-[28%] text-center">
-                  {tabConfig.orgColTitle}
-                </th>
-                <th className="py-2.5 px-3 w-[24%] text-center">ФИО</th>
-                <th className="py-2.5 px-3 w-[24%] text-center">Должность</th>
-                <th className="py-2.5 px-3 w-[20%] text-center">Контактный телефон</th>
-                {canEdit && (
-                  <th className="py-2.5 px-2 w-20 text-center print:hidden">Действия</th>
-                )}
-              </tr>
-            </thead>
-
-            <tbody className="divide-y divide-slate-300">
-              {groupedOrgs.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={canEdit ? 6 : 5}
-                    className="py-12 px-4 text-center text-slate-400 bg-white"
-                  >
-                    <div className="flex flex-col items-center justify-center gap-2">
-                      <Search className="h-8 w-8 text-slate-300" />
-                      <span className="text-sm font-medium text-slate-600">Контакты не найдены</span>
-                      <span className="text-xs text-slate-400">Попробуйте изменить параметры поиска или фильтрации</span>
-                    </div>
-                  </td>
+          {isCioTab ? (
+            /* Таблица для вкладки ЦИО по образцу */
+            <table className="w-full border-collapse text-xs sm:text-sm">
+              <thead>
+                <tr className="bg-[#dce6c8] border-b border-slate-400 text-slate-900 font-semibold text-center divide-x divide-slate-300">
+                  <th className="py-2.5 px-2 w-12 text-center">№</th>
+                  <th className="py-2.5 px-3 w-[26%] text-center">
+                    Наименование показателя / критерия
+                  </th>
+                  <th className="py-2.5 px-2 w-24 text-center">ЦИО</th>
+                  <th className="py-2.5 px-3 w-[20%] text-center">
+                    Ответственный исполнитель ФИО
+                  </th>
+                  <th className="py-2.5 px-3 w-[22%] text-center">Должность</th>
+                  <th className="py-2.5 px-3 w-[18%] text-center">
+                    Контактный телефон рабочий / мобильный
+                  </th>
+                  <th className="py-2.5 px-3 w-36 text-center">Электронная почта</th>
+                  {canEdit && (
+                    <th className="py-2.5 px-2 w-16 text-center print:hidden">Действия</th>
+                  )}
                 </tr>
-              ) : (
-                groupedOrgs.map((group) => (
-                  <GroupRows
-                    key={group.orgName}
-                    group={group}
-                    canEdit={canEdit}
-                    onEdit={handleEditClick}
-                    onDelete={handleDeleteClick}
-                  />
-                ))
-              )}
-            </tbody>
-          </table>
+              </thead>
+
+              <tbody className="divide-y divide-slate-300">
+                {filteredContacts.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={canEdit ? 8 : 7}
+                      className="py-12 px-4 text-center text-slate-400 bg-white"
+                    >
+                      <div className="flex flex-col items-center justify-center gap-2">
+                        <Search className="h-8 w-8 text-slate-300" />
+                        <span className="text-sm font-medium text-slate-600">Контакты не найдены</span>
+                        <span className="text-xs text-slate-400">Попробуйте изменить параметры поиска или фильтрации</span>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  filteredContacts.map((contact, idx) => {
+                    const phoneLines = getContactPhoneLines(contact);
+
+                    // Если это строка-заголовок группы
+                    if (contact.isGroupHeader) {
+                      return (
+                        <tr
+                          key={contact.id || idx}
+                          className="bg-slate-100/90 font-bold border-b border-slate-300 divide-x divide-slate-300 text-slate-900 text-xs sm:text-sm"
+                        >
+                          <td className="py-2 px-2 text-center align-top font-bold">
+                            {contact.num}
+                          </td>
+                          <td className="py-2 px-3 align-top font-bold" colSpan={canEdit ? 7 : 6}>
+                            {contact.indicatorName || contact.orgName}
+                          </td>
+                        </tr>
+                      );
+                    }
+
+                    return (
+                      <tr
+                        key={contact.id || idx}
+                        className="hover:bg-sky-50/40 transition-colors border-b border-slate-300 divide-x divide-slate-300 text-xs sm:text-sm text-slate-800"
+                      >
+                        {/* 1. № */}
+                        <td className="py-2 px-2 text-center align-top font-medium text-slate-900">
+                          {contact.num || idx + 1}
+                        </td>
+
+                        {/* 2. Наименование показателя / критерия */}
+                        <td className="py-2 px-3 align-top font-medium text-slate-900 leading-snug">
+                          {contact.indicatorName || contact.orgName}
+                        </td>
+
+                        {/* 3. ЦИО */}
+                        <td className="py-2 px-2 text-center align-top font-semibold text-slate-800 whitespace-pre-line leading-tight">
+                          {contact.cioName || contact.orgName}
+                        </td>
+
+                        {/* 4. Ответственный исполнитель ФИО */}
+                        <td className="py-2 px-3 align-top font-medium text-slate-900 leading-snug">
+                          {contact.fio || <span className="text-slate-400 italic">—</span>}
+                        </td>
+
+                        {/* 5. Должность */}
+                        <td className="py-2 px-3 align-top text-slate-700 leading-snug">
+                          {contact.position || <span className="text-slate-400 italic">—</span>}
+                        </td>
+
+                        {/* 6. Контактный телефон рабочий / мобильный */}
+                        <td className="py-2 px-3 align-top leading-tight text-slate-800">
+                          <div className="space-y-1">
+                            {phoneLines.length > 0 ? (
+                              phoneLines.map((ph, pIdx) => (
+                                <div key={pIdx} className="font-mono text-xs text-slate-800 flex items-center gap-1.5">
+                                  <Phone className="h-3 w-3 text-slate-400 shrink-0 print:hidden" />
+                                  <span>{ph}</span>
+                                </div>
+                              ))
+                            ) : (
+                              <span className="text-slate-400 italic">—</span>
+                            )}
+                          </div>
+                        </td>
+
+                        {/* 7. Электронная почта */}
+                        <td className="py-2 px-3 align-top text-slate-800">
+                          {contact.email ? (
+                            <a
+                              href={`mailto:${contact.email}`}
+                              className="text-xs text-blue-700 hover:text-blue-900 hover:underline flex items-center gap-1 font-sans break-all"
+                            >
+                              <Mail className="h-3 w-3 text-blue-600 shrink-0 print:hidden" />
+                              <span>{contact.email}</span>
+                            </a>
+                          ) : (
+                            <span className="text-slate-400 italic">—</span>
+                          )}
+                        </td>
+
+                        {/* 8. Действия (для Админа и МЭФ) */}
+                        {canEdit && (
+                          <td className="py-2 px-2 text-center align-middle print:hidden">
+                            <div className="flex items-center justify-center gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleEditClick(contact)}
+                                title="Редактировать контакт"
+                                className="h-7 w-7 text-slate-500 hover:text-blue-700 hover:bg-blue-50"
+                              >
+                                <Pencil className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleDeleteClick(contact.id, contact.fio || contact.indicatorName || '')}
+                                title="Удалить контакт"
+                                className="h-7 w-7 text-slate-400 hover:text-red-600 hover:bg-red-50"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
+                          </td>
+                        )}
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          ) : (
+            /* Таблица для ОМСУ и МЭФ с группировкой по округам/подразделениям */
+            <table className="w-full border-collapse text-xs sm:text-sm">
+              <thead>
+                <tr className="bg-[#dce6c8] border-b border-slate-400 text-slate-900 font-semibold text-center divide-x divide-slate-300">
+                  <th className="py-2.5 px-2 w-10 sm:w-12 text-center">№</th>
+                  <th className="py-2.5 px-3 w-[28%] text-center">
+                    {tabConfig.orgColTitle}
+                  </th>
+                  <th className="py-2.5 px-3 w-[24%] text-center">ФИО</th>
+                  <th className="py-2.5 px-3 w-[24%] text-center">Должность</th>
+                  <th className="py-2.5 px-3 w-[20%] text-center">Контактный телефон</th>
+                  {canEdit && (
+                    <th className="py-2.5 px-2 w-20 text-center print:hidden">Действия</th>
+                  )}
+                </tr>
+              </thead>
+
+              <tbody className="divide-y divide-slate-300">
+                {groupedOrgs.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={canEdit ? 6 : 5}
+                      className="py-12 px-4 text-center text-slate-400 bg-white"
+                    >
+                      <div className="flex flex-col items-center justify-center gap-2">
+                        <Search className="h-8 w-8 text-slate-300" />
+                        <span className="text-sm font-medium text-slate-600">Контакты не найдены</span>
+                        <span className="text-xs text-slate-400">Попробуйте изменить параметры поиска или фильтрации</span>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  groupedOrgs.map((group) => (
+                    <GroupRows
+                      key={group.orgName}
+                      group={group}
+                      canEdit={canEdit}
+                      onEdit={handleEditClick}
+                      onDelete={handleDeleteClick}
+                    />
+                  ))
+                )}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
 
@@ -472,13 +669,14 @@ export function ContactsView({ activeTab, role }: ContactsViewProps) {
           orgTitleLabel={tabConfig.orgColTitle}
           defaultOrgNames={tabConfig.defaultOrgs}
           roleOptions={tabConfig.roleOptions}
+          isCioTab={isCioTab}
         />
       )}
     </div>
   );
 }
 
-// Компонент отрисовки группы организации и строк сотрудников
+// Компонент отрисовки группы организации для ОМСУ / МЭФ
 function GroupRows({
   group,
   canEdit,
@@ -492,7 +690,7 @@ function GroupRows({
 }) {
   return (
     <>
-      {/* Строка-заголовок организации (№ и Наименование городского округа / ЦИО на голубовато-сером фоне) */}
+      {/* Строка-заголовок организации */}
       <tr className="bg-[#dbe5f1] border-t-2 border-b border-slate-400 font-bold text-slate-900 divide-x divide-slate-300">
         <td className="py-1.5 px-2 text-center align-middle font-bold text-xs sm:text-sm">
           {group.num}
@@ -507,26 +705,21 @@ function GroupRows({
 
       {/* Строки сотрудников внутри организации */}
       {group.contacts.map((contact, idx) => {
-        const phoneLines = contact.phones ? contact.phones.split('\n').filter(Boolean) : [];
+        const phoneLines = getContactPhoneLines(contact);
 
         return (
           <tr
             key={contact.id || idx}
             className="hover:bg-sky-50/40 transition-colors border-b border-slate-300 divide-x divide-slate-300 text-xs sm:text-sm text-slate-800"
           >
-            {/* Пустая ячейка номера (в строке сотрудника) */}
+            {/* Пустая ячейка номера */}
             <td className="py-2 px-2 text-center align-top text-slate-400 font-mono text-[11px]">
-              {/* пусто либо маркер */}
+              {/* маркер/пусто */}
             </td>
 
             {/* Роль в направлении */}
             <td className="py-2 px-3 align-top leading-snug">
               <span className="font-medium text-slate-800">{contact.roleCategory}</span>
-              {contact.notes && (
-                <div className="text-[11px] text-slate-500 mt-1 italic">
-                  {contact.notes}
-                </div>
-              )}
             </td>
 
             {/* ФИО */}
