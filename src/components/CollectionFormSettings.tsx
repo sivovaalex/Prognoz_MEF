@@ -166,7 +166,7 @@ export function CollectionFormSettings({ block }: CollectionFormSettingsProps) {
         </div>
 
         {/* Примечание */}
-        <div className="space-y-2 pt-2 border-t">
+        <div className="space-y-1 pt-2 border-t">
           <label className="flex items-center gap-2 cursor-pointer select-none">
             <input
               type="checkbox"
@@ -176,7 +176,11 @@ export function CollectionFormSettings({ block }: CollectionFormSettingsProps) {
               onChange={(e) => setSettingsNote(e.target.checked)}
             />
             <span className="text-sm font-medium leading-none">Добавить поле Примечание</span>
+            <span className="text-xs text-muted-foreground font-normal">(необязательно)</span>
           </label>
+          <p className="text-[11px] text-muted-foreground ml-6">
+            Добавляет поле «Примечание» для показателя в таблицу
+          </p>
         </div>
 
         {/* Кнопка сохранения */}

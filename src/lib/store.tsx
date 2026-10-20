@@ -61,6 +61,7 @@ export type Action =
   | { type: 'CIO_TERR_SET_VALUE'; cioId: string; indId: string; munId: string; field: ValueFieldKey; value: number | null }
   | { type: 'CIO_TERR_SIGN'; cioId: string; indId: string; munId: string; actor: string }
   | { type: 'CIO_TERR_RECALL'; cioId: string; indId: string; munId: string; actor: string }
+  | { type: 'SET_INDICATOR_NOTE'; indId: string; munId?: string; cioId?: string; target: 'omsu' | 'cio' | 'mef'; note: string }
   // ── Пояснительная записка (ПЗ) ──────────────────────────────────────
   | { type: 'NOTE_ADD_TEMPLATE'; template: NoteTemplate }
   | { type: 'NOTE_UPDATE_TEMPLATE'; template: NoteTemplate }
@@ -671,6 +672,84 @@ function reducer(state: AppState, a: Action): AppState {
         },
         history: [{ at: new Date().toISOString(), actor, action: `ЦИО отозвал значение (Территория)` }, ...state.history]
       };
+    }
+    case 'SET_INDICATOR_NOTE': {
+      const { indId, munId, target, note } = a;
+      const ind = state.indicators.find((i) => i.id === indId);
+      const cioId = a.cioId || ind?.cioId || 'c2';
+
+      if (target === 'omsu' && munId) {
+        const cur = state.omsuValues[munId]?.[indId] ?? { ...emptyValueFields(), status: 'draft' as const, updatedAt: now() };
+        return {
+          ...state,
+          omsuValues: {
+            ...state.omsuValues,
+            [munId]: {
+              ...(state.omsuValues[munId] ?? {}),
+              [indId]: { ...cur, note, updatedAt: now() },
+            },
+          },
+        };
+      } else if (target === 'cio') {
+        if (munId) {
+          const cur = state.cioTerritoryValues[cioId]?.[indId]?.[munId] ?? { ...emptyValueFields(), status: 'draft' as const, updatedAt: null };
+          return {
+            ...state,
+            cioTerritoryValues: {
+              ...state.cioTerritoryValues,
+              [cioId]: {
+                ...(state.cioTerritoryValues[cioId] ?? {}),
+                [indId]: {
+                  ...(state.cioTerritoryValues[cioId]?.[indId] ?? {}),
+                  [munId]: { ...cur, note, updatedAt: now() },
+                },
+              },
+            },
+          };
+        } else {
+          const cur = state.cioValues[indId]?.[cioId] ?? { ...emptyValueFields(), status: 'draft' as const, updatedAt: null };
+          return {
+            ...state,
+            cioValues: {
+              ...state.cioValues,
+              [indId]: {
+                ...(state.cioValues[indId] ?? {}),
+                [cioId]: { ...cur, note, updatedAt: now() },
+              },
+            },
+          };
+        }
+      } else if (target === 'mef') {
+        if (munId) {
+          const cur = state.mefTerritoryValues[cioId]?.[indId]?.[munId] ?? { ...emptyValueFields(), status: 'draft' as const, updatedAt: null };
+          return {
+            ...state,
+            mefTerritoryValues: {
+              ...state.mefTerritoryValues,
+              [cioId]: {
+                ...(state.mefTerritoryValues[cioId] ?? {}),
+                [indId]: {
+                  ...(state.mefTerritoryValues[cioId]?.[indId] ?? {}),
+                  [munId]: { ...cur, note, updatedAt: now() },
+                },
+              },
+            },
+          };
+        } else {
+          const cur = state.mefValues[indId]?.[cioId] ?? { ...emptyValueFields(), status: 'draft' as const, updatedAt: null };
+          return {
+            ...state,
+            mefValues: {
+              ...state.mefValues,
+              [indId]: {
+                ...(state.mefValues[indId] ?? {}),
+                [cioId]: { ...cur, note, updatedAt: now() },
+              },
+            },
+          };
+        }
+      }
+      return state;
     }
     // ── Пояснительная записка (ПЗ) ─────────────────────────────────────
     case 'NOTE_ADD_TEMPLATE':

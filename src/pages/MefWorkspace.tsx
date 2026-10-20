@@ -21,12 +21,12 @@ const GROUP_HEAD: Record<string, string> = {
   y2029: 'bg-blue-50/70',
 };
 
-export function MefWorkspace({ block }: { block?: string }) {
+export function MefWorkspace({ block = 'mun' }: { block?: string }) {
   const isNewLogic = block === 'mun' || block === 'rating_main' || block === 'ukaz_main';
-  return isNewLogic ? <MefWorkspaceNew /> : <MefWorkspaceOld />;
+  return isNewLogic ? <MefWorkspaceNew block={block} /> : <MefWorkspaceOld block={block} />;
 }
 
-function MefWorkspaceNew() {
+function MefWorkspaceNew({ block = 'mun' }: { block?: string }) {
   const { state } = useStore();
   const [treeFilter, setTreeFilter] = useState<TreeFilter>(EMPTY_TREE_FILTER);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
@@ -47,6 +47,7 @@ function MefWorkspaceNew() {
         </div>
       </div>
       <MefTerritoryIndicators
+        block={block}
         visible={visible}
         fillable={fillable}
         collapsed={collapsed}
@@ -61,7 +62,7 @@ function MefWorkspaceNew() {
   );
 }
 
-function MefTerritoryIndicators({ visible, fillable, collapsed, toggleNode, parents, treeFilter, setTreeFilter, showOmsu, setShowOmsu }: any) {
+function MefTerritoryIndicators({ block = 'mun', visible, fillable, collapsed, toggleNode, parents, treeFilter, setTreeFilter, showOmsu, setShowOmsu }: any) {
   const { state, dispatch } = useStore();
   const [returnTarget, setReturnTarget] = useState<{ cioId: string; indId: string; munId: string } | null>(null);
   const [comment, setComment] = useState('');
@@ -71,6 +72,10 @@ function MefTerritoryIndicators({ visible, fillable, collapsed, toggleNode, pare
   if (munFilter !== 'all') {
     activeOmsus = activeOmsus.filter(o => o.id === munFilter);
   }
+
+  const approvers = state.blockSettings[block]?.approvers || ['omsu', 'cio', 'mef'];
+  const hasNote = state.blockSettings[block]?.hasNote || false;
+  const noteColsCount = (showOmsu && approvers.includes('omsu') ? 1 : 0) + (approvers.includes('cio') ? 1 : 0) + (approvers.includes('mef') ? 1 : 0);
 
   return (
     <>
@@ -97,6 +102,11 @@ function MefTerritoryIndicators({ visible, fillable, collapsed, toggleNode, pare
                     {g.label}
                   </th>
                 ))}
+                {hasNote && noteColsCount > 0 && (
+                  <th rowSpan={2} colSpan={noteColsCount} className="text-center p-1.5 border-l border-b bg-amber-50/70 font-semibold text-slate-800">
+                    Примечание
+                  </th>
+                )}
               </tr>
               <tr className="border-b text-xs text-muted-foreground">
                 {VALUE_FIELDS.map((f) => (
@@ -113,13 +123,20 @@ function MefTerritoryIndicators({ visible, fillable, collapsed, toggleNode, pare
                     <th className={`text-center p-1.5 font-medium ${f.key === 'v2026' || f.key === 'v2025' ? 'bg-amber-50/70' : fieldTint(f.key)}`}>МЭФ</th>
                   </Fragment>
                 ))}
+                {hasNote && noteColsCount > 0 && (
+                  <>
+                    {showOmsu && approvers.includes('omsu') && <th className="text-center p-1.5 font-medium border-l bg-amber-50/50 min-w-[180px]">ОМСУ</th>}
+                    {approvers.includes('cio') && <th className={`text-center p-1.5 font-medium ${!showOmsu || !approvers.includes('omsu') ? 'border-l' : ''} bg-amber-50/50 min-w-[180px]`}>ЦИО</th>}
+                    {approvers.includes('mef') && <th className="text-center p-1.5 font-medium border-l bg-amber-50/50 min-w-[180px]">МЭФ</th>}
+                  </>
+                )}
               </tr>
             </thead>
             <tbody>
               {visible.map((ind: any) => (
                 <Fragment key={ind.id}>
                   <tr className="border-b bg-slate-100">
-                    <td colSpan={1 + VALUE_FIELDS.length * (showOmsu ? 3 : 2)} className="p-2 font-medium">
+                    <td colSpan={1 + VALUE_FIELDS.length * (showOmsu ? 3 : 2) + (hasNote ? noteColsCount : 0)} className="p-2 font-medium">
                       <div className="flex items-center gap-1" style={{ paddingLeft: `${(ind.level - 1) * 16}px` }}>
                         <TreeToggle hasChildren={parents.has(ind.id)} collapsed={!!collapsed[ind.id]} onToggle={() => toggleNode(ind.id)} />
                         <span>{ind.num} {ind.name} <span className="font-normal text-muted-foreground text-xs ml-2">({ind.unit})</span></span>
@@ -133,6 +150,7 @@ function MefTerritoryIndicators({ visible, fillable, collapsed, toggleNode, pare
                     const safeV = v || { v2023: null, v2024: null, v2025: null, v2026: null, cons2027: null, base2027: null, cons2028: null, base2028: null, cons2029: null, base2029: null, status: 'not_filled', updatedAt: null };
                     
                     const mefV = state.mefTerritoryValues[cioId]?.[ind.id]?.[omsu.id] || { v2023: null, v2024: null, v2025: null, v2026: null, cons2027: null, base2027: null, cons2028: null, base2028: null, cons2029: null, base2029: null, status: 'not_filled', updatedAt: null };
+                    const omsuVal = state.omsuValues[omsu.id]?.[ind.id];
                     return (
                       <tr key={omsu.id} className={`border-b ${safeV.status === 'pending_mef' ? 'bg-amber-50/60' : 'hover:bg-slate-50'}`}>
                         <td className="p-2 font-medium pl-6">{omsu.name}</td>
@@ -210,6 +228,41 @@ function MefTerritoryIndicators({ visible, fillable, collapsed, toggleNode, pare
                             </td>
                           </Fragment>
                         ))}
+                        {/* Примечание (последний столбец) */}
+                        {hasNote && noteColsCount > 0 && (
+                          <>
+                            {showOmsu && approvers.includes('omsu') && (
+                              <td className="p-1.5 text-xs border-l text-slate-700 bg-amber-50/10 align-middle">
+                                {omsuVal?.note || <span className="text-muted-foreground">—</span>}
+                              </td>
+                            )}
+                            {approvers.includes('cio') && (
+                              <td className={`p-1.5 text-xs ${!showOmsu || !approvers.includes('omsu') ? 'border-l' : ''} text-slate-700 bg-amber-50/10 align-middle`}>
+                                {safeV.note || <span className="text-muted-foreground">—</span>}
+                              </td>
+                            )}
+                            {approvers.includes('mef') && (
+                              <td className="p-1.5 text-xs border-l text-slate-700 bg-amber-50/10 align-middle min-w-[160px]">
+                                <Input
+                                  type="text"
+                                  placeholder="Примечание МЭФ..."
+                                  className="h-8 text-xs bg-white min-w-[140px]"
+                                  value={mefV.note || ''}
+                                  onChange={(e) =>
+                                    dispatch({
+                                      type: 'SET_INDICATOR_NOTE',
+                                      indId: ind.id,
+                                      cioId,
+                                      munId: omsu.id,
+                                      target: 'mef',
+                                      note: e.target.value,
+                                    })
+                                  }
+                                />
+                              </td>
+                            )}
+                          </>
+                        )}
                       </tr>
                     );
                   })}
@@ -234,12 +287,16 @@ function MefTerritoryIndicators({ visible, fillable, collapsed, toggleNode, pare
   );
 }
 
-function MefWorkspaceOld() {
+function MefWorkspaceOld({ block = 'mun' }: { block?: string }) {
   const { state, dispatch } = useStore();
   const [treeFilter, setTreeFilter] = useState<TreeFilter>(EMPTY_TREE_FILTER);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [returnTarget, setReturnTarget] = useState<{ cioId: string; indId: string } | null>(null);
   const [comment, setComment] = useState('');
+
+  const approvers = state.blockSettings[block]?.approvers || ['cio', 'mef'];
+  const hasNote = state.blockSettings[block]?.hasNote || false;
+  const noteColsCount = (approvers.includes('cio') ? 1 : 0) + (approvers.includes('mef') ? 1 : 0);
 
   const visible = visibleTree(state.indicators, collapsed, treeFilter);
   const parents = chevronParents(state.indicators);
@@ -268,6 +325,11 @@ function MefWorkspaceOld() {
                     {g.label}
                   </th>
                 ))}
+                {hasNote && noteColsCount > 0 && (
+                  <th rowSpan={2} colSpan={noteColsCount} className="text-center p-1.5 border-l border-b bg-amber-50/70 font-semibold text-slate-800">
+                    Примечание
+                  </th>
+                )}
               </tr>
               <tr className="border-b text-xs text-muted-foreground">
                 {VALUE_FIELDS.map((f) => (
@@ -283,6 +345,12 @@ function MefWorkspaceOld() {
                     <th className={`text-center p-1.5 font-medium ${f.key === 'v2026' || f.key === 'v2025' ? 'bg-amber-50/70' : fieldTint(f.key)}`}>МЭФ</th>
                   </Fragment>
                 ))}
+                {hasNote && noteColsCount > 0 && (
+                  <>
+                    {approvers.includes('cio') && <th className="text-center p-1.5 font-medium border-l bg-amber-50/50 min-w-[180px]">ЦИО</th>}
+                    {approvers.includes('mef') && <th className="text-center p-1.5 font-medium border-l bg-amber-50/50 min-w-[180px]">МЭФ</th>}
+                  </>
+                )}
               </tr>
             </thead>
             <tbody>
@@ -290,7 +358,7 @@ function MefWorkspaceOld() {
                 if (ind.isGroup) {
                   return (
                     <tr key={ind.id} className="border-b bg-slate-50/80">
-                      <td colSpan={1 + VALUE_FIELDS.length * 2} className="p-2 align-middle">
+                      <td colSpan={1 + VALUE_FIELDS.length * 2 + (hasNote ? noteColsCount : 0)} className="p-2 align-middle">
                         <span className="flex items-center gap-1 font-semibold text-slate-700" style={{ paddingLeft: `${(ind.level - 1) * 18}px` }}>
                           <TreeToggle hasChildren={parents.has(ind.id)} collapsed={!!collapsed[ind.id]} onToggle={() => toggleNode(ind.id)} />
                           <span><span className="mr-1 text-slate-400">▸</span>{ind.num}. {ind.name}</span>
@@ -307,7 +375,7 @@ function MefWorkspaceOld() {
                   <Fragment key={ind.id}>
                     {ciosWithData.length === 0 ? (
                       <tr className="border-b hover:bg-slate-50">
-                        <td className="p-2" colSpan={1 + VALUE_FIELDS.length * 2}>
+                        <td className="p-2" colSpan={1 + VALUE_FIELDS.length * 2 + (hasNote ? noteColsCount : 0)}>
                           <div className="flex items-start gap-1" style={{ paddingLeft: `${(ind.level - 1) * 18}px` }}>
                             <TreeToggle hasChildren={parents.has(ind.id)} collapsed={!!collapsed[ind.id]} onToggle={() => toggleNode(ind.id)} />
                             <div>
@@ -406,6 +474,34 @@ function MefWorkspaceOld() {
                                 </td>
                               </Fragment>
                             ))}
+                            {hasNote && noteColsCount > 0 && (
+                              <>
+                                {approvers.includes('cio') && (
+                                  <td className="p-1.5 text-xs border-l text-slate-700 bg-amber-50/10 align-middle">
+                                    {v.note || <span className="text-muted-foreground">—</span>}
+                                  </td>
+                                )}
+                                {approvers.includes('mef') && (
+                                  <td className="p-1.5 text-xs border-l text-slate-700 bg-amber-50/10 align-middle min-w-[160px]">
+                                    <Input
+                                      type="text"
+                                      placeholder="Примечание МЭФ..."
+                                      className="h-8 text-xs bg-white min-w-[140px]"
+                                      value={mefV.note || ''}
+                                      onChange={(e) =>
+                                        dispatch({
+                                          type: 'SET_INDICATOR_NOTE',
+                                          indId: ind.id,
+                                          cioId,
+                                          target: 'mef',
+                                          note: e.target.value,
+                                        })
+                                      }
+                                    />
+                                  </td>
+                                )}
+                              </>
+                            )}
                           </tr>
                         );
                       })

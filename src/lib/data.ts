@@ -355,6 +355,62 @@ const makeFields = (v2026: number): Pick<OmsuValue,
   base2029: r2(v2026 * 1.06),
 });
 
+export const UKAZ_SCREEN_DEMO: Record<string, {
+  v2026: number | null;
+  cons2027: number | null;
+  base2027: number | null;
+  cons2028: number | null;
+  base2028: number | null;
+  noteOmsu: string;
+  noteCio: string;
+}> = {
+  u1: {
+    v2026: null,
+    cons2027: null,
+    base2027: null,
+    cons2028: null,
+    base2028: null,
+    noteOmsu: '',
+    noteCio: '',
+  },
+  u1_1: {
+    v2026: 53,
+    cons2027: 53,
+    base2027: 53,
+    cons2028: 53,
+    base2028: 53,
+    noteOmsu: 'Снижение показателя связано с тем что компания ликвидирована. Компания перешла в средние организации. В плановом периоде планируем сохранение количества малых предприятий.',
+    noteCio: 'Снижение показателя связано с тем что компания ликвидирована. Компания перешла в средние организации. В плановом периоде планируем сохранение количества малых предприятий.',
+  },
+  u1_2: {
+    v2026: 2090,
+    cons2027: 2092,
+    base2027: 2092,
+    cons2028: 2094,
+    base2028: 2094,
+    noteOmsu: 'Увеличение связано с открытием новых ИП и ООО. В дальнейшем ожидаем рост за счет новых налоговых резидентов.',
+    noteCio: 'Увеличение связано с открытием новых ИП и ООО. В дальнейшем ожидаем рост за счет новых налоговых резидентов.',
+  },
+  u1_3: {
+    v2026: 8,
+    cons2027: 8,
+    base2027: 8,
+    cons2028: 8,
+    base2028: 8,
+    noteOmsu: 'Увеличились за счет перехода предприятий из малых в средние организации. В последующие годы планируем сохранение количества средних предприятий.',
+    noteCio: 'Увеличились за счет перехода предприятий из малых в средние организации. В последующие годы планируем сохранение количества средних предприятий.',
+  },
+  u2: {
+    v2026: 32.55,
+    cons2027: 32.57,
+    base2027: 32.57,
+    cons2028: 32.61,
+    base2028: 32.61,
+    noteOmsu: 'Снижение ССЧ связано с оптимизацией сотрудников на предприятиях округа. В дальнейшем планируем не большой прирост за счет привлечения новых налоговых резидентов.',
+    noteCio: 'Снижение ССЧ связано с оптимизацией сотрудников на предприятиях округа. В дальнейшем планируем не большой прирост за счет привлечения новых налоговых резидентов.',
+  },
+};
+
 function buildOmsuValues(indicators: Indicator[]): Record<string, Record<string, OmsuValue>> {
   const fillable = indicators.filter(i => !i.isGroup);
   const out: Record<string, Record<string, OmsuValue>> = {};
@@ -367,7 +423,21 @@ function buildOmsuValues(indicators: Indicator[]): Record<string, Record<string,
       const [lo, hi] = RANGES[ind.id] ?? [100, 1000];
       const v = r2(lo + rand() * (hi - lo));
 
-      if (m.id === CURRENT_OMSU) {
+      if (m.id === 'm4' && UKAZ_SCREEN_DEMO[ind.id]) {
+        const uDemo = UKAZ_SCREEN_DEMO[ind.id];
+        out[m.id][ind.id] = {
+          ...emptyValueFields(),
+          v2026: uDemo.v2026,
+          cons2027: uDemo.cons2027,
+          base2027: uDemo.base2027,
+          cons2028: uDemo.cons2028,
+          base2028: uDemo.base2028,
+          status: 'approved',
+          updatedAt: '24.07.2026 11:20',
+          signedBy: 'Сычев М.В. (ОМСУ Волоколамский)',
+          note: uDemo.noteOmsu,
+        };
+      } else if (m.id === CURRENT_OMSU) {
         // Демо-сценарий для Балашихи: показываем разные статусы
         const demo: Record<string, Pick<OmsuValue, 'status' | 'updatedAt' | 'comment' | 'signedBy'>> = {
           i1: { status: 'approved', updatedAt: '24.07.2026 11:20', signedBy: 'Иванова А.П. (ЭЦП)' },
@@ -487,11 +557,27 @@ function buildCioTerritoryValues(indicators: Indicator[], omsus: Municipality[])
       if (r > 0.8) s = 'not_filled';
       else if (r > 0.7) s = 'draft';
 
-      out[ind.cioId][ind.id][m.id] = {
-        ...(s === 'not_filled' ? emptyValueFields() : makeFields(v)),
-        status: s,
-        updatedAt: s === 'not_filled' ? null : '23.07.2026 15:30',
-      };
+      if (m.id === 'm4' && UKAZ_SCREEN_DEMO[ind.id]) {
+        const uDemo = UKAZ_SCREEN_DEMO[ind.id];
+        out[ind.cioId][ind.id][m.id] = {
+          ...emptyValueFields(),
+          v2026: uDemo.v2026,
+          cons2027: uDemo.cons2027,
+          base2027: uDemo.base2027,
+          cons2028: uDemo.cons2028,
+          base2028: uDemo.base2028,
+          status: 'approved',
+          updatedAt: '24.07.2026 12:30',
+          signedBy: 'Министерство инвестиций (ЦИО)',
+          note: uDemo.noteCio,
+        };
+      } else {
+        out[ind.cioId][ind.id][m.id] = {
+          ...(s === 'not_filled' ? emptyValueFields() : makeFields(v)),
+          status: s,
+          updatedAt: s === 'not_filled' ? null : '23.07.2026 15:30',
+        };
+      }
     }
   }
   return out;
@@ -956,7 +1042,7 @@ export function buildInitialState(moduleId: string): AppState {
         obl: { approvers: ['cio', 'mef'], reportingPeriods: [], estimatedPeriods: [], forecastPeriods: [], hasNote: false },
         params: { approvers: ['omsu', 'cio', 'mef'], reportingPeriods: [], estimatedPeriods: [], forecastPeriods: [], hasNote: false },
         rating_main: { approvers: ['omsu', 'cio', 'mef'], reportingPeriods: [], estimatedPeriods: [], forecastPeriods: [], hasNote: false },
-        ukaz_main: { approvers: ['omsu', 'cio', 'mef'], reportingPeriods: [], estimatedPeriods: [], forecastPeriods: [], hasNote: false },
+        ukaz_main: { approvers: ['omsu', 'cio', 'mef'], reportingPeriods: ['y2023', 'y2024', 'y2025'], estimatedPeriods: [], forecastPeriods: ['y2026', 'y2027', 'y2028'], hasNote: true },
         form2p: { approvers: ['cio', 'mef'], reportingPeriods: [], estimatedPeriods: [], forecastPeriods: [], hasNote: false },
         long_term: { approvers: ['cio', 'mef'], reportingPeriods: [], estimatedPeriods: [], forecastPeriods: [], hasNote: false },
         note: { approvers: ['omsu', 'cio', 'mef'], reportingPeriods: [], estimatedPeriods: [], forecastPeriods: [], hasNote: false },
@@ -1093,28 +1179,74 @@ export const UKAZ_DIRECTIONS: Direction[] = [
 export const UKAZ_INDICATORS: Indicator[] = [
   {
     id: 'u1',
-    num: '1',
-    name: 'Число субъектов малого и среднего предпринимательства в расчете на 10 тыс. человек населения.',
-    unit: 'ед.',
+    num: '1.',
+    name: 'Число субъектов малого и среднего предпринимательства в расчете на 10 тыс. человек населения',
+    unit: 'единиц',
     directionId: 'd_ukaz',
     cioId: 'c2',
     formula: 'X / Y * 10000',
     optimum: 'max',
     weight: 1,
     level: 1,
-    parentId: null, actualFrom: '2024-01-01' },
+    parentId: null,
+    actualFrom: '2024-01-01',
+  },
+  {
+    id: 'u1_1',
+    num: '1.1-спр.',
+    name: 'Количество малых предприятий, зарегистрированных на территории муниципального образования (фактически осуществляющих деятельность)',
+    unit: 'единиц',
+    directionId: 'd_ukaz',
+    cioId: 'c2',
+    optimum: 'max',
+    weight: 1,
+    level: 2,
+    parentId: 'u1',
+    isReference: true,
+    actualFrom: '2024-01-01',
+  },
+  {
+    id: 'u1_2',
+    num: '1.2-спр.',
+    name: 'Количество микропредприятий, зарегистрированных на территории муниципального образования (фактически осуществляющих деятельность)',
+    unit: 'единиц',
+    directionId: 'd_ukaz',
+    cioId: 'c2',
+    optimum: 'max',
+    weight: 1,
+    level: 2,
+    parentId: 'u1',
+    isReference: true,
+    actualFrom: '2024-01-01',
+  },
+  {
+    id: 'u1_3',
+    num: '1.3-спр.',
+    name: 'Количество средних предприятий, зарегистрированных на территории муниципального образования (фактически осуществляющих деятельность)',
+    unit: 'единиц',
+    directionId: 'd_ukaz',
+    cioId: 'c2',
+    optimum: 'max',
+    weight: 1,
+    level: 2,
+    parentId: 'u1',
+    isReference: true,
+    actualFrom: '2024-01-01',
+  },
   {
     id: 'u2',
-    num: '2',
-    name: 'Доля среднесписочной численности работников малых и средних предприятий в среднесписочной численности работников всех предприятий.',
-    unit: '%',
+    num: '2.',
+    name: 'Доля среднесписочной численности работников (без внешних совместителей) малых и средних предприятий в среднесписочной численности работников (без внешних совместителей) всех предприятий и организаций',
+    unit: 'процентов',
     directionId: 'd_ukaz',
     cioId: 'c2',
     formula: 'X / Y * 100',
     optimum: 'max',
     weight: 1,
     level: 1,
-    parentId: null, actualFrom: '2024-01-01' },
+    parentId: null,
+    actualFrom: '2024-01-01',
+  },
   {
     id: 'u3',
     num: '3',

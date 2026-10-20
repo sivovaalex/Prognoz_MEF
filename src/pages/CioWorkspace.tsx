@@ -27,7 +27,7 @@ const GROUP_HEAD: Record<string, string> = {
   y2029: 'bg-blue-50/70',
 };
 
-function CioWorkspaceNew() {
+function CioWorkspaceNew({ block = 'mun' }: { block?: string }) {
   const { state, dispatch } = useStore();
   const cio = state.cios.find((c) => c.id === CURRENT_CIO)!;
   const [returnTarget, setReturnTarget] = useState<{ munId: string; indId: string } | null>(null);
@@ -58,6 +58,7 @@ function CioWorkspaceNew() {
         <h3 className="font-medium text-slate-800">Согласование показателей ОМСУ</h3>
       </div>
       <CioTerritoryIndicators
+        block={block}
         myOwnVisible={myOwnVisible}
         myFillable={myFillable}
         collapsed={collapsed}
@@ -115,12 +116,16 @@ function CioWorkspaceNew() {
   );
 }
 
-function CioTerritoryIndicators({ myOwnVisible, myFillable, collapsed, toggleNode, parents, treeFilter, setTreeFilter, munFilter, setMunFilter, cio, setSignTarget, setReturnTarget }: any) {
+function CioTerritoryIndicators({ block = 'mun', myOwnVisible, myFillable, collapsed, toggleNode, parents, treeFilter, setTreeFilter, munFilter, setMunFilter, cio, setSignTarget, setReturnTarget }: any) {
   const { state, dispatch } = useStore();
   let activeOmsus = state.omsus.filter(o => o.isActive);
   if (munFilter && munFilter !== 'all') {
     activeOmsus = activeOmsus.filter(o => o.id === munFilter);
   }
+
+  const approvers = state.blockSettings[block]?.approvers || ['omsu', 'cio', 'mef'];
+  const hasNote = state.blockSettings[block]?.hasNote || false;
+  const noteColsCount = (approvers.includes('omsu') ? 1 : 0) + (approvers.includes('cio') ? 1 : 0);
 
   return (
     <>
@@ -147,6 +152,11 @@ function CioTerritoryIndicators({ myOwnVisible, myFillable, collapsed, toggleNod
                     {g.label}
                   </th>
                 ))}
+                {hasNote && noteColsCount > 0 && (
+                  <th rowSpan={2} colSpan={noteColsCount} className="text-center p-1.5 border-l border-b bg-amber-50/70 font-semibold text-slate-800">
+                    Примечание
+                  </th>
+                )}
               </tr>
               <tr className="border-b text-xs text-muted-foreground">
                 {VALUE_FIELDS.map((f) => (
@@ -163,13 +173,19 @@ function CioTerritoryIndicators({ myOwnVisible, myFillable, collapsed, toggleNod
                     
                   </Fragment>
                 ))}
+                {hasNote && noteColsCount > 0 && (
+                  <>
+                    {approvers.includes('omsu') && <th className="text-center p-1.5 font-medium border-l bg-amber-50/50 min-w-[180px]">ОМСУ</th>}
+                    {approvers.includes('cio') && <th className={`text-center p-1.5 font-medium ${!approvers.includes('omsu') ? 'border-l' : ''} bg-amber-50/50 min-w-[180px]`}>ЦИО</th>}
+                  </>
+                )}
               </tr>
             </thead>
             <tbody>
               {myOwnVisible.map((ind: any) => (
                 <Fragment key={ind.id}>
                   <tr className="border-b bg-slate-100">
-                    <td colSpan={1 + VALUE_FIELDS.length * 2} className="p-2 font-medium">
+                    <td colSpan={1 + VALUE_FIELDS.length * 2 + (hasNote ? noteColsCount : 0)} className="p-2 font-medium">
                       <div className="flex items-center gap-1" style={{ paddingLeft: `${(ind.level - 1) * 16}px` }}>
                         <TreeToggle
                           hasChildren={parents.has(ind.id)}
@@ -261,6 +277,35 @@ function CioTerritoryIndicators({ myOwnVisible, myFillable, collapsed, toggleNod
 
                           </Fragment>
                         ))}
+                        {hasNote && noteColsCount > 0 && (
+                          <>
+                            {approvers.includes('omsu') && (
+                              <td className="p-1.5 text-xs border-l text-slate-700 bg-amber-50/10 align-middle">
+                                {omsuV?.note || <span className="text-muted-foreground">—</span>}
+                              </td>
+                            )}
+                            {approvers.includes('cio') && (
+                              <td className={`p-1.5 text-xs ${!approvers.includes('omsu') ? 'border-l' : ''} text-slate-700 bg-amber-50/10 align-middle`}>
+                                <Input
+                                  type="text"
+                                  placeholder="Примечание ЦИО..."
+                                  className="h-8 text-xs bg-white min-w-[150px]"
+                                  value={v.note || ''}
+                                  disabled={v.status === 'approved'}
+                                  onChange={(e) =>
+                                    dispatch({
+                                      type: 'SET_INDICATOR_NOTE',
+                                      indId: ind.id,
+                                      munId: omsu.id,
+                                      target: 'cio',
+                                      note: e.target.value,
+                                    })
+                                  }
+                                />
+                              </td>
+                            )}
+                          </>
+                        )}
                       </tr>
                     );
                   })}
@@ -275,7 +320,7 @@ function CioTerritoryIndicators({ myOwnVisible, myFillable, collapsed, toggleNod
 }
 
 
-function CioWorkspaceOld({ hideOmsuApprove = false }: { hideOmsuApprove?: boolean }) {
+function CioWorkspaceOld({ block = 'obl', hideOmsuApprove = false }: { block?: string; hideOmsuApprove?: boolean }) {
   const { state, dispatch } = useStore();
   const cio = state.cios.find((c) => c.id === CURRENT_CIO)!;
   const [returnTarget, setReturnTarget] = useState<{ munId: string; indId: string } | null>(null);
@@ -504,6 +549,7 @@ function CioWorkspaceOld({ hideOmsuApprove = false }: { hideOmsuApprove?: boolea
           ) : (
             <div className="space-y-4">
               <CioOwnIndicatorsOld 
+                block={block}
                 myOwnVisible={myOwnVisible} 
                 myFillable={myFillable}
                 collapsed={collapsed}
@@ -511,11 +557,10 @@ function CioWorkspaceOld({ hideOmsuApprove = false }: { hideOmsuApprove?: boolea
                 parents={parents}
                 treeFilter={treeFilter}
                 setTreeFilter={setTreeFilter}
-
                 cio={cio}
-            setSignTarget={setSignTarget}
-            setReturnTarget={setReturnTarget}
-          />
+                setSignTarget={setSignTarget}
+                setReturnTarget={setReturnTarget}
+              />
             </div>
           )}
         </TabsContent>
@@ -565,8 +610,11 @@ function CioWorkspaceOld({ hideOmsuApprove = false }: { hideOmsuApprove?: boolea
 }
 
 
-function CioOwnIndicatorsOld({ myOwnVisible, myFillable, collapsed, toggleNode, parents, treeFilter, setTreeFilter, cio, setSignTarget }: any) {
+function CioOwnIndicatorsOld({ block = 'obl', myOwnVisible, myFillable, collapsed, toggleNode, parents, treeFilter, setTreeFilter, cio, setSignTarget }: any) {
   const { state, dispatch } = useStore();
+  const approvers = state.blockSettings[block]?.approvers || ['cio', 'mef'];
+  const hasNote = (state.blockSettings[block]?.hasNote || false) && approvers.includes('cio');
+
   return (
     <>
       <IndToolbar
@@ -591,6 +639,11 @@ function CioOwnIndicatorsOld({ myOwnVisible, myFillable, collapsed, toggleNode, 
                 leading={<th rowSpan={2} className="text-left p-2 align-middle min-w-[220px]">Показатель</th>}
                 trailing={(
                   <>
+                    {hasNote && (
+                      <th rowSpan={2} className="text-center p-2 border-l border-b bg-amber-50/70 font-semibold text-slate-800 min-w-[180px]">
+                        Примечание ЦИО
+                      </th>
+                    )}
                     <th rowSpan={2} className="text-left p-2 align-middle border-l">Статус</th>
                     <th rowSpan={2} className="text-left p-2 align-middle">Комментарий МЭФ</th>
                   </>
@@ -666,6 +719,29 @@ function CioOwnIndicatorsOld({ myOwnVisible, myFillable, collapsed, toggleNode, 
                         </td>
                       );
                     })}
+                    {hasNote && (
+                      <td className="p-1.5 text-xs border-l bg-amber-50/10 align-middle min-w-[160px]">
+                        {editable ? (
+                          <Input
+                            type="text"
+                            placeholder="Примечание ЦИО..."
+                            className="h-8 text-xs bg-white"
+                            value={v.note || ''}
+                            onChange={(e) =>
+                              dispatch({
+                                type: 'SET_INDICATOR_NOTE',
+                                indId: ind.id,
+                                cioId: CURRENT_CIO,
+                                target: 'cio',
+                                note: e.target.value,
+                              })
+                            }
+                          />
+                        ) : (
+                          <span>{v.note || <span className="text-muted-foreground">—</span>}</span>
+                        )}
+                      </td>
+                    )}
                     <td className="p-2"><CioStatusBadge status={v.status} /></td>
                     <td className="p-2 text-xs text-red-700">{v.comment ?? ''}</td>
                   </tr>
@@ -682,5 +758,5 @@ function CioOwnIndicatorsOld({ myOwnVisible, myFillable, collapsed, toggleNode, 
 
 export function CioWorkspace({ block, hideOmsuApprove = false }: { block: string; hideOmsuApprove?: boolean }) {
   const isNewLogic = ['mun', 'rating_main', 'ukaz_main'].includes(block);
-  return isNewLogic ? <CioWorkspaceNew /> : <CioWorkspaceOld hideOmsuApprove={hideOmsuApprove} />;
+  return isNewLogic ? <CioWorkspaceNew block={block} /> : <CioWorkspaceOld block={block} hideOmsuApprove={hideOmsuApprove} />;
 }

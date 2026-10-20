@@ -462,7 +462,7 @@ function Shell({
           <div className="px-4"><ContactsView activeTab={page} role={role} /></div>
         )}
         {page === 'setup' && <div className="px-4"><Setup block={block} /></div>}
-        {page === 'omsu' && <div className="px-4"><OmsuForm /></div>}
+        {page === 'omsu' && <div className="px-4"><OmsuForm block={block} /></div>}
         {page === 'cio' && <div className="px-4"><CioWorkspace key={block} block={block} hideOmsuApprove={!(state.blockSettings[block]?.approvers || []).includes('omsu')} /></div>}
         {page === 'mef-manage' && <div className="px-4"><MefManage block={block} goRating={() => setPage('rating')} goReport={() => setPage('report')} /></div>}
         {page === 'rating' && <div className="px-4"><RatingView role={role} /></div>}

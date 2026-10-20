@@ -146,6 +146,7 @@ export interface OmsuValue extends IndicatorValues {
   updatedAt: string | null;
   comment?: string;      // комментарий при возврате
   signedBy?: string;
+  note?: string;         // Примечание ОМСУ
 }
 
 export interface SysUser {
@@ -181,12 +182,14 @@ export interface CioValue extends IndicatorValues {
   updatedAt: string | null;
   comment?: string;
   signedBy?: string;
+  note?: string;         // Примечание ЦИО (Ведомственные данные)
 }
 
 export interface MefValue extends IndicatorValues {
   status: MefStatus;
   updatedAt: string | null;
   signedBy?: string;
+  note?: string;         // Примечание МЭФ
 }
 
 export type CampaignStatus = 'draft' | 'scheduled' | 'collecting' | 'completed';

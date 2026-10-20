@@ -33,7 +33,7 @@ export function dirStats(inds: { id: string }[], values: Record<string, { status
   return { total, filled, approved, pending, returned };
 }
 
-export function OmsuForm() {
+export function OmsuForm({ block }: { block?: string } = {}) {
   const { state, dispatch } = useStore();
   const munId = CURRENT_OMSU;
   const isCurrentOmsu = munId === CURRENT_OMSU;
@@ -58,6 +58,10 @@ export function OmsuForm() {
   // ввод значений и отправка на согласование ЦИО заблокированы
   const isClosedForMe = (ind: { closed?: boolean; closedForOmsuIds?: string[] }) =>
     !!ind.closed || (Array.isArray(ind.closedForOmsuIds) && ind.closedForOmsuIds.includes(munId));
+
+  const currentBlock = block || (state.campaign.module === 'ukaz' ? 'ukaz_main' : state.campaign.module === 'rating' ? 'rating_main' : 'mun');
+  const approvers = state.blockSettings[currentBlock]?.approvers || ['omsu', 'cio', 'mef'];
+  const hasNote = (state.blockSettings[currentBlock]?.hasNote ?? false) && approvers.includes('omsu');
 
   const values = state.omsuValues[munId];
   const fillable = myIndicators.filter((i) => !i.isGroup);
@@ -145,6 +149,13 @@ export function OmsuForm() {
                           <th rowSpan={2} className="text-left p-2 align-middle">ЦИО</th>
                         </>
                       )}
+                      trailing={
+                        hasNote ? (
+                          <th rowSpan={2} className="text-center p-2 border-l border-b bg-amber-50/70 font-semibold text-slate-800 min-w-[180px]">
+                            Примечание
+                          </th>
+                        ) : undefined
+                      }
                     />
                   </thead>
                   <tbody>
@@ -153,7 +164,7 @@ export function OmsuForm() {
                         return (
                           <tr key={ind.id} className="border-b bg-slate-50/80">
                             <td className="p-2 text-muted-foreground whitespace-nowrap align-middle">{ind.num}</td>
-                            <td colSpan={2 + VALUE_FIELDS.length} className="p-2 align-middle">
+                            <td colSpan={2 + VALUE_FIELDS.length + (hasNote ? 1 : 0)} className="p-2 align-middle">
                               <span
                                 className="flex items-center gap-1 font-semibold text-slate-700"
                                 style={{ paddingLeft: `${(ind.level - 1) * 18}px` }}
@@ -281,6 +292,21 @@ export function OmsuForm() {
                               </div>
                             </td>
                           ))}
+                          {hasNote && (
+                            <td className="p-1.5 text-xs border-l bg-amber-50/10 align-middle min-w-[160px]">
+                              {editable ? (
+                                <Input
+                                  type="text"
+                                  placeholder="Примечание..."
+                                  className="h-8 text-xs bg-white"
+                                  value={v.note || ''}
+                                  onChange={(e) => dispatch({ type: 'SET_INDICATOR_NOTE', indId: ind.id, munId, target: 'omsu', note: e.target.value })}
+                                />
+                              ) : (
+                                <span className="line-clamp-3" title={v.note || ''}>{v.note || <span className="text-muted-foreground">—</span>}</span>
+                              )}
+                            </td>
+                          )}
                         </tr>
                         </Fragment>
                       );
