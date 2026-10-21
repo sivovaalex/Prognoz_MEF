@@ -11,7 +11,7 @@ import {
 import {
   Users, Building2, Landmark, Phone, Mail, Search,
   Plus, ShieldAlert, Pencil, Trash2, FileSpreadsheet,
-  Printer, Check
+  Check
 } from 'lucide-react';
 import {
   type ContactItem,
@@ -47,15 +47,8 @@ function renderFormattedIndicatorName(name: string, isTopLevel: boolean = false)
 }
 
 export function ContactsView({ activeTab, role }: ContactsViewProps) {
-  // Проверка прав доступа к вкладке
-  const isOmsuAllowed = role === 'admin' || role === 'mef' || role === 'omsu';
-  const isCioAllowed = role === 'admin' || role === 'mef' || role === 'cio';
-  const isMefAllowed = role === 'admin' || role === 'mef';
-
-  const isCurrentTabAllowed =
-    (activeTab === 'contacts-omsu' && isOmsuAllowed) ||
-    (activeTab === 'contacts-cio' && isCioAllowed) ||
-    (activeTab === 'contacts-mef' && isMefAllowed);
+  // Раздел «Контакты» виден всем ролям без ограничений (просмотр доступен всем)
+  const isCurrentTabAllowed = true;
 
   // Права на редактирование: только Администратор и МЭФ
   const canEdit = role === 'admin' || role === 'mef';
@@ -479,10 +472,6 @@ export function ContactsView({ activeTab, role }: ContactsViewProps) {
     document.body.removeChild(link);
   };
 
-  const handlePrint = () => {
-    window.print();
-  };
-
   if (!isCurrentTabAllowed) {
     return (
       <div className="pt-6">
@@ -543,16 +532,6 @@ export function ContactsView({ activeTab, role }: ContactsViewProps) {
             <span>Экспорт</span>
           </Button>
 
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handlePrint}
-            className="h-8 text-xs gap-1.5 text-slate-700 hover:text-slate-900"
-            title="Распечатать таблицу контактов"
-          >
-            <Printer className="h-3.5 w-3.5 text-slate-600" />
-            <span>Печать</span>
-          </Button>
 
           {canEdit && (
             <Button
