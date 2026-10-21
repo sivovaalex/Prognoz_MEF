@@ -508,9 +508,13 @@ export function ContactsView({ activeTab, role }: ContactsViewProps) {
               <Badge variant="outline" className="text-xs bg-slate-50 text-slate-700">
                 {tabConfig.badge}
               </Badge>
-              {canEdit && (
+              {canEdit ? (
                 <Badge className="text-[10px] bg-sky-100 text-sky-800 border-sky-200 hover:bg-sky-100">
                   Режим редактирования (Админ / МЭФ)
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="text-[10px] bg-slate-100 text-slate-600 border-slate-300">
+                  Режим просмотра
                 </Badge>
               )}
             </div>

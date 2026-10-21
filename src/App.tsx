@@ -242,16 +242,11 @@ function Shell({
           { id: 'rating-monitoring' as PageId, label: 'Мониторинг хода сбора данных' },
         ]
     : block === 'rating_contacts'
-      ? (role === 'cio'
-          ? [{ id: 'contacts-cio' as PageId, label: 'Контакты ЦИО по Рейтингу' }]
-          : role === 'omsu'
-            ? [{ id: 'contacts-omsu' as PageId, label: 'Контакты ОМСУ по Рейтингу' }]
-            : [
-                { id: 'contacts-omsu' as PageId, label: 'Контакты ОМСУ по Рейтингу' },
-                { id: 'contacts-cio' as PageId, label: 'Контакты ЦИО по Рейтингу' },
-                { id: 'contacts-mef' as PageId, label: 'Контакты МЭФ' },
-              ]
-        )
+      ? [
+          { id: 'contacts-omsu' as PageId, label: 'Контакты ОМСУ по Рейтингу' },
+          { id: 'contacts-cio' as PageId, label: 'Контакты ЦИО по Рейтингу' },
+          { id: 'contacts-mef' as PageId, label: 'Контакты МЭФ' },
+        ]
     : block === 'rating_view'
       ? (role === 'admin' || role === 'mef'
           ? [
