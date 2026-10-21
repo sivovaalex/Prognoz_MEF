@@ -4,13 +4,14 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import {
   Users, Building2, Landmark, Phone, Mail, Search,
   Plus, ShieldAlert, Pencil, Trash2, FileSpreadsheet,
-  Printer
+  Printer, Check
 } from 'lucide-react';
 import {
   type ContactItem,
@@ -64,18 +65,59 @@ export function ContactsView({ activeTab, role }: ContactsViewProps) {
   const isIndicatorTab = isCioTab || isMefTab;
 
   // Хранилище контактов для каждой вкладки в localStorage
+  // Хранилище контактов для каждой вкладки в localStorage
   const storageKey = `contacts_rating_${activeTab}`;
+
+  // Миграция сохраненных контактов МЭФ (для родительских показателей № 3, 4, 6)
+  const migrateMefContacts = (items: ContactItem[]): ContactItem[] => {
+    return items.map((c) => {
+      if (c.num === '3' && (!c.fio || c.isGroupHeader)) {
+        return {
+          ...c,
+          isGroupHeader: false,
+          fio: c.fio || 'Бородулина Елена Владимировна',
+          position: c.position || 'Консультант отдела мониторинга',
+          phones: c.phones || '8 (498) 602-85-00, доб. 45-461',
+          email: c.email || 'borodulinaEV@mosreg.ru',
+        };
+      }
+      if (c.num === '4' && (!c.fio || c.isGroupHeader)) {
+        return {
+          ...c,
+          isGroupHeader: false,
+          fio: c.fio || 'Бородулина Елена Владимировна',
+          position: c.position || 'Консультант отдела мониторинга',
+          phones: c.phones || '8 (498) 602-85-00, доб. 45-461',
+          email: c.email || 'borodulinaEV@mosreg.ru',
+        };
+      }
+      if (c.num === '6' && (!c.fio || c.isGroupHeader)) {
+        return {
+          ...c,
+          isGroupHeader: false,
+          fio: c.fio || 'Копылова Юлия Валерьевна',
+          position: c.position || 'Заместитель заведующего отделом',
+          phones: c.phones || '8 (498) 602-85-00, доб. 45-288',
+          email: c.email || 'kopylovajv@mosreg.ru',
+        };
+      }
+      return c;
+    });
+  };
 
   const [contacts, setContacts] = useState<ContactItem[]>(() => {
     try {
       const saved = localStorage.getItem(storageKey);
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return activeTab === 'contacts-mef' ? migrateMefContacts(parsed) : parsed;
+      }
     } catch (e) {
       console.error(e);
     }
     if (activeTab === 'contacts-omsu') return INITIAL_OMSU_CONTACTS;
     if (activeTab === 'contacts-cio') return INITIAL_CIO_CONTACTS;
-    return INITIAL_MEF_CONTACTS;
+    return migrateMefContacts(INITIAL_MEF_CONTACTS);
   });
 
   // При смене активной вкладки подгружаем соответствующие данные
@@ -83,7 +125,8 @@ export function ContactsView({ activeTab, role }: ContactsViewProps) {
     try {
       const saved = localStorage.getItem(storageKey);
       if (saved) {
-        setContacts(JSON.parse(saved));
+        const parsed = JSON.parse(saved);
+        setContacts(activeTab === 'contacts-mef' ? migrateMefContacts(parsed) : parsed);
         return;
       }
     } catch (e) {
@@ -91,7 +134,7 @@ export function ContactsView({ activeTab, role }: ContactsViewProps) {
     }
     if (activeTab === 'contacts-omsu') setContacts(INITIAL_OMSU_CONTACTS);
     else if (activeTab === 'contacts-cio') setContacts(INITIAL_CIO_CONTACTS);
-    else setContacts(INITIAL_MEF_CONTACTS);
+    else setContacts(migrateMefContacts(INITIAL_MEF_CONTACTS));
   }, [activeTab, storageKey]);
 
   // Сохранение в localStorage
@@ -102,6 +145,41 @@ export function ContactsView({ activeTab, role }: ContactsViewProps) {
     } catch (e) {
       console.error(e);
     }
+  };
+
+  // Вспомогательная функция для МЭФ: если у дочернего показателя (напр., 3.1 «Инфоугрозы»)
+  // не заполнено собственное ФИО, автоматически наследуем ответственных от родительского показателя (№ 3 «Коммуникация и политика»)
+  const getEffectiveContact = (contact: ContactItem): { contact: ContactItem; isInherited: boolean; parentNum?: string } => {
+    if (activeTab !== 'contacts-mef' || !contact.num || !contact.num.includes('.')) {
+      return { contact, isInherited: false };
+    }
+
+    // Если у дочернего уже заполнено собственное ФИО, используем его
+    if (contact.fio && contact.fio.trim() !== '') {
+      return { contact, isInherited: false };
+    }
+
+    const parentNum = contact.num.split('.')[0];
+    const parent = contacts.find((c) => c.num === parentNum);
+    if (!parent || !parent.fio) {
+      return { contact, isInherited: false, parentNum };
+    }
+
+    return {
+      contact: {
+        ...contact,
+        fio: parent.fio,
+        position: parent.position,
+        phones: parent.phones,
+        workPhone: parent.workPhone,
+        workPhoneExt: parent.workPhoneExt,
+        mobilePhone: parent.mobilePhone,
+        additionalPhones: parent.additionalPhones,
+        email: parent.email,
+      },
+      isInherited: true,
+      parentNum,
+    };
   };
 
   // Фильтры и поиск
@@ -165,6 +243,68 @@ export function ContactsView({ activeTab, role }: ContactsViewProps) {
     },
   }[activeTab];
 
+  // Редактирование заголовков таблиц с сохранением в localStorage
+  const [tableTitle, setTableTitle] = useState<string>(() => {
+    try {
+      return localStorage.getItem(`contacts_table_title_${activeTab}`) || tabConfig.title;
+    } catch {
+      return tabConfig.title;
+    }
+  });
+
+  const [tableSubtitle, setTableSubtitle] = useState<string>(() => {
+    try {
+      const saved = localStorage.getItem(`contacts_table_subtitle_${activeTab}`);
+      return saved !== null ? saved : tabConfig.subtitle;
+    } catch {
+      return tabConfig.subtitle;
+    }
+  });
+
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [editTitleInput, setEditTitleInput] = useState('');
+  const [editSubtitleInput, setEditSubtitleInput] = useState('');
+
+  // При смене активной вкладки обновляем заголовки из localStorage / tabConfig
+  useEffect(() => {
+    try {
+      const savedTitle = localStorage.getItem(`contacts_table_title_${activeTab}`);
+      setTableTitle(savedTitle || tabConfig.title);
+      const savedSubtitle = localStorage.getItem(`contacts_table_subtitle_${activeTab}`);
+      setTableSubtitle(savedSubtitle !== null ? savedSubtitle : tabConfig.subtitle);
+    } catch {
+      setTableTitle(tabConfig.title);
+      setTableSubtitle(tabConfig.subtitle);
+    }
+    setIsEditingTitle(false);
+  }, [activeTab, tabConfig.title, tabConfig.subtitle]);
+
+  const handleSaveTitle = () => {
+    const newTitle = editTitleInput.trim() || tabConfig.title;
+    const newSubtitle = editSubtitleInput.trim();
+    setTableTitle(newTitle);
+    setTableSubtitle(newSubtitle);
+    try {
+      localStorage.setItem(`contacts_table_title_${activeTab}`, newTitle);
+      localStorage.setItem(`contacts_table_subtitle_${activeTab}`, newSubtitle);
+    } catch (e) {
+      console.error(e);
+    }
+    setIsEditingTitle(false);
+  };
+
+  const handleResetTitleToDefault = () => {
+    setTableTitle(tabConfig.title);
+    setTableSubtitle(tabConfig.subtitle);
+    try {
+      localStorage.removeItem(`contacts_table_title_${activeTab}`);
+      localStorage.removeItem(`contacts_table_subtitle_${activeTab}`);
+    } catch (e) {
+      console.error(e);
+    }
+    setIsEditingTitle(false);
+  };
+
   // Список всех организаций/ведомств для селекта
   const allOrgNames = useMemo(() => {
     if (isIndicatorTab) {
@@ -176,7 +316,8 @@ export function ContactsView({ activeTab, role }: ContactsViewProps) {
   // Фильтрация контактов
   const filteredContacts = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return contacts.filter((c) => {
+    return contacts.filter((rawC) => {
+      const { contact: c } = getEffectiveContact(rawC);
       const phoneStr = (c.phones || '') + ' ' + (c.workPhone || '') + ' ' + (c.mobilePhone || '') + ' ' + (c.workPhoneExt || '') + ' ' + (c.additionalPhones || []).map(a => a.phone).join(' ');
 
       const matchSearch =
@@ -200,7 +341,7 @@ export function ContactsView({ activeTab, role }: ContactsViewProps) {
 
       return matchSearch && matchOrg && matchRole;
     });
-  }, [contacts, search, selectedOrg, selectedRoleCat, isIndicatorTab]);
+  }, [contacts, search, selectedOrg, selectedRoleCat, isIndicatorTab, activeTab]);
 
   // Группировка для вкладки ОМСУ
   const groupedOrgs = useMemo(() => {
@@ -255,19 +396,22 @@ export function ContactsView({ activeTab, role }: ContactsViewProps) {
   // Экспорт в CSV / Excel
   const handleExportCsv = () => {
     if (isMefTab) {
-      const header = ['№', 'Показатель/критерии', 'отв. ЦИО', 'Ответственные сотрудники МЭФ', 'Телефон', 'Email'];
-      const rows = filteredContacts.map((c) => [
-        c.num || '',
-        c.indicatorName || c.orgName,
-        (c.cioName || '').replace(/\n/g, ' / '),
-        c.fio,
-        getContactPhoneLines(c).join('; '),
-        c.email || '',
-      ]);
+      const header = ['№', 'Показатель/критерии', 'отв. ЦИО', 'ФИО', 'Телефон', 'Email'];
+      const rows = filteredContacts.map((rawC) => {
+        const { contact: c } = getEffectiveContact(rawC);
+        return [
+          c.num || '',
+          c.indicatorName || c.orgName,
+          (c.cioName || '').replace(/\n/g, ' / '),
+          c.fio,
+          getContactPhoneLines(c).join('; '),
+          c.email || '',
+        ];
+      });
 
       const csvContent =
         'data:text/csv;charset=utf-8,\uFEFF' +
-        [tabConfig.title, tabConfig.subtitle || '', '', header.join(';'), ...rows.map((e) => e.map((val) => `"${val.replace(/"/g, '""')}"`).join(';'))].join('\n');
+        [tableTitle, tableSubtitle || '', '', header.join(';'), ...rows.map((e) => e.map((val) => `"${val.replace(/"/g, '""')}"`).join(';'))].join('\n');
 
       const encodedUri = encodeURI(csvContent);
       const link = document.createElement('a');
@@ -280,7 +424,7 @@ export function ContactsView({ activeTab, role }: ContactsViewProps) {
     }
 
     if (isCioTab) {
-      const header = ['№', 'Наименование показателя / критерия', 'ЦИО', 'Ответственный исполнитель ФИО', 'Должность', 'Контактный телефон рабочий / мобильный', 'Электронная почта'];
+      const header = ['№', 'Наименование показателя / критерия', 'ЦИО', 'ФИО', 'Должность', 'Контактный телефон', 'Электронная почта'];
       const rows = filteredContacts.map((c) => [
         c.num || '',
         c.indicatorName || c.orgName,
@@ -293,7 +437,7 @@ export function ContactsView({ activeTab, role }: ContactsViewProps) {
 
       const csvContent =
         'data:text/csv;charset=utf-8,\uFEFF' +
-        [tabConfig.title, '', header.join(';'), ...rows.map((e) => e.map((val) => `"${val.replace(/"/g, '""')}"`).join(';'))].join('\n');
+        [tableTitle, tableSubtitle || '', '', header.join(';'), ...rows.map((e) => e.map((val) => `"${val.replace(/"/g, '""')}"`).join(';'))].join('\n');
 
       const encodedUri = encodeURI(csvContent);
       const link = document.createElement('a');
@@ -324,7 +468,7 @@ export function ContactsView({ activeTab, role }: ContactsViewProps) {
 
     const csvContent =
       'data:text/csv;charset=utf-8,\uFEFF' +
-      [tabConfig.title, '', header.join(';'), ...rows.map((e) => e.map((val) => `"${val.replace(/"/g, '""')}"`).join(';'))].join('\n');
+      [tableTitle, tableSubtitle || '', '', header.join(';'), ...rows.map((e) => e.map((val) => `"${val.replace(/"/g, '""')}"`).join(';'))].join('\n');
 
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
@@ -495,17 +639,101 @@ export function ContactsView({ activeTab, role }: ContactsViewProps) {
 
       {/* Основная таблица контактов в стиле документа / отчёта */}
       <div className="bg-white rounded-lg border shadow-sm overflow-hidden">
-        {/* Заголовок документа по центру над таблицей */}
-        <div className="py-3 px-4 text-center border-b bg-slate-50/50">
-          <h2 className="text-xs sm:text-sm md:text-base font-bold text-slate-900 leading-snug tracking-tight">
-            {tabConfig.title}
-          </h2>
-          {tabConfig.subtitle && (
-            <div className="text-xs sm:text-sm font-semibold text-slate-800 mt-0.5">
-              {tabConfig.subtitle}
+        {/* Заголовок документа по центру над таблицей с возможностью редактирования */}
+        {!isEditingTitle ? (
+          <div className="py-3 px-4 text-center border-b bg-slate-50/50 relative group">
+            <div className="flex items-center justify-center gap-2">
+              <h2 className="text-xs sm:text-sm md:text-base font-bold text-slate-900 leading-snug tracking-tight">
+                {tableTitle}
+              </h2>
+              {canEdit && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => {
+                    setEditTitleInput(tableTitle);
+                    setEditSubtitleInput(tableSubtitle);
+                    setIsEditingTitle(true);
+                  }}
+                  className="h-6 w-6 text-slate-400 hover:text-blue-700 hover:bg-blue-50 shrink-0 print:hidden transition-opacity"
+                  title="Редактировать заголовок таблицы"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </Button>
+              )}
             </div>
-          )}
-        </div>
+            {tableSubtitle && (
+              <div className="text-xs sm:text-sm font-semibold text-slate-800 mt-0.5">
+                {tableSubtitle}
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="py-3.5 px-4 border-b bg-sky-50/60 print:hidden">
+            <div className="max-w-2xl mx-auto space-y-3">
+              <div className="flex items-center justify-between text-xs font-semibold text-slate-800 border-b border-sky-200/80 pb-2">
+                <span className="flex items-center gap-1.5 text-[#1e5c8f]">
+                  <Pencil className="h-3.5 w-3.5" />
+                  <span>Редактирование заголовка таблицы</span>
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleResetTitleToDefault}
+                  className="h-6 text-[11px] text-slate-500 hover:text-red-700 hover:bg-red-50"
+                  title="Восстановить исходный заголовок"
+                >
+                  Сбросить по умолчанию
+                </Button>
+              </div>
+
+              <div className="space-y-1">
+                <Label htmlFor="table-title-input" className="text-[11px] font-medium text-slate-600">
+                  Основной заголовок таблицы
+                </Label>
+                <Input
+                  id="table-title-input"
+                  value={editTitleInput}
+                  onChange={(e) => setEditTitleInput(e.target.value)}
+                  className="h-8 text-xs sm:text-sm font-bold bg-white"
+                  placeholder="Введите заголовок таблицы..."
+                />
+              </div>
+
+              <div className="space-y-1">
+                <Label htmlFor="table-subtitle-input" className="text-[11px] font-medium text-slate-600">
+                  Подзаголовок (необязательно)
+                </Label>
+                <Input
+                  id="table-subtitle-input"
+                  value={editSubtitleInput}
+                  onChange={(e) => setEditSubtitleInput(e.target.value)}
+                  className="h-8 text-xs bg-white"
+                  placeholder="Введите подзаголовок или служебные контакты..."
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsEditingTitle(false)}
+                  className="h-7 text-xs"
+                >
+                  Отмена
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={handleSaveTitle}
+                  className="h-7 text-xs bg-[#1e5c8f] hover:bg-[#16486f] text-white gap-1"
+                >
+                  <Check className="h-3.5 w-3.5" />
+                  <span>Сохранить заголовок</span>
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="overflow-x-auto">
           {isMefTab ? (
@@ -514,14 +742,13 @@ export function ContactsView({ activeTab, role }: ContactsViewProps) {
               <thead>
                 <tr className="bg-[#dce6c8] border-b border-slate-400 text-slate-900 font-semibold text-center divide-x divide-slate-300">
                   <th className="py-2.5 px-2 w-12 text-center">№</th>
-                  <th className="py-2.5 px-3 w-[40%] text-center">
+                  <th className="py-2.5 px-3 w-[32%] text-center">
                     Показатель/критерии
                   </th>
-                  <th className="py-2.5 px-2 w-[18%] text-center">отв. ЦИО</th>
-                  <th className="py-2.5 px-3 w-[22%] text-center">
-                    Ответственные сотрудники МЭФ
-                  </th>
-                  <th className="py-2.5 px-3 w-[20%] text-center">Телефон</th>
+                  <th className="py-2.5 px-2 w-[14%] text-center">отв. ЦИО</th>
+                  <th className="py-2.5 px-3 w-[20%] text-center">ФИО</th>
+                  <th className="py-2.5 px-3 w-[17%] text-center">Контактный телефон</th>
+                  <th className="py-2.5 px-3 w-[17%] text-center">Электронная почта</th>
                   {canEdit && (
                     <th className="py-2.5 px-2 w-16 text-center print:hidden">Действия</th>
                   )}
@@ -532,7 +759,7 @@ export function ContactsView({ activeTab, role }: ContactsViewProps) {
                 {filteredContacts.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={canEdit ? 6 : 5}
+                      colSpan={canEdit ? 7 : 6}
                       className="py-12 px-4 text-center text-slate-400 bg-white"
                     >
                       <div className="flex flex-col items-center justify-center gap-2">
@@ -543,60 +770,20 @@ export function ContactsView({ activeTab, role }: ContactsViewProps) {
                     </td>
                   </tr>
                 ) : (
-                  filteredContacts.map((contact, idx) => {
+                  filteredContacts.map((rawContact, idx) => {
+                    const { contact, isInherited, parentNum } = getEffectiveContact(rawContact);
                     const phoneLines = getContactPhoneLines(contact);
                     const isTopNum = contact.num && !contact.num.includes('.');
-
-                    // Если это строка-заголовок группы/направления
-                    if (contact.isGroupHeader) {
-                      return (
-                        <tr
-                          key={contact.id || idx}
-                          className="bg-slate-100/90 font-bold border-b border-slate-300 divide-x divide-slate-300 text-slate-900 text-xs sm:text-sm"
-                        >
-                          <td className="py-2 px-2 text-center align-middle font-bold">
-                            {contact.num}
-                          </td>
-                          <td className="py-2 px-3 align-middle font-bold">
-                            {contact.indicatorName || contact.orgName}
-                          </td>
-                          <td className="py-2 px-2 text-center align-middle font-bold whitespace-pre-line leading-tight">
-                            {contact.cioName || contact.orgName}
-                          </td>
-                          <td className="py-2 px-3 align-middle text-slate-400"></td>
-                          <td className="py-2 px-3 align-middle text-slate-400"></td>
-                          {canEdit && (
-                            <td className="py-2 px-2 text-center align-middle print:hidden">
-                              <div className="flex items-center justify-center gap-1">
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => handleEditClick(contact)}
-                                  title="Редактировать запись"
-                                  className="h-7 w-7 text-slate-500 hover:text-blue-700 hover:bg-blue-50"
-                                >
-                                  <Pencil className="h-3.5 w-3.5" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => handleDeleteClick(contact.id, contact.indicatorName || '')}
-                                  title="Удалить запись"
-                                  className="h-7 w-7 text-slate-400 hover:text-red-600 hover:bg-red-50"
-                                >
-                                  <Trash2 className="h-3.5 w-3.5" />
-                                </Button>
-                              </div>
-                            </td>
-                          )}
-                        </tr>
-                      );
-                    }
+                    const isChildNum = contact.num && contact.num.includes('.');
 
                     return (
                       <tr
-                        key={contact.id || idx}
-                        className="hover:bg-sky-50/40 transition-colors border-b border-slate-300 divide-x divide-slate-300 text-xs sm:text-sm text-slate-800"
+                        key={rawContact.id || idx}
+                        className={`transition-colors border-b border-slate-300 divide-x divide-slate-300 text-xs sm:text-sm ${
+                          isTopNum
+                            ? 'bg-slate-100/90 font-bold text-slate-900 hover:bg-slate-200/60'
+                            : 'hover:bg-sky-50/40 text-slate-800'
+                        }`}
                       >
                         {/* 1. № */}
                         <td className={`py-2 px-2 text-center align-top ${isTopNum ? 'font-bold' : 'font-normal'} text-slate-900`}>
@@ -604,8 +791,15 @@ export function ContactsView({ activeTab, role }: ContactsViewProps) {
                         </td>
 
                         {/* 2. Показатель/критерии */}
-                        <td className="py-2 px-3 align-top leading-snug">
-                          {renderFormattedIndicatorName(contact.indicatorName || contact.orgName, !!isTopNum)}
+                        <td className={`py-2 px-3 align-top leading-snug ${isChildNum ? 'pl-6' : ''}`}>
+                          <div className="flex items-center gap-1.5">
+                            {isChildNum && (
+                              <span className="text-slate-400 font-mono select-none">↳</span>
+                            )}
+                            <div className="flex-1">
+                              {renderFormattedIndicatorName(contact.indicatorName || contact.orgName, !!isTopNum)}
+                            </div>
+                          </div>
                         </td>
 
                         {/* 3. отв. ЦИО */}
@@ -614,8 +808,23 @@ export function ContactsView({ activeTab, role }: ContactsViewProps) {
                         </td>
 
                         {/* 4. Ответственные сотрудники МЭФ */}
-                        <td className="py-2 px-3 align-top font-medium text-slate-900 leading-snug">
-                          {contact.fio || <span className="text-slate-400 italic">—</span>}
+                        <td className="py-2 px-3 align-top leading-snug">
+                          <div className="font-medium text-slate-900 flex items-center flex-wrap gap-1.5">
+                            <span>{contact.fio || <span className="text-slate-400 italic">—</span>}</span>
+                            {isInherited && (
+                              <span
+                                className="inline-flex items-center text-[10px] font-normal text-blue-700 bg-blue-50 border border-blue-200 px-1.5 py-0.5 rounded"
+                                title={`Ответственный сотрудник наследуется от родительского показателя № ${parentNum}`}
+                              >
+                                как в № {parentNum}
+                              </span>
+                            )}
+                          </div>
+                          {contact.position && (
+                            <div className="text-[11px] text-slate-500 mt-0.5 leading-snug">
+                              {contact.position}
+                            </div>
+                          )}
                         </td>
 
                         {/* 5. Телефон */}
@@ -629,31 +838,34 @@ export function ContactsView({ activeTab, role }: ContactsViewProps) {
                                 </div>
                               ))
                             ) : (
-                              !contact.email && <span className="text-slate-400 italic">—</span>
-                            )}
-
-                            {contact.email && (
-                              <div className="pt-0.5">
-                                <a
-                                  href={`mailto:${contact.email}`}
-                                  className="text-xs text-blue-700 hover:text-blue-900 hover:underline flex items-center gap-1.5 font-sans break-all"
-                                >
-                                  <Mail className="h-3 w-3 text-blue-600 shrink-0 print:hidden" />
-                                  <span>{contact.email}</span>
-                                </a>
-                              </div>
+                              <span className="text-slate-400 italic">—</span>
                             )}
                           </div>
                         </td>
 
-                        {/* 6. Действия (для Админа и МЭФ) */}
+                        {/* 6. Электронная почта */}
+                        <td className="py-2 px-3 align-top text-slate-800">
+                          {contact.email ? (
+                            <a
+                              href={`mailto:${contact.email}`}
+                              className="text-xs text-blue-700 hover:text-blue-900 hover:underline flex items-center gap-1.5 font-sans break-all"
+                            >
+                              <Mail className="h-3 w-3 text-blue-600 shrink-0 print:hidden" />
+                              <span>{contact.email}</span>
+                            </a>
+                          ) : (
+                            <span className="text-slate-400 italic">—</span>
+                          )}
+                        </td>
+
+                        {/* 7. Действия (для Админа и МЭФ) */}
                         {canEdit && (
                           <td className="py-2 px-2 text-center align-middle print:hidden">
                             <div className="flex items-center justify-center gap-1">
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                onClick={() => handleEditClick(contact)}
+                                onClick={() => handleEditClick(rawContact)}
                                 title="Редактировать запись"
                                 className="h-7 w-7 text-slate-500 hover:text-blue-700 hover:bg-blue-50"
                               >
@@ -662,7 +874,7 @@ export function ContactsView({ activeTab, role }: ContactsViewProps) {
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                onClick={() => handleDeleteClick(contact.id, contact.fio || contact.indicatorName || '')}
+                                onClick={() => handleDeleteClick(rawContact.id, rawContact.fio || rawContact.indicatorName || '')}
                                 title="Удалить запись"
                                 className="h-7 w-7 text-slate-400 hover:text-red-600 hover:bg-red-50"
                               >
@@ -687,12 +899,10 @@ export function ContactsView({ activeTab, role }: ContactsViewProps) {
                     Наименование показателя / критерия
                   </th>
                   <th className="py-2.5 px-2 w-24 text-center">ЦИО</th>
-                  <th className="py-2.5 px-3 w-[20%] text-center">
-                    Ответственный исполнитель ФИО
-                  </th>
+                  <th className="py-2.5 px-3 w-[20%] text-center">ФИО</th>
                   <th className="py-2.5 px-3 w-[22%] text-center">Должность</th>
                   <th className="py-2.5 px-3 w-[18%] text-center">
-                    Контактный телефон рабочий / мобильный
+                    Контактный телефон
                   </th>
                   <th className="py-2.5 px-3 w-36 text-center">Электронная почта</th>
                   {canEdit && (
@@ -724,14 +934,53 @@ export function ContactsView({ activeTab, role }: ContactsViewProps) {
                       return (
                         <tr
                           key={contact.id || idx}
-                          className="bg-slate-100/90 font-bold border-b border-slate-300 divide-x divide-slate-300 text-slate-900 text-xs sm:text-sm"
+                          className="bg-slate-100/90 font-bold border-b border-slate-300 divide-x divide-slate-300 text-slate-900 text-xs sm:text-sm hover:bg-slate-200/60 transition-colors"
                         >
-                          <td className="py-2 px-2 text-center align-top font-bold">
+                          {/* 1. № */}
+                          <td className="py-2 px-2 text-center align-middle font-bold">
                             {contact.num}
                           </td>
-                          <td className="py-2 px-3 align-top font-bold" colSpan={canEdit ? 7 : 6}>
+
+                          {/* 2. Наименование показателя / критерия */}
+                          <td className="py-2 px-3 align-middle font-bold">
                             {contact.indicatorName || contact.orgName}
                           </td>
+
+                          {/* 3. ЦИО */}
+                          <td className="py-2 px-2 text-center align-middle font-semibold text-slate-700 whitespace-pre-line leading-tight">
+                            {contact.cioName || <span className="text-slate-400 font-normal italic">—</span>}
+                          </td>
+
+                          {/* 4-7. ФИО, Должность, Телефон, Почта */}
+                          <td className="py-2 px-3 align-middle text-slate-400 text-center font-normal" colSpan={4}>
+                            <span className="text-xs text-slate-400 italic font-normal">Строка-заголовок (без контакта)</span>
+                          </td>
+
+                          {/* 8. Действия */}
+                          {canEdit && (
+                            <td className="py-2 px-2 text-center align-middle print:hidden">
+                              <div className="flex items-center justify-center gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleEditClick(contact)}
+                                  title="Редактировать запись"
+                                  className="h-7 w-7 text-slate-500 hover:text-blue-700 hover:bg-blue-50"
+                                >
+                                  <Pencil className="h-3.5 w-3.5" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleDeleteClick(contact.id, contact.indicatorName || contact.orgName || '')}
+                                  title="Удалить запись"
+                                  className="h-7 w-7 text-slate-400 hover:text-red-600 hover:bg-red-50"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                              </div>
+                            </td>
+                          )}
                         </tr>
                       );
                     }
@@ -834,14 +1083,15 @@ export function ContactsView({ activeTab, role }: ContactsViewProps) {
               <thead>
                 <tr className="bg-[#dce6c8] border-b border-slate-400 text-slate-900 font-semibold text-center divide-x divide-slate-300">
                   <th className="py-2.5 px-2 w-10 sm:w-12 text-center">№</th>
-                  <th className="py-2.5 px-3 w-[28%] text-center">
-                    {tabConfig.orgColTitle}
+                  <th className="py-2.5 px-3 w-[22%] text-center">
+                    Роль в направлении
                   </th>
-                  <th className="py-2.5 px-3 w-[24%] text-center">ФИО</th>
-                  <th className="py-2.5 px-3 w-[24%] text-center">Должность</th>
-                  <th className="py-2.5 px-3 w-[20%] text-center">Контактный телефон</th>
+                  <th className="py-2.5 px-3 w-[20%] text-center">ФИО</th>
+                  <th className="py-2.5 px-3 w-[20%] text-center">Должность</th>
+                  <th className="py-2.5 px-3 w-[17%] text-center">Контактный телефон</th>
+                  <th className="py-2.5 px-3 w-[17%] text-center">Электронная почта</th>
                   {canEdit && (
-                    <th className="py-2.5 px-2 w-20 text-center print:hidden">Действия</th>
+                    <th className="py-2.5 px-2 w-16 text-center print:hidden">Действия</th>
                   )}
                 </tr>
               </thead>
@@ -850,7 +1100,7 @@ export function ContactsView({ activeTab, role }: ContactsViewProps) {
                 {groupedOrgs.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={canEdit ? 6 : 5}
+                      colSpan={canEdit ? 7 : 6}
                       className="py-12 px-4 text-center text-slate-400 bg-white"
                     >
                       <div className="flex flex-col items-center justify-center gap-2">
@@ -889,6 +1139,7 @@ export function ContactsView({ activeTab, role }: ContactsViewProps) {
           roleOptions={tabConfig.roleOptions}
           tabType={activeTab}
           isCioTab={isCioTab}
+          allContacts={contacts}
         />
       )}
     </div>
@@ -915,7 +1166,7 @@ function GroupRows({
           {group.num}
         </td>
         <td
-          colSpan={canEdit ? 5 : 4}
+          colSpan={canEdit ? 6 : 5}
           className="py-1.5 px-3 text-left align-middle font-bold text-xs sm:text-sm tracking-wide text-slate-900"
         >
           {group.orgName}
@@ -951,7 +1202,7 @@ function GroupRows({
               {contact.position || <span className="text-slate-400 italic">—</span>}
             </td>
 
-            {/* Контактные телефоны и email */}
+            {/* Контактные телефоны */}
             <td className="py-2 px-3 align-top leading-tight text-slate-800">
               <div className="space-y-1">
                 {phoneLines.length > 0 ? (
@@ -962,21 +1213,24 @@ function GroupRows({
                     </div>
                   ))
                 ) : (
-                  !contact.email && <span className="text-slate-400 italic">—</span>
-                )}
-
-                {contact.email && (
-                  <div className="pt-0.5">
-                    <a
-                      href={`mailto:${contact.email}`}
-                      className="text-xs text-blue-700 hover:text-blue-900 hover:underline flex items-center gap-1.5 font-sans"
-                    >
-                      <Mail className="h-3 w-3 text-blue-600 shrink-0 print:hidden" />
-                      <span>{contact.email}</span>
-                    </a>
-                  </div>
+                  <span className="text-slate-400 italic">—</span>
                 )}
               </div>
+            </td>
+
+            {/* Электронная почта */}
+            <td className="py-2 px-3 align-top text-slate-800">
+              {contact.email ? (
+                <a
+                  href={`mailto:${contact.email}`}
+                  className="text-xs text-blue-700 hover:text-blue-900 hover:underline flex items-center gap-1.5 font-sans break-all"
+                >
+                  <Mail className="h-3 w-3 text-blue-600 shrink-0 print:hidden" />
+                  <span>{contact.email}</span>
+                </a>
+              ) : (
+                <span className="text-slate-400 italic">—</span>
+              )}
             </td>
 
             {/* Кнопки действий (только для Админа и МЭФ) */}
