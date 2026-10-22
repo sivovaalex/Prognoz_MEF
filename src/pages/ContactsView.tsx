@@ -6,9 +6,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from '@/components/ui/select';
-import {
   Users, Building2, Landmark, Phone, Mail, Search,
   Plus, ShieldAlert, Pencil, Trash2, FileSpreadsheet,
   Check
@@ -175,10 +172,8 @@ export function ContactsView({ activeTab, role }: ContactsViewProps) {
     };
   };
 
-  // Фильтры и поиск
+  // Поиск
   const [search, setSearch] = useState('');
-  const [selectedOrg, setSelectedOrg] = useState<string>('all');
-  const [selectedRoleCat, setSelectedRoleCat] = useState<string>('all');
 
   // Модальное окно добавления/редактирования
   const [modalOpen, setModalOpen] = useState(false);
@@ -306,7 +301,7 @@ export function ContactsView({ activeTab, role }: ContactsViewProps) {
     return Array.from(new Set(contacts.map((c) => c.orgName))).filter(Boolean);
   }, [contacts, isIndicatorTab]);
 
-  // Фильтрация контактов
+  // Фильтрация контактов по строке поиска
   const filteredContacts = useMemo(() => {
     const q = search.trim().toLowerCase();
     return contacts.filter((rawC) => {
@@ -325,16 +320,9 @@ export function ContactsView({ activeTab, role }: ContactsViewProps) {
         phoneStr.toLowerCase().includes(q) ||
         (c.email && c.email.toLowerCase().includes(q));
 
-      const matchOrg =
-        selectedOrg === 'all' ||
-        (isIndicatorTab ? (c.cioName || c.orgName) === selectedOrg : c.orgName === selectedOrg);
-
-      const matchRole =
-        selectedRoleCat === 'all' || c.roleCategory === selectedRoleCat;
-
-      return matchSearch && matchOrg && matchRole;
+      return matchSearch;
     });
-  }, [contacts, search, selectedOrg, selectedRoleCat, isIndicatorTab, activeTab]);
+  }, [contacts, search]);
 
   // Группировка для вкладки ОМСУ
   const groupedOrgs = useMemo(() => {
@@ -550,9 +538,9 @@ export function ContactsView({ activeTab, role }: ContactsViewProps) {
         </div>
       </div>
 
-      {/* Панель поиска и фильтрации */}
-      <div className="flex flex-wrap items-center gap-2.5 bg-white p-3 rounded-lg border shadow-sm print:hidden">
-        <div className="relative flex-1 min-w-[220px]">
+      {/* Панель поиска */}
+      <div className="flex items-center gap-2.5 bg-white p-3 rounded-lg border shadow-sm print:hidden">
+        <div className="relative flex-1">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
           <Input
             placeholder={isCioTab ? "Поиск по показателю, ЦИО, ФИО, должности, телефону или email..." : "Поиск по ФИО, организации, должности, телефону или email..."}
@@ -570,52 +558,14 @@ export function ContactsView({ activeTab, role }: ContactsViewProps) {
           )}
         </div>
 
-        <div className="w-full sm:w-[220px]">
-          <Select value={selectedOrg} onValueChange={setSelectedOrg}>
-            <SelectTrigger className="h-8 text-xs">
-              <SelectValue placeholder={isCioTab ? "Все ЦИО" : "Все организации"} />
-            </SelectTrigger>
-            <SelectContent className="max-h-64">
-              <SelectItem value="all">{isCioTab ? "Все ЦИО" : "Все организации"} ({allOrgNames.length})</SelectItem>
-              {allOrgNames.map((name) => (
-                <SelectItem key={name} value={name}>
-                  {name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {!isCioTab && (
-          <div className="w-full sm:w-[240px]">
-            <Select value={selectedRoleCat} onValueChange={setSelectedRoleCat}>
-              <SelectTrigger className="h-8 text-xs">
-                <SelectValue placeholder="Все роли" />
-              </SelectTrigger>
-              <SelectContent className="max-h-64">
-                <SelectItem value="all">Все роли</SelectItem>
-                {tabConfig.roleOptions.map((roleOpt) => (
-                  <SelectItem key={roleOpt} value={roleOpt}>
-                    {roleOpt}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
-
-        {(search || selectedOrg !== 'all' || selectedRoleCat !== 'all') && (
+        {search && (
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => {
-              setSearch('');
-              setSelectedOrg('all');
-              setSelectedRoleCat('all');
-            }}
+            onClick={() => setSearch('')}
             className="h-8 text-xs text-slate-500 hover:text-slate-800"
           >
-            Сбросить фильтры
+            Сбросить поиск
           </Button>
         )}
       </div>
