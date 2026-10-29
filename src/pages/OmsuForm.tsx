@@ -15,6 +15,9 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
 import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
+import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { Send, Undo2, Lock, Info, ChevronDown, Users } from 'lucide-react';
@@ -33,11 +36,11 @@ export function dirStats(inds: { id: string }[], values: Record<string, { status
   return { total, filled, approved, pending, returned };
 }
 
-export function OmsuForm({ block }: { block?: string } = {}) {
+export function OmsuForm({ block, munId: propMunId, onMunIdChange }: { block?: string; munId?: string; onMunIdChange?: (id: string) => void } = {}) {
   const { state, dispatch } = useStore();
-  const munId = CURRENT_OMSU;
-  const isCurrentOmsu = munId === CURRENT_OMSU;
-  const mun = state.omsus.find((m) => m.id === munId)!;
+  const munId = propMunId || CURRENT_OMSU;
+  const isCurrentOmsu = true;
+  const mun = state.omsus.find((m) => m.id === munId) || state.omsus[0];
   const [signTarget, setSignTarget] = useState<string | null>(null);
   const [cmpMunFilter, setCmpMunFilter] = useState<string>('all');
   // аккордеон: открыта только одна сфера
@@ -73,10 +76,26 @@ export function OmsuForm({ block }: { block?: string } = {}) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-start justify-between">
+      <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h2 className="text-lg font-semibold">Форма сбора — {mun.name}</h2>
-          <p className="text-sm text-muted-foreground">
+          <div className="flex flex-wrap items-center gap-3">
+            <h2 className="text-lg font-semibold">Форма сбора — {mun.name}</h2>
+            {onMunIdChange && (
+              <Select value={munId} onValueChange={onMunIdChange}>
+                <SelectTrigger className="h-8 w-[220px] bg-white text-xs border-slate-300">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {state.omsus.map((m) => (
+                    <SelectItem key={m.id} value={m.id}>
+                      {m.name} {m.isZato ? '(ЗАТО)' : ''}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+          <p className="text-sm text-muted-foreground mt-0.5">
             {state.campaign.name}, {state.campaign.period} · срок заполнения: {state.campaign.deadlineOmsu.split('-').reverse().join('.')}
           </p>
         </div>
@@ -85,6 +104,15 @@ export function OmsuForm({ block }: { block?: string } = {}) {
           <Badge variant="outline" className="text-amber-700 border-amber-300">На согласовании: {pending}</Badge>
         </div>
       </div>
+
+      {state.campaign.status === 'precollecting' && (
+        <div className="rounded-md border border-purple-200 bg-purple-50 p-3 text-sm text-purple-900 flex items-start gap-2 shadow-xs">
+          <Info className="h-4 w-4 text-purple-700 mt-0.5 shrink-0" />
+          <span>
+            <b>Идёт предсбор МЭФ:</b> куратор МЭФ производит предварительный ввод и автосогласование значений. Ячейки, зафиксированные МЭФ, отмечены значком замочка <Lock className="inline h-3.5 w-3.5 text-amber-600 mx-0.5" /> и заблокированы от редактирования.
+          </span>
+        </div>
+      )}
 
       <div className="rounded-md border border-blue-200 bg-blue-50 p-3 text-sm flex gap-2">
         <Info className="h-4 w-4 text-blue-700 mt-0.5 shrink-0" />
@@ -185,7 +213,7 @@ export function OmsuForm({ block }: { block?: string } = {}) {
                       }
                       const v = values[ind.id];
                       const closedForMe = isClosedForMe(ind);
-                      const editable = !closedForMe && isCurrentOmsu && (v.status === 'not_filled' || v.status === 'draft' || v.status === 'returned');
+                      const rowEditable = !closedForMe && !v.lockedByMef && isCurrentOmsu && (v.status === 'not_filled' || v.status === 'draft' || v.status === 'returned');
                       return (
                         <Fragment key={ind.id}>
                           <tr className="border-b hover:bg-slate-50 align-top">
@@ -240,61 +268,79 @@ export function OmsuForm({ block }: { block?: string } = {}) {
                             </div>
                           </td>
                           <td className="p-2"><Badge variant="secondary">{state.cios.find((c) => c.id === ind.cioId)?.short}</Badge></td>
-                          {VALUE_FIELDS.map((f) => (
-                            <td key={f.key} className={`p-1.5 text-center ${fieldTint(f.key)}`}>
-                              <div className="flex flex-col items-center justify-center gap-1">
-                                {editable && (f.key === 'v2026' || f.key === 'v2025') ? (
-                                  <WithValueTip show={v[f.key] !== null} updatedAt={v.updatedAt} author={v.signedBy ?? 'Иванова А.П.'}>
-                                    <Input
-                                      type="number"
-                                      step="0.01"
-                                      className="h-8 w-[76px] text-center mx-auto px-1 bg-white"
-                                      placeholder="—"
-                                      value={v[f.key] ?? ''}
-                                      onChange={(e) =>
-                                        dispatch({
-                                          type: 'OMSU_SET_VALUE',
-                                          munId,
-                                          indId: ind.id,
-                                          field: f.key,
-                                          value: e.target.value === '' ? null : Number(e.target.value),
-                                        })
-                                      }
-                                    />
-                                  </WithValueTip>
-                                ) : (
-                                  <span className={(f.key === 'v2026' || f.key === 'v2025') ? 'font-medium' : ''}>
-                                    <ValueTip value={v[f.key]} updatedAt={v.updatedAt} author={v.signedBy ?? 'Иванова А.П.'} />
-                                  </span>
-                                )}
-                                {(f.key === 'v2026' || f.key === 'v2025') && editable && v[f.key] !== null && (
-                                  <Button size="sm" variant="outline" className="h-6 text-[10px] px-2 mt-1 border-blue-200 hover:bg-blue-50" onClick={() => setSignTarget(ind.id)} title="Отправить в ЦИО">
-                                    <Send className="w-3 h-3 mr-1" /> Отправить
-                                  </Button>
-                                )}
-                                {(f.key === 'v2026' || f.key === 'v2025') && v.status === 'pending_cio' && isCurrentOmsu && v[f.key] !== null && (
-                                  <div className="flex flex-col items-center gap-1 mt-1">
-                                    <span className="text-[10px] text-amber-600 leading-tight">На согласовании ЦИО</span>
-                                    <Button size="sm" variant="outline" className="h-6 text-[10px] px-2" onClick={() => dispatch({ type: 'OMSU_RECALL', munId, indId: ind.id, actor: mun.name })}>
-                                      <Undo2 className="w-3 h-3 mr-1" /> Отозвать
+                          {VALUE_FIELDS.map((f) => {
+                            const isForecastField = f.key.startsWith('cons') || f.key.startsWith('base');
+                            const isInputField = f.key === 'v2026' || f.key === 'v2025' || isForecastField;
+                            const isLockedByMef = !!v?.lockedFields?.[f.key] || (!!v?.lockedByMef && isInputField);
+                            const editable = !closedForMe && !isLockedByMef && isCurrentOmsu && (v.status === 'not_filled' || v.status === 'draft' || v.status === 'returned');
+
+                            return (
+                              <td key={f.key} className={`p-1.5 text-center ${fieldTint(f.key)}`}>
+                                <div className="flex flex-col items-center justify-center gap-1">
+                                  {isLockedByMef ? (
+                                    <div className="flex flex-col items-center justify-center gap-0.5">
+                                      <div
+                                        className="flex items-center gap-1 font-semibold text-amber-950 bg-amber-50/90 px-2 py-1 rounded border border-amber-300 shadow-xs"
+                                        title="Значение установлено куратором МЭФ в Рабочем месте МЭФ с автосогласованием. Ввод заблокирован"
+                                      >
+                                        <Lock className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                                        <span>{v[f.key] ?? '—'}</span>
+                                      </div>
+                                      <span className="text-[9px] text-amber-800 font-medium">Заблокировано МЭФ</span>
+                                    </div>
+                                  ) : editable && isInputField ? (
+                                    <WithValueTip show={v[f.key] !== null} updatedAt={v.updatedAt} author={v.signedBy ?? 'Иванова А.П.'}>
+                                      <Input
+                                        type="number"
+                                        step="0.01"
+                                        className="h-8 w-[76px] text-center mx-auto px-1 bg-white font-medium"
+                                        placeholder="—"
+                                        value={v[f.key] ?? ''}
+                                        onChange={(e) =>
+                                          dispatch({
+                                            type: 'OMSU_SET_VALUE',
+                                            munId,
+                                            indId: ind.id,
+                                            field: f.key,
+                                            value: e.target.value === '' ? null : Number(e.target.value),
+                                          })
+                                        }
+                                      />
+                                    </WithValueTip>
+                                  ) : (
+                                    <span className={isInputField ? 'font-medium' : ''}>
+                                      <ValueTip value={v[f.key]} updatedAt={v.updatedAt} author={v.signedBy ?? 'Иванова А.П.'} />
+                                    </span>
+                                  )}
+                                  {!isLockedByMef && (f.key === 'v2026' || f.key === 'v2025') && editable && v[f.key] !== null && (
+                                    <Button size="sm" variant="outline" className="h-6 text-[10px] px-2 mt-1 border-blue-200 hover:bg-blue-50" onClick={() => setSignTarget(ind.id)} title="Отправить в ЦИО">
+                                      <Send className="w-3 h-3 mr-1" /> Отправить
                                     </Button>
-                                  </div>
-                                )}
-                                {(f.key === 'v2026' || f.key === 'v2025') && v.status === 'approved' && v[f.key] !== null && (
-                                  <span className="text-[10px] text-green-600 flex items-center gap-0.5 mt-1"><Lock className="w-3 h-3"/> Согласовано ЦИО</span>
-                                )}
-                                {(f.key === 'v2026' || f.key === 'v2025') && v.status === 'returned' && v.comment && v[f.key] !== null && (
-                                  <div className="flex flex-col items-center mt-1 max-w-[120px]">
-                                    <span className="text-[10px] text-red-600 font-semibold leading-tight text-center">Возвращена на доработку</span>
-                                    <span className="text-[9px] text-red-700 leading-tight text-center break-words w-full">{v.comment}</span>
-                                  </div>
-                                )}
-                              </div>
-                            </td>
-                          ))}
+                                  )}
+                                  {!isLockedByMef && (f.key === 'v2026' || f.key === 'v2025') && v.status === 'pending_cio' && isCurrentOmsu && v[f.key] !== null && (
+                                    <div className="flex flex-col items-center gap-1 mt-1">
+                                      <span className="text-[10px] text-amber-600 leading-tight">На согласовании ЦИО</span>
+                                      <Button size="sm" variant="outline" className="h-6 text-[10px] px-2" onClick={() => dispatch({ type: 'OMSU_RECALL', munId, indId: ind.id, actor: mun.name })}>
+                                        <Undo2 className="w-3 h-3 mr-1" /> Отозвать
+                                      </Button>
+                                    </div>
+                                  )}
+                                  {!isLockedByMef && (f.key === 'v2026' || f.key === 'v2025') && v.status === 'approved' && v[f.key] !== null && (
+                                    <span className="text-[10px] text-green-600 flex items-center gap-0.5 mt-1"><Lock className="w-3 h-3"/> Согласовано ЦИО</span>
+                                  )}
+                                  {!isLockedByMef && (f.key === 'v2026' || f.key === 'v2025') && v.status === 'returned' && v.comment && v[f.key] !== null && (
+                                    <div className="flex flex-col items-center mt-1 max-w-[120px]">
+                                      <span className="text-[10px] text-red-600 font-semibold leading-tight text-center">Возвращена на доработку</span>
+                                      <span className="text-[9px] text-red-700 leading-tight text-center break-words w-full">{v.comment}</span>
+                                    </div>
+                                  )}
+                                </div>
+                              </td>
+                            );
+                          })}
                           {hasNote && (
                             <td className="p-1.5 text-xs border-l bg-amber-50/10 align-middle min-w-[160px]">
-                              {editable ? (
+                              {rowEditable ? (
                                 <Input
                                   type="text"
                                   placeholder="Примечание..."

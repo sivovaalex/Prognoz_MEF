@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { StoreProvider, useStore } from '@/lib/store';
 import { NewsProvider, useNews } from '@/context/NewsContext';
-import { ROLES, CURRENT_OMSU } from '@/lib/data';
+import { ROLES, CURRENT_OMSU, CURRENT_CIO } from '@/lib/data';
 import type { RoleId, AppState } from '@/lib/types';
 import { Setup } from '@/pages/Setup';
 import { OmsuForm } from '@/pages/OmsuForm';
@@ -25,6 +25,7 @@ import { NoteCioWorkspace } from '@/pages/note/NoteCioWorkspace';
 import { NoteOutputTables } from '@/pages/note/NoteOutputTables';
 import { RatingMonitoringView } from '@/pages/RatingMonitoringView';
 import { ContactsView } from '@/pages/ContactsView';
+import { MethodologiesView } from '@/pages/MethodologiesView';
 import { NewsListPage } from '@/pages/news/NewsListPage';
 import { NewsEditPage } from '@/pages/news/NewsEditPage';
 import {
@@ -36,8 +37,9 @@ import { Bell, Landmark, UserRound, Home as HomeIcon, LogOut } from 'lucide-reac
 type PageId = 'setup' | 'omsu' | 'cio' | 'mef-manage' | 'rating' | 'rating-zato' | 'report' | 'about' | 'users' | 'dicts' | 'output-tables' | 'mef-workspace'
   | 'note-admin' | 'note-collection' | 'note-omsu' | 'note-cio' | 'note-output'
   | 'rating-monitoring' | 'news' | 'news-create' | 'news-edit'
-  | 'contacts-omsu' | 'contacts-cio' | 'contacts-mef';
-type BlockId = 'mun' | 'obl' | 'params' | 'form2p' | 'long_term' | 'news_block' | 'admin_block' | 'ukaz_main' | 'rating_monitoring' | 'rating_main' | 'rating_view' | 'rating_contacts';
+  | 'contacts-omsu' | 'contacts-cio' | 'contacts-mef'
+  | 'methods-list' | 'methods-acknowledgment';
+type BlockId = 'mun' | 'obl' | 'params' | 'form2p' | 'long_term' | 'news_block' | 'admin_block' | 'ukaz_main' | 'rating_monitoring' | 'rating_methods' | 'rating_main' | 'rating_view' | 'rating_contacts';
 
 const BLOCK_LABELS: Record<BlockId, string> = {
   mun: 'Муниципальный прогноз',
@@ -49,6 +51,7 @@ const BLOCK_LABELS: Record<BlockId, string> = {
   admin_block: 'Администрирование',
   ukaz_main: 'Указ Президента РФ №607',
   rating_monitoring: 'Мониторинг хода сбора',
+  rating_methods: 'Методики',
   rating_main: 'Показатели',
   rating_view: 'Рейтинг ОМСУ',
   rating_contacts: 'Контакты',
@@ -59,10 +62,10 @@ const getBlocks = (role: RoleId, module: ModuleId, settings: AppState['blockSett
   if (module === 'ukaz') {
     blocks = role === 'admin' ? ['ukaz_main', 'news_block', 'admin_block'] : ['ukaz_main', 'news_block'];
   } else if (module === 'rating') {
-    if (role === 'admin') blocks = ['rating_monitoring', 'rating_main', 'rating_view', 'rating_contacts', 'news_block', 'admin_block'];
-    else if (role === 'mef') blocks = ['rating_monitoring', 'rating_main', 'rating_view', 'rating_contacts', 'news_block'];
-    else if (role === 'cio') blocks = ['rating_monitoring', 'rating_main', 'rating_view', 'rating_contacts', 'news_block'];
-    else blocks = ['rating_main', 'rating_view', 'rating_contacts', 'news_block']; // В личном кабинете ОМСУ ход сбора не отображается
+    if (role === 'admin') blocks = ['rating_monitoring', 'rating_methods', 'rating_main', 'rating_view', 'rating_contacts', 'news_block', 'admin_block'];
+    else if (role === 'mef') blocks = ['rating_monitoring', 'rating_methods', 'rating_main', 'rating_view', 'rating_contacts', 'news_block'];
+    else if (role === 'cio') blocks = ['rating_monitoring', 'rating_methods', 'rating_main', 'rating_view', 'rating_contacts', 'news_block'];
+    else blocks = ['rating_methods', 'rating_main', 'rating_view', 'rating_contacts', 'news_block']; // В личном кабинете ОМСУ ход сбора не отображается
   } else {
     if (role === 'admin') blocks = ['mun', 'obl', 'params', 'form2p', 'long_term', 'news_block', 'admin_block'];
     else if (role === 'mef' || role === 'cio') blocks = ['mun', 'obl', 'params', 'form2p', 'long_term', 'news_block'];
@@ -71,7 +74,7 @@ const getBlocks = (role: RoleId, module: ModuleId, settings: AppState['blockSett
   
   if (role !== 'admin' && role !== 'mef') {
     blocks = blocks.filter(b => {
-      if (b === 'news_block' || b === 'rating_contacts') return true;
+      if (b === 'news_block' || b === 'rating_contacts' || b === 'rating_methods') return true;
       if (b === 'rating_monitoring') return role !== 'omsu';
       if (b === 'rating_view' || b === 'admin_block') return true;
       return settings[b] && settings[b].approvers.includes(role);
@@ -85,6 +88,7 @@ const NAV: Record<RoleId, { id: PageId; label: string }[]> = {
     { id: 'setup', label: 'Настройка показателей' },
     { id: 'mef-manage', label: 'Управление сбором' },
     { id: 'output-tables', label: 'Выходные таблицы' },
+    { id: 'mef-workspace', label: 'Рабочее место МЭФ' },
   ],
   mef: [
     { id: 'mef-manage', label: 'Управление сбором' },
@@ -148,6 +152,7 @@ function Shell({
   const [block, setBlock] = useState<BlockId>('mun');
   const [subSection, setSubSection] = useState<'ind' | 'note'>('ind');
   const [currentOmsuId, setCurrentOmsuId] = useState<string>(CURRENT_OMSU);
+  const [currentCioId, setCurrentCioId] = useState<string>(CURRENT_CIO);
   const [editNewsId, setEditNewsId] = useState<string | null>(null);
 
   // Synchronize role with NewsContext
@@ -166,6 +171,8 @@ function Shell({
     setBlock(b[0]);
     if (b[0] === 'rating_monitoring') {
       setPage('rating-monitoring');
+    } else if (b[0] === 'rating_methods') {
+      setPage('methods-list');
     } else if (b[0] === 'news_block') {
       setPage('news');
     } else {
@@ -186,6 +193,8 @@ function Shell({
     setBlock(targetBlock);
     if (targetBlock === 'rating_monitoring') {
       setPage('rating-monitoring');
+    } else if (targetBlock === 'rating_methods') {
+      setPage('methods-list');
     } else if (targetBlock === 'news_block') {
       setPage('news');
     } else if (targetBlock === 'rating_contacts') {
@@ -208,6 +217,8 @@ function Shell({
       setPage('news');
     } else if (b === 'rating_monitoring') {
       setPage('rating-monitoring');
+    } else if (b === 'rating_methods') {
+      setPage('methods-list');
     } else if (b === 'rating_contacts') {
       setPage(role === 'cio' ? 'contacts-cio' : 'contacts-omsu');
     } else if (b === 'rating_view') {
@@ -241,6 +252,11 @@ function Shell({
       ? [
           { id: 'rating-monitoring' as PageId, label: 'Мониторинг хода сбора данных' },
         ]
+    : block === 'rating_methods'
+      ? [
+          { id: 'methods-list' as PageId, label: 'Методики' },
+          { id: 'methods-acknowledgment' as PageId, label: 'Форма отметки ознакомления с методиками' },
+        ]
     : block === 'rating_contacts'
       ? [
           { id: 'contacts-omsu' as PageId, label: 'Контакты ОМСУ по Рейтингу' },
@@ -262,7 +278,7 @@ function Shell({
         : NAV[role];
 
   // Filter NAV tabs based on block settings
-  if (block !== 'admin_block' && block !== 'news_block' && block !== 'rating_view' && block !== 'rating_monitoring' && block !== 'rating_contacts') {
+  if (block !== 'admin_block' && block !== 'news_block' && block !== 'rating_view' && block !== 'rating_monitoring' && block !== 'rating_contacts' && block !== 'rating_methods') {
     const approvers = state.blockSettings[block]?.approvers || [];
     activeNav = activeNav.filter(item => {
       if (item.id === 'omsu' || item.id === 'note-omsu') return approvers.includes('omsu');
@@ -288,7 +304,7 @@ function Shell({
                 ГАС «Управление» МО · Конструктор форм
               </div>
               <div className="text-xs text-white/80">
-                Модуль «{activeModule === 'ukaz' ? 'Указ Президента РФ №607' : activeModule === 'rating' ? 'Формирование Рейтинга ОМСУ' : 'Прогноз СЭР МО'}» · служба техподдержки: support.mosreg.ru
+                Модуль «{activeModule === 'ukaz' ? 'Указ Президента РФ №607' : activeModule === 'rating' ? 'Показатели и рейтинг' : 'Прогноз СЭР МО'}» · служба техподдержки: support.mosreg.ru
               </div>
             </div>
           </div>
@@ -348,6 +364,27 @@ function Shell({
                     {state.omsus.map((m) => (
                       <SelectItem key={m.id} value={m.id}>
                         {m.name} {m.isZato ? '(ЗАТО)' : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {role === 'cio' && (
+              <div className="flex items-center gap-1.5 rounded-md bg-white/10 px-2 py-1">
+                <span className="text-xs text-white/80 shrink-0 font-medium">ЦИО:</span>
+                <Select
+                  value={currentCioId}
+                  onValueChange={(v) => setCurrentCioId(v)}
+                >
+                  <SelectTrigger className="h-8 w-[200px] border-0 bg-transparent text-white focus:ring-0 [&>span]:text-white text-xs truncate">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {state.cios.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -452,13 +489,23 @@ function Shell({
       )}
 
       <main className="w-full pb-10">
+        {(page === 'methods-list' || page === 'methods-acknowledgment') && (
+          <div className="px-4">
+            <MethodologiesView
+              activeTab={page === 'methods-acknowledgment' ? 'acknowledgment' : 'list'}
+              onTabChange={(t) => setPage(t === 'acknowledgment' ? 'methods-acknowledgment' : 'methods-list')}
+              role={role}
+              currentOmsuId={currentOmsuId}
+            />
+          </div>
+        )}
         {page === 'rating-monitoring' && <div className="px-4"><RatingMonitoringView role={role} /></div>}
         {(page === 'contacts-omsu' || page === 'contacts-cio' || page === 'contacts-mef') && (
           <div className="px-4"><ContactsView activeTab={page} role={role} /></div>
         )}
         {page === 'setup' && <div className="px-4"><Setup block={block} /></div>}
-        {page === 'omsu' && <div className="px-4"><OmsuForm block={block} /></div>}
-        {page === 'cio' && <div className="px-4"><CioWorkspace key={block} block={block} hideOmsuApprove={!(state.blockSettings[block]?.approvers || []).includes('omsu')} /></div>}
+        {page === 'omsu' && <div className="px-4"><OmsuForm block={block} munId={currentOmsuId} onMunIdChange={setCurrentOmsuId} /></div>}
+        {page === 'cio' && <div className="px-4"><CioWorkspace key={`${block}-${currentCioId}`} block={block} cioId={currentCioId} onCioChange={setCurrentCioId} hideOmsuApprove={!(state.blockSettings[block]?.approvers || []).includes('omsu')} /></div>}
         {page === 'mef-manage' && <div className="px-4"><MefManage block={block} goRating={() => setPage('rating')} goReport={() => setPage('report')} /></div>}
         {page === 'rating' && <div className="px-4"><RatingView role={role} /></div>}
         {page === 'rating-zato' && <div className="px-4"><ZatoRatingView role={role} /></div>}
@@ -506,7 +553,7 @@ function Shell({
 
       <footer className="border-t bg-white py-3">
         <div className="w-full px-4 text-xs text-muted-foreground">
-          Прототип доработки ИС «Конструктор форм» — модуль «{activeModule === 'ukaz' ? 'Указ Президента РФ №607' : activeModule === 'rating' ? 'Формирование Рейтинга ОМСУ' : 'Прогноз СЭР МО'}». Данные демонстрационные.
+          Прототип доработки ИС «Конструктор форм» — модуль «{activeModule === 'ukaz' ? 'Указ Президента РФ №607' : activeModule === 'rating' ? 'Показатели и рейтинг' : 'Прогноз СЭР МО'}». Данные демонстрационные.
         </div>
       </footer>
     </div>

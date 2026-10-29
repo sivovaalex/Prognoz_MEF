@@ -147,6 +147,8 @@ export interface OmsuValue extends IndicatorValues {
   comment?: string;      // комментарий при возврате
   signedBy?: string;
   note?: string;         // Примечание ОМСУ
+  lockedByMef?: boolean; // заблокировано МЭФ при предсборе
+  lockedFields?: Partial<Record<ValueFieldKey, boolean>>; // заблокированные МЭФ поля
 }
 
 export interface SysUser {
@@ -183,6 +185,8 @@ export interface CioValue extends IndicatorValues {
   comment?: string;
   signedBy?: string;
   note?: string;         // Примечание ЦИО (Ведомственные данные)
+  lockedByMef?: boolean; // заблокировано МЭФ при предсборе
+  lockedFields?: Partial<Record<ValueFieldKey, boolean>>; // заблокированные МЭФ поля
 }
 
 export interface MefValue extends IndicatorValues {
@@ -192,7 +196,7 @@ export interface MefValue extends IndicatorValues {
   note?: string;         // Примечание МЭФ
 }
 
-export type CampaignStatus = 'draft' | 'scheduled' | 'collecting' | 'completed';
+export type CampaignStatus = 'draft' | 'scheduled' | 'precollecting' | 'collecting' | 'completed';
 
 export interface BlockSettings {
   approvers: ('omsu' | 'cio' | 'mef')[];
@@ -338,6 +342,7 @@ export interface Campaign {
   deadlineCio: string;        // срок согласования ЦИО
   deadlineMef: string;        // срок согласования МЭФ
   launchedAt: string | null;
+  precollectLaunchedAt?: string | null;
 }
 
 export interface NotificationItem {

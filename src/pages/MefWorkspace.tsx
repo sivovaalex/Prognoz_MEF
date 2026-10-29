@@ -1,4 +1,4 @@
-import { useState, Fragment } from 'react';
+import { useState, useEffect, Fragment } from 'react';
 import { useStore } from '@/lib/store';
 import { VALUE_FIELDS, VALUE_GROUPS } from '@/lib/types';
 import { EMPTY_TREE_FILTER, chevronParents, visibleTree, type TreeFilter } from '@/lib/indTree';
@@ -6,8 +6,9 @@ import { IndToolbar, TreeToggle } from '@/components/IndToolbar';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Undo2, CheckCircle2, Info, Lock, Send } from 'lucide-react';
+import { Undo2, CheckCircle2, Info, Lock, Send, PlayCircle, StopCircle, Sparkles } from 'lucide-react';
 import { fieldTint } from '@/components/ValueColumns';
 import { CioStatusBadge } from '@/components/StatusBadge';
 import { ValueTip } from '@/components/ValueTip';
@@ -27,10 +28,15 @@ export function MefWorkspace({ block = 'mun' }: { block?: string }) {
 }
 
 function MefWorkspaceNew({ block = 'mun' }: { block?: string }) {
-  const { state } = useStore();
+  const { state, dispatch } = useStore();
+  const isPrecollect = state.campaign.status === 'precollecting';
   const [treeFilter, setTreeFilter] = useState<TreeFilter>(EMPTY_TREE_FILTER);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
-  const [showOmsu, setShowOmsu] = useState(false);
+  const [showOmsu, setShowOmsu] = useState(isPrecollect);
+
+  useEffect(() => {
+    if (isPrecollect) setShowOmsu(true);
+  }, [isPrecollect]);
 
   const parents = chevronParents(state.indicators);
   const toggleNode = (id: string) => setCollapsed((p) => ({ ...p, [id]: !p[id] }));
@@ -40,12 +46,63 @@ function MefWorkspaceNew({ block = 'mun' }: { block?: string }) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-4 rounded-lg border shadow-sm">
         <div>
-          <h2 className="text-lg font-semibold">Согласование прогноза</h2>
-          <p className="text-sm text-muted-foreground">Проверка и утверждение данных ЦИО.</p>
+          <div className="flex items-center gap-2">
+            <h2 className="text-lg font-semibold">Рабочее место МЭФ — Согласование прогноза</h2>
+            {isPrecollect ? (
+              <Badge className="bg-purple-100 text-purple-800 border-purple-300 flex items-center gap-1">
+                <Sparkles className="h-3 w-3 text-purple-600 animate-spin" /> Режим «Предсбор МЭФ» активен
+              </Badge>
+            ) : state.campaign.status === 'collecting' ? (
+              <Badge className="bg-amber-100 text-amber-800 border-amber-300">Сбор данных запущен</Badge>
+            ) : (
+              <Badge variant="outline">Сбор не запущен</Badge>
+            )}
+          </div>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Куратор МЭФ / Администратор: ввод значений в столбцы ОМСУ и ЦИО с автосогласованием и блокировкой ячеек.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {!isPrecollect && state.campaign.status !== 'collecting' && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="border-purple-300 text-purple-700 hover:bg-purple-50 font-medium"
+              onClick={() => dispatch({ type: 'CAMPAIGN_PRECOLLECT_LAUNCH' })}
+              title="Запустить режим предсбора МЭФ для предварительного ввода значений ОМСУ и ЦИО"
+            >
+              <PlayCircle className="h-4 w-4 mr-1 text-purple-600" /> Включить предсбор МЭФ
+            </Button>
+          )}
+          {isPrecollect && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-red-600 border-red-200 hover:bg-red-50"
+              onClick={() => dispatch({ type: 'CAMPAIGN_PRECOLLECT_STOP' })}
+              title="Завершить режим предсбора МЭФ"
+            >
+              <StopCircle className="h-4 w-4 mr-1" /> Завершить предсбор
+            </Button>
+          )}
         </div>
       </div>
+
+      {isPrecollect && (
+        <div className="rounded-lg border border-purple-200 bg-purple-50 p-3 text-xs text-purple-900 flex items-start gap-2 shadow-sm">
+          <Info className="h-4 w-4 text-purple-700 mt-0.5 shrink-0" />
+          <div className="space-y-0.5 leading-relaxed">
+            <span className="font-semibold text-purple-950 block">Активен функционал «Предсбор МЭФ»:</span>
+            <span>
+              Вы можете вводить значения непосредственно в столбцы <b>ОМСУ</b> и <b>ЦИО</b>. При вводе значения автоматически согласуются и блокируются от изменения в рабочих местах ОМСУ и ЦИО (со значком замочка <Lock className="inline h-3 w-3 text-amber-600" />). При необходимости МЭФ может вернуть право редактирования по кнопке <b>«Вернуть»</b>.
+            </span>
+          </div>
+        </div>
+      )}
+
       <MefTerritoryIndicators
         block={block}
         visible={visible}
@@ -57,6 +114,7 @@ function MefWorkspaceNew({ block = 'mun' }: { block?: string }) {
         setTreeFilter={setTreeFilter}
         showOmsu={showOmsu}
         setShowOmsu={setShowOmsu}
+        isPrecollect={isPrecollect}
       />
     </div>
   );
@@ -154,40 +212,135 @@ function MefTerritoryIndicators({ block = 'mun', visible, fillable, collapsed, t
                     return (
                       <tr key={omsu.id} className={`border-b ${safeV.status === 'pending_mef' ? 'bg-amber-50/60' : 'hover:bg-slate-50'}`}>
                         <td className="p-2 font-medium pl-6">{omsu.name}</td>
-                        {VALUE_FIELDS.map((f) => (
-                          <Fragment key={f.key}>
-                            {showOmsu && (
-                              <td className={`p-1.5 text-center border-l ${f.key === 'v2026' || f.key === 'v2025' ? 'bg-amber-50/30' : fieldTint(f.key)}`}>
-                                <span className="text-muted-foreground">—</span>
-                              </td>
-                            )}
-                            <td className={`p-1.5 text-center ${!showOmsu ? 'border-l' : ''} ${f.key === 'v2026' || f.key === 'v2025' ? 'bg-amber-50/30' : fieldTint(f.key)}`}>
-                              <div className={mefV[f.key] !== null && safeV[f.key] !== null && mefV[f.key] !== safeV[f.key] ? 'text-red-600 font-bold' : ''}>
-                                <ValueTip value={safeV[f.key]} updatedAt={safeV.updatedAt} author={safeV.signedBy ?? 'Ответственный'} />
-                              </div>
-                              {(f.key === 'v2026' || f.key === 'v2025') && (
-                                <div className="mt-1 flex flex-col items-center gap-1">
-                                  <CioStatusBadge status={safeV.status} />
-                                  {safeV.status === 'pending_mef' && (
-                                    <div className="flex gap-1 mt-1">
-                                      <Button size="icon-sm" variant="outline" className="h-6 w-6 text-green-600 hover:text-green-700" onClick={() => dispatch({ type: 'MEF_TERR_APPROVE', indId: ind.id, cioId, munId: omsu.id, actor: 'МЭФ' })} title="Согласовать">
-                                        <CheckCircle2 className="h-3.5 w-3.5" />
-                                      </Button>
-                                      <Button size="icon-sm" variant="outline" className="h-6 w-6 text-red-500 hover:text-red-600" onClick={() => { setReturnTarget({ cioId, indId: ind.id, munId: omsu.id }); setComment(''); }} title="Вернуть">
-                                        <Undo2 className="h-3.5 w-3.5" />
+                        {VALUE_FIELDS.map((f) => {
+                          const isOmsuLocked = !!omsuVal?.lockedFields?.[f.key] || (!!omsuVal?.lockedByMef && (f.key === 'v2026' || f.key === 'v2025' || f.key.startsWith('cons') || f.key.startsWith('base')));
+                          const isCioLocked = !!safeV?.lockedFields?.[f.key] || (!!safeV?.lockedByMef && (f.key === 'v2026' || f.key === 'v2025' || f.key.startsWith('cons') || f.key.startsWith('base')));
+
+                          return (
+                            <Fragment key={f.key}>
+                              {showOmsu && (
+                                <td className={`p-1.5 text-center border-l ${f.key === 'v2026' || f.key === 'v2025' ? 'bg-amber-50/30' : fieldTint(f.key)}`}>
+                                  <div className="flex flex-col items-center gap-1">
+                                    <Input
+                                      type="number"
+                                      step="0.1"
+                                      className={`h-8 w-[76px] text-center mx-auto bg-white px-1 font-medium ${isOmsuLocked ? 'border-amber-500 bg-amber-50/50 text-amber-950 font-bold ring-1 ring-amber-400' : 'border-amber-300'}`}
+                                      placeholder="—"
+                                      value={omsuVal?.[f.key] ?? ''}
+                                      onChange={(e) => {
+                                        const val = e.target.value === '' ? null : Number(e.target.value);
+                                        dispatch({
+                                          type: 'MEF_SET_OMSU_VALUE',
+                                          munId: omsu.id,
+                                          indId: ind.id,
+                                          field: f.key,
+                                          value: val,
+                                        });
+                                      }}
+                                      title={isOmsuLocked ? 'Значение введено МЭФ (заблокировано для ОМСУ)' : 'Ввод значения ОМСУ куратором МЭФ с автосогласованием'}
+                                    />
+                                    {isOmsuLocked ? (
+                                      <div className="flex flex-col items-center gap-0.5 mt-0.5">
+                                        <span className="text-[10px] text-amber-800 font-semibold flex items-center gap-0.5 bg-amber-100/70 px-1 rounded whitespace-nowrap">
+                                          <Lock className="w-3 h-3 text-amber-700" /> Введено МЭФ
+                                        </span>
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          className="h-5 text-[9px] px-1.5 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+                                          onClick={() => dispatch({ type: 'MEF_UNLOCK_OMSU_VALUE', munId: omsu.id, indId: ind.id, field: f.key })}
+                                          title="Снять блокировку МЭФ и вернуть право редактирования ОМСУ"
+                                        >
+                                          <Undo2 className="h-3 w-3 mr-0.5" /> Вернуть ОМСУ
+                                        </Button>
+                                      </div>
+                                    ) : (
+                                      omsuVal && omsuVal[f.key] != null && (
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          className="h-5 text-[9px] px-1.5 mt-0.5 text-purple-700 border-purple-200 hover:bg-purple-50"
+                                          onClick={() => dispatch({ type: 'MEF_SET_OMSU_VALUE', munId: omsu.id, indId: ind.id, field: f.key, value: omsuVal[f.key] })}
+                                          title="Автосогласовать и заблокировать для ОМСУ"
+                                        >
+                                          <Lock className="h-3 w-3 mr-0.5" /> Заблокировать
+                                        </Button>
+                                      )
+                                    )}
+                                  </div>
+                                </td>
+                              )}
+                              <td className={`p-1.5 text-center ${!showOmsu ? 'border-l' : ''} ${f.key === 'v2026' || f.key === 'v2025' ? 'bg-amber-50/30' : fieldTint(f.key)}`}>
+                                <div className="flex flex-col items-center gap-1">
+                                  <Input
+                                    type="number"
+                                    step="0.1"
+                                    className={`h-8 w-[76px] text-center mx-auto bg-white px-1 font-medium ${isCioLocked ? 'border-blue-500 bg-blue-50/50 text-blue-950 font-bold ring-1 ring-blue-400' : 'border-blue-300'}`}
+                                    placeholder="—"
+                                    value={safeV[f.key] ?? ''}
+                                    onChange={(e) => {
+                                      const val = e.target.value === '' ? null : Number(e.target.value);
+                                      dispatch({
+                                        type: 'MEF_SET_CIO_TERR_VALUE',
+                                        cioId,
+                                        indId: ind.id,
+                                        munId: omsu.id,
+                                        field: f.key,
+                                        value: val,
+                                      });
+                                    }}
+                                    title={isCioLocked ? 'Значение введено МЭФ (заблокировано для ЦИО)' : 'Ввод значения ЦИО куратором МЭФ с автосогласованием'}
+                                  />
+                                  {isCioLocked ? (
+                                    <div className="flex flex-col items-center gap-0.5 mt-0.5">
+                                      <span className="text-[10px] text-blue-800 font-semibold flex items-center gap-0.5 bg-blue-100/70 px-1 rounded whitespace-nowrap">
+                                        <Lock className="w-3 h-3 text-blue-700" /> Введено МЭФ
+                                      </span>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="h-5 text-[9px] px-1.5 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+                                        onClick={() => dispatch({ type: 'MEF_UNLOCK_CIO_TERR_VALUE', cioId, indId: ind.id, munId: omsu.id, field: f.key })}
+                                        title="Снять блокировку МЭФ и вернуть право редактирования ЦИО"
+                                      >
+                                        <Undo2 className="h-3 w-3 mr-0.5" /> Вернуть ЦИО
                                       </Button>
                                     </div>
-                                  )}
-                                  {safeV.status === 'approved' && (
-                                    <div className="flex gap-1 mt-1">
-                                      <Button size="icon-sm" variant="outline" className="h-6 w-6 text-red-500 hover:text-red-600" onClick={() => { setReturnTarget({ cioId, indId: ind.id, munId: omsu.id }); setComment(''); }} title="Вернуть">
-                                        <Undo2 className="h-3.5 w-3.5" />
-                                      </Button>
+                                  ) : (
+                                    <div className="flex flex-col items-center gap-1">
+                                      <CioStatusBadge status={safeV.status} />
+                                      {safeV.status === 'pending_mef' && (
+                                        <div className="flex gap-1 mt-0.5">
+                                          <Button size="icon-sm" variant="outline" className="h-6 w-6 text-green-600 hover:text-green-700" onClick={() => dispatch({ type: 'MEF_TERR_APPROVE', indId: ind.id, cioId, munId: omsu.id, actor: 'МЭФ' })} title="Согласовать">
+                                            <CheckCircle2 className="h-3.5 w-3.5" />
+                                          </Button>
+                                          <Button size="icon-sm" variant="outline" className="h-6 w-6 text-red-500 hover:text-red-600" onClick={() => { setReturnTarget({ cioId, indId: ind.id, munId: omsu.id }); setComment(''); }} title="Вернуть">
+                                            <Undo2 className="h-3.5 w-3.5" />
+                                          </Button>
+                                        </div>
+                                      )}
+                                      {safeV.status === 'approved' && (
+                                        <div className="flex gap-1 mt-0.5">
+                                          <Button size="icon-sm" variant="outline" className="h-6 w-6 text-red-500 hover:text-red-600" onClick={() => { setReturnTarget({ cioId, indId: ind.id, munId: omsu.id }); setComment(''); }} title="Вернуть">
+                                            <Undo2 className="h-3.5 w-3.5" />
+                                          </Button>
+                                        </div>
+                                      )}
+                                      {safeV.status !== 'approved' && safeV[f.key] != null && (
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          className="h-5 text-[9px] px-1.5 mt-0.5 text-purple-700 border-purple-200 hover:bg-purple-50"
+                                          onClick={() => dispatch({ type: 'MEF_SET_CIO_TERR_VALUE', cioId, indId: ind.id, munId: omsu.id, field: f.key, value: safeV[f.key] })}
+                                          title="Автосогласовать и заблокировать для ЦИО"
+                                        >
+                                          <Lock className="h-3 w-3 mr-0.5" /> Заблокировать
+                                        </Button>
+                                      )}
                                     </div>
                                   )}
                                 </div>
-                              )}
-                            </td>
+                              </td>
                             <td className={`p-1.5 text-center ${f.key === 'v2026' || f.key === 'v2025' ? 'bg-amber-50/30' : fieldTint(f.key)}`}>
                               {(f.key === 'v2026' || f.key === 'v2025') ? (
                                 <div className="flex flex-col items-center gap-1">
@@ -227,7 +380,8 @@ function MefTerritoryIndicators({ block = 'mun', visible, fillable, collapsed, t
                               )}
                             </td>
                           </Fragment>
-                        ))}
+                        );
+                      })}
                         {/* Примечание (последний столбец) */}
                         {hasNote && noteColsCount > 0 && (
                           <>
@@ -404,35 +558,88 @@ function MefWorkspaceOld({ block = 'mun' }: { block?: string }) {
                                 </div>
                               </div>
                             </td>
-                            {VALUE_FIELDS.map((f) => (
-                              <Fragment key={f.key}>
-                                <td className={`p-1.5 text-center border-l ${f.key === 'v2026' || f.key === 'v2025' ? 'bg-amber-50/30' : fieldTint(f.key)}`}>
-                                  <div className={mefV[f.key] !== null && v[f.key] !== null && mefV[f.key] !== v[f.key] ? 'text-red-600 font-bold' : ''}>
-                                    <ValueTip value={v[f.key]} updatedAt={v.updatedAt} author={v.signedBy ?? 'Ответственный'} />
-                                  </div>
-                                  {(f.key === 'v2026' || f.key === 'v2025') && (
-                                    <div className="mt-1 flex flex-col items-center gap-1">
-                                      <CioStatusBadge status={v.status} />
-                                      {v.status === 'pending_mef' && (
-                                        <div className="flex gap-1 mt-1">
-                                          <Button size="icon-sm" variant="outline" className="h-6 w-6 text-green-600 hover:text-green-700" onClick={() => dispatch({ type: 'MEF_APPROVE', cioIndId: ind.id, cioId, actor: 'МЭФ' })} title="Согласовать">
-                                            <CheckCircle2 className="h-3.5 w-3.5" />
-                                          </Button>
-                                          <Button size="icon-sm" variant="outline" className="h-6 w-6 text-red-500 hover:text-red-600" onClick={() => { setReturnTarget({ cioId, indId: ind.id }); setComment(''); }} title="Вернуть">
-                                            <Undo2 className="h-3.5 w-3.5" />
-                                          </Button>
-                                        </div>
-                                      )}
-                                      {v.status === 'approved' && (
-                                        <div className="flex gap-1 mt-1">
-                                          <Button size="icon-sm" variant="outline" className="h-6 w-6 text-red-500 hover:text-red-600" onClick={() => { setReturnTarget({ cioId, indId: ind.id }); setComment(''); }} title="Вернуть">
-                                            <Undo2 className="h-3.5 w-3.5" />
-                                          </Button>
-                                        </div>
-                                      )}
-                                    </div>
-                                  )}
-                                </td>
+                            {VALUE_FIELDS.map((f) => {
+                              const isForecastField = f.key.startsWith('cons') || f.key.startsWith('base');
+                              const isTargetField = f.key === 'v2026' || f.key === 'v2025' || isForecastField;
+                              const isCioLocked = !!v.lockedByMef || !!v.lockedFields?.[f.key];
+                              return (
+                                <Fragment key={f.key}>
+                                  <td className={`p-1.5 text-center border-l ${isTargetField ? 'bg-amber-50/30' : fieldTint(f.key)}`}>
+                                    {isTargetField ? (
+                                      <div className="flex flex-col items-center gap-1">
+                                        <Input
+                                          type="number"
+                                          step="0.1"
+                                          className={`h-8 w-[76px] text-center mx-auto bg-white px-1 font-medium ${isCioLocked ? 'border-blue-500 bg-blue-50/50 text-blue-950 font-bold ring-1 ring-blue-400' : 'border-blue-300'}`}
+                                          placeholder="—"
+                                          value={v[f.key] ?? ''}
+                                          onChange={(e) => {
+                                            const val = e.target.value === '' ? null : Number(e.target.value);
+                                            dispatch({
+                                              type: 'MEF_SET_CIO_OWN_VALUE',
+                                              cioIndId: ind.id,
+                                              cioId,
+                                              field: f.key,
+                                              value: val,
+                                            });
+                                          }}
+                                          title={isCioLocked ? 'Значение введено МЭФ (заблокировано для ЦИО)' : 'Ввод значения ЦИО куратором МЭФ с автосогласованием'}
+                                        />
+                                        {isCioLocked ? (
+                                          <div className="flex flex-col items-center gap-0.5 mt-0.5">
+                                            <span className="text-[10px] text-blue-800 font-semibold flex items-center gap-0.5 bg-blue-100/70 px-1 rounded">
+                                              <Lock className="w-3 h-3 text-blue-700" /> Введено МЭФ
+                                            </span>
+                                            <Button
+                                              size="sm"
+                                              variant="outline"
+                                              className="h-5 text-[9px] px-1.5 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+                                              onClick={() => dispatch({ type: 'MEF_UNLOCK_CIO_OWN_VALUE', cioIndId: ind.id, cioId, field: f.key })}
+                                              title="Снять блокировку МЭФ и вернуть ЦИО право редактирования"
+                                            >
+                                              <Undo2 className="h-3 w-3 mr-0.5" /> Вернуть ЦИО
+                                            </Button>
+                                          </div>
+                                        ) : (
+                                          <div className="flex flex-col items-center gap-1">
+                                            <CioStatusBadge status={v.status} />
+                                            {v.status === 'pending_mef' && (
+                                              <div className="flex gap-1 mt-0.5">
+                                                <Button size="icon-sm" variant="outline" className="h-6 w-6 text-green-600 hover:text-green-700" onClick={() => dispatch({ type: 'MEF_APPROVE', cioIndId: ind.id, cioId, actor: 'МЭФ' })} title="Согласовать">
+                                                  <CheckCircle2 className="h-3.5 w-3.5" />
+                                                </Button>
+                                                <Button size="icon-sm" variant="outline" className="h-6 w-6 text-red-500 hover:text-red-600" onClick={() => { setReturnTarget({ cioId, indId: ind.id }); setComment(''); }} title="Вернуть">
+                                                  <Undo2 className="h-3.5 w-3.5" />
+                                                </Button>
+                                              </div>
+                                            )}
+                                            {v.status === 'approved' && (
+                                              <div className="flex gap-1 mt-0.5">
+                                                <Button size="icon-sm" variant="outline" className="h-6 w-6 text-red-500 hover:text-red-600" onClick={() => { setReturnTarget({ cioId, indId: ind.id }); setComment(''); }} title="Вернуть">
+                                                  <Undo2 className="h-3.5 w-3.5" />
+                                                </Button>
+                                              </div>
+                                            )}
+                                            {v.status !== 'approved' && v[f.key] != null && (
+                                              <Button
+                                                size="sm"
+                                                variant="outline"
+                                                className="h-5 text-[9px] px-1.5 mt-0.5 text-purple-700 border-purple-200 hover:bg-purple-50"
+                                                onClick={() => dispatch({ type: 'MEF_SET_CIO_OWN_VALUE', cioIndId: ind.id, cioId, field: f.key, value: v[f.key] })}
+                                                title="Автосогласовать и заблокировать для ЦИО"
+                                              >
+                                                <Lock className="h-3 w-3 mr-0.5" /> Заблокировать
+                                              </Button>
+                                            )}
+                                          </div>
+                                        )}
+                                      </div>
+                                    ) : (
+                                      <div className={mefV[f.key] !== null && v[f.key] !== null && mefV[f.key] !== v[f.key] ? 'text-red-600 font-bold' : ''}>
+                                        <ValueTip value={v[f.key]} updatedAt={v.updatedAt} author={v.signedBy ?? 'Ответственный'} />
+                                      </div>
+                                    )}
+                                  </td>
                                 <td className={`p-1.5 text-center ${f.key === 'v2026' || f.key === 'v2025' ? 'bg-amber-50/30' : fieldTint(f.key)}`}>
                                   {(f.key === 'v2026' || f.key === 'v2025') ? (
                                     <div className="flex flex-col items-center gap-1">
@@ -473,7 +680,8 @@ function MefWorkspaceOld({ block = 'mun' }: { block?: string }) {
                                   )}
                                 </td>
                               </Fragment>
-                            ))}
+                            );
+                          })}
                             {hasNote && noteColsCount > 0 && (
                               <>
                                 {approvers.includes('cio') && (

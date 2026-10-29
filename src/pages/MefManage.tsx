@@ -60,7 +60,7 @@ export function MefManage({ block }: { block?: string; goRating?: () => void; go
               <Label>Дата окончания сбора</Label>
               <Input type="datetime-local" value={dlMef} onChange={(e) => setDlMef(e.target.value)} />
             </div>
-            <div className="flex gap-2 pt-2">
+            <div className="flex flex-wrap gap-2 pt-2">
               <Button
                 variant="outline"
                 onClick={() =>
@@ -76,7 +76,27 @@ export function MefManage({ block }: { block?: string; goRating?: () => void; go
               >
                 <CalendarClock className="h-4 w-4 mr-1" /> Сохранить даты
               </Button>
-              {state.campaign.status === 'collecting' ? (
+
+              {state.campaign.status === 'precollecting' ? (
+                <>
+                  <Badge className="bg-purple-100 text-purple-800 border-purple-300 hover:bg-purple-100 flex items-center gap-1.5 py-1 px-2.5">
+                    <Send className="h-3.5 w-3.5 text-purple-600 animate-pulse" />
+                    Предсбор МЭФ активен ({state.campaign.precollectLaunchedAt || state.campaign.launchedAt})
+                  </Badge>
+                  <Button
+                    className="bg-[#1e5c8f] hover:bg-[#1e5c8f]/90 text-white"
+                    onClick={() => dispatch({ type: 'CAMPAIGN_LAUNCH' })}
+                  >
+                    <PlayCircle className="h-4 w-4 mr-1" /> Запустить основной сбор
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    onClick={() => dispatch({ type: 'CAMPAIGN_PRECOLLECT_STOP' })}
+                  >
+                    <StopCircle className="h-4 w-4 mr-1" /> Завершить предсбор
+                  </Button>
+                </>
+              ) : state.campaign.status === 'collecting' ? (
                 <>
                   <Button variant="destructive" onClick={() => dispatch({ type: 'CAMPAIGN_STOP' })}>
                     <StopCircle className="h-4 w-4 mr-1" /> Завершить сбор
@@ -87,10 +107,26 @@ export function MefManage({ block }: { block?: string; goRating?: () => void; go
                   </Badge>
                 </>
               ) : (
-                <Button onClick={() => dispatch({ type: 'CAMPAIGN_LAUNCH' })}>
-                  <PlayCircle className="h-4 w-4 mr-1" /> {state.campaign.status === 'completed' ? 'Запустить новый сбор' : 'Запустить сбор'}
-                </Button>
+                <>
+                  <Button
+                    variant="outline"
+                    className="border-purple-300 text-purple-700 hover:bg-purple-50 font-semibold"
+                    onClick={() => dispatch({ type: 'CAMPAIGN_PRECOLLECT_LAUNCH' })}
+                    title="Предзапуск сбора: МЭФ/админ вводит значения ОМСУ и ЦИО с автосогласованием и блокировкой"
+                  >
+                    <PlayCircle className="h-4 w-4 mr-1 text-purple-600" /> Предсбор МЭФ
+                  </Button>
+                  <Button onClick={() => dispatch({ type: 'CAMPAIGN_LAUNCH' })}>
+                    <PlayCircle className="h-4 w-4 mr-1" /> {state.campaign.status === 'completed' ? 'Запустить новый сбор' : 'Запустить сбор'}
+                  </Button>
+                </>
               )}
+            </div>
+            <div className="rounded-md border border-purple-200 bg-purple-50/50 p-2.5 text-xs text-purple-950 space-y-1">
+              <span className="font-semibold text-purple-900 block">Функционал «Предсбор МЭФ»:</span>
+              <p>
+                Позволяет МЭФ и Администратору произвести предварительный запуск сбора и внести значения в столбцы ОМСУ и ЦИО в «Рабочем месте МЭФ» с автосогласованием. Внесённые ячейки блокируются в рабочих местах ОМСУ и ЦИО со значком замочка. МЭФ сохраняет право вернуть значения на доработку/редактирование ОМСУ и ЦИО.
+              </p>
             </div>
             <p className="text-xs text-muted-foreground">
               В указанную дату КФ автоматически рассылает уведомления и формы: {state.omsus.length} ОМСУ и {state.cios.length} ЦИО. Предварительный отчёт формируется автоматически по мере занесения данных, а итоговый отчёт — автоматически при завершении кампании.
@@ -131,12 +167,18 @@ export function MefManage({ block }: { block?: string; goRating?: () => void; go
                 </tr>
                 {state.campaign.status !== 'draft' && (
                   <tr className="border-b hover:bg-slate-50">
-                    <td className="p-2">{state.campaign.launchedAt || '20.07.2026 09:00'}</td>
+                    <td className="p-2">{state.campaign.status === 'precollecting' ? (state.campaign.precollectLaunchedAt || state.campaign.launchedAt) : (state.campaign.launchedAt || '20.07.2026 09:00')}</td>
                     <td className="p-2">{state.campaign.period}</td>
                     <td className="p-2">
-                      <Badge variant="outline" className="text-amber-700 border-amber-300">
-                        {state.campaign.status === 'collecting' ? 'В процессе' : 'Завершён'}
-                      </Badge>
+                      {state.campaign.status === 'precollecting' ? (
+                        <Badge variant="outline" className="text-purple-700 border-purple-300 bg-purple-50">
+                          Предсбор МЭФ
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-amber-700 border-amber-300">
+                          {state.campaign.status === 'collecting' ? 'В процессе' : 'Завершён'}
+                        </Badge>
+                      )}
                     </td>
                     <td className="p-2">МЭФ</td>
                   </tr>

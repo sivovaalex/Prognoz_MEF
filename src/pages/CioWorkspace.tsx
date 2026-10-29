@@ -15,6 +15,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
+import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/dialog';
 import { CheckCircle2, Undo2, Send, Lock, Info, ChevronDown, ChevronRight } from 'lucide-react';
@@ -27,14 +30,15 @@ const GROUP_HEAD: Record<string, string> = {
   y2029: 'bg-blue-50/70',
 };
 
-function CioWorkspaceNew({ block = 'mun' }: { block?: string }) {
+function CioWorkspaceNew({ block = 'mun', cioId: propCioId, onCioChange }: { block?: string; cioId?: string; onCioChange?: (id: string) => void }) {
   const { state, dispatch } = useStore();
-  const cio = state.cios.find((c) => c.id === CURRENT_CIO)!;
+  const activeCioId = propCioId || CURRENT_CIO;
+  const cio = state.cios.find((c) => c.id === activeCioId) || state.cios[0];
   const [returnTarget, setReturnTarget] = useState<{ munId: string; indId: string } | null>(null);
   const [comment, setComment] = useState('');
   const [signTarget, setSignTarget] = useState<{ type: 'own' | 'terr'; indId: string; munId?: string } | null>(null);
 
-  const myIndicators = state.indicators.filter((i) => i.cioId === CURRENT_CIO);
+  const myIndicators = state.indicators.filter((i) => i.cioId === activeCioId);
   const myFillable = myIndicators.filter((i) => !i.isGroup);
 
   // дерево показателей: сворачивание дочерних и фильтры (общие для обеих вкладок)
@@ -49,16 +53,44 @@ function CioWorkspaceNew({ block = 'mun' }: { block?: string }) {
 
   return (
     <div className="space-y-4">
-      <div>
-        <h2 className="text-lg font-semibold">Рабочее место отраслевого ЦИО — {cio.short}</h2>
-        <p className="text-sm text-muted-foreground">{cio.name} · {state.campaign.period}</p>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <div className="flex flex-wrap items-center gap-3">
+            <h2 className="text-lg font-semibold">Рабочее место отраслевого ЦИО — {cio.short}</h2>
+            {onCioChange && (
+              <Select value={activeCioId} onValueChange={onCioChange}>
+                <SelectTrigger className="h-8 w-[220px] bg-white text-xs border-slate-300">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {state.cios.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.short} — {c.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+          <p className="text-sm text-muted-foreground mt-0.5">{cio.name} · {state.campaign.period}</p>
+        </div>
       </div>
+
+      {state.campaign.status === 'precollecting' && (
+        <div className="rounded-md border border-purple-200 bg-purple-50 p-3 text-sm text-purple-900 flex items-start gap-2 shadow-xs">
+          <Info className="h-4 w-4 text-purple-700 mt-0.5 shrink-0" />
+          <span>
+            <b>Идёт предсбор МЭФ:</b> куратор МЭФ производит предварительный ввод и автосогласование значений. Ячейки, зафиксированные МЭФ, отмечены значком замочка <Lock className="inline h-3.5 w-3.5 text-blue-600 mx-0.5" /> и заблокированы от редактирования.
+          </span>
+        </div>
+      )}
 
       <div className="flex items-center justify-between">
         <h3 className="font-medium text-slate-800">Согласование показателей ОМСУ</h3>
       </div>
       <CioTerritoryIndicators
         block={block}
+        cioId={activeCioId}
         myOwnVisible={myOwnVisible}
         myFillable={myFillable}
         collapsed={collapsed}
@@ -107,8 +139,8 @@ function CioWorkspaceNew({ block = 'mun' }: { block?: string }) {
         onOpenChange={(v) => !v && setSignTarget(null)}
         title="Направление на согласование в МЭФ"
         onSigned={() => {
-          if (signTarget?.type === 'own') dispatch({ type: 'CIO_SIGN_OWN', cioIndId: signTarget.indId, cioId: CURRENT_CIO, actor: 'Петров С.И.' });
-          if (signTarget?.type === 'terr') dispatch({ type: 'CIO_TERR_SIGN', indId: signTarget.indId, munId: signTarget.munId!, cioId: CURRENT_CIO, actor: 'Петров С.И.' });
+          if (signTarget?.type === 'own') dispatch({ type: 'CIO_SIGN_OWN', cioIndId: signTarget.indId, cioId: activeCioId, actor: 'Петров С.И.' });
+          if (signTarget?.type === 'terr') dispatch({ type: 'CIO_TERR_SIGN', indId: signTarget.indId, munId: signTarget.munId!, cioId: activeCioId, actor: 'Петров С.И.' });
           setSignTarget(null);
         }}
       />
@@ -116,7 +148,7 @@ function CioWorkspaceNew({ block = 'mun' }: { block?: string }) {
   );
 }
 
-function CioTerritoryIndicators({ block = 'mun', myOwnVisible, myFillable, collapsed, toggleNode, parents, treeFilter, setTreeFilter, munFilter, setMunFilter, cio, setSignTarget, setReturnTarget }: any) {
+function CioTerritoryIndicators({ block = 'mun', cioId, myOwnVisible, myFillable, collapsed, toggleNode, parents, treeFilter, setTreeFilter, munFilter, setMunFilter, cio, setSignTarget, setReturnTarget }: any) {
   const { state, dispatch } = useStore();
   let activeOmsus = state.omsus.filter(o => o.isActive);
   if (munFilter && munFilter !== 'all') {
@@ -197,86 +229,121 @@ function CioTerritoryIndicators({ block = 'mun', myOwnVisible, myFillable, colla
                     </td>
                   </tr>
                   {!collapsed[ind.id] && activeOmsus.map((omsu: any) => {
-                    const v = state.cioTerritoryValues[CURRENT_CIO]?.[ind.id]?.[omsu.id] ?? { ...emptyValueFields(), status: 'not_filled', updatedAt: null };
+                    const activeCio = cioId || CURRENT_CIO;
+                    const v = state.cioTerritoryValues[activeCio]?.[ind.id]?.[omsu.id] ?? { ...emptyValueFields(), status: 'not_filled', updatedAt: null };
                     const omsuV = state.omsuValues[omsu.id]?.[ind.id];
 
                     return (
                       <tr key={omsu.id} className="border-b hover:bg-slate-50">
                         <td className="p-2 font-medium pl-6">{omsu.name}</td>
-                        {VALUE_FIELDS.map((f) => (
-                          <Fragment key={f.key}>
-                            {/* Столбец ОМСУ */}
-                            <td className={`p-1.5 text-center border-l ${(f.key === 'v2026' || f.key === 'v2025') ? 'bg-amber-50/30' : fieldTint(f.key)}`}>
-                              <div className="flex flex-col items-center justify-center gap-1">
-                                <div className={omsuV?.[f.key] != null && v[f.key] != null && omsuV[f.key] !== v[f.key] ? 'text-red-600 font-bold' : ''}>
-                                  <ValueTip value={omsuV?.[f.key] ?? null} updatedAt={omsuV?.updatedAt ?? null} author={omsuV?.signedBy ?? 'ОМСУ'} />
-                                </div>
-                                {(f.key === 'v2026' || f.key === 'v2025') && omsuV && <OmsuStatusBadge status={omsuV.status} />}
-                                {(f.key === 'v2026' || f.key === 'v2025') && omsuV?.status === 'pending_cio' && (
-                                  <div className="flex gap-1 mt-1">
-                                    <Button size="icon-sm" variant="outline" className="h-6 w-6 text-green-600 hover:text-green-700" onClick={() => dispatch({ type: 'CIO_APPROVE', munId: omsu.id, indId: ind.id, actor: cio.short })} title="Согласовать">
-                                      <CheckCircle2 className="h-3.5 w-3.5" />
-                                    </Button>
-                                    <Button size="icon-sm" variant="outline" className="h-6 w-6 text-red-500 hover:text-red-600" onClick={() => setReturnTarget({ munId: omsu.id, indId: ind.id })} title="Вернуть">
-                                      <Undo2 className="h-3.5 w-3.5" />
-                                    </Button>
-                                  </div>
-                                )}
-                                {(f.key === 'v2026' || f.key === 'v2025') && omsuV?.status === 'approved' && (
-                                  <div className="flex gap-1 mt-1">
-                                    <Button size="icon-sm" variant="outline" className="h-6 w-6 text-red-500 hover:text-red-600" onClick={() => setReturnTarget({ munId: omsu.id, indId: ind.id })} title="Вернуть">
-                                      <Undo2 className="h-3.5 w-3.5" />
-                                    </Button>
-                                  </div>
-                                )}
-                              </div>
-                            </td>
-                            {/* Столбец ЦИО */}
-                            <td className={`p-1.5 text-center ${(f.key === 'v2026' || f.key === 'v2025') ? 'bg-amber-50/30' : fieldTint(f.key)}`}>
-                              <div className="flex flex-col items-center justify-center gap-1">
-                                {(f.key === 'v2026' || f.key === 'v2025') ? (
-                                  <Input
-                                    type="number"
-                                    step="0.1"
-                                    className="h-8 w-[76px] text-center mx-auto bg-white px-1 font-medium border-amber-300"
-                                    placeholder="—"
-                                    value={v[f.key] ?? ''}
-                                    disabled={v.status === 'pending_mef' || v.status === 'approved'}
-                                    onChange={(e) =>
-                                      dispatch({
-                                        type: 'CIO_TERR_SET_VALUE',
-                                        cioId: CURRENT_CIO,
-                                        indId: ind.id,
-                                        munId: omsu.id,
-                                        field: f.key,
-                                        value: e.target.value === '' ? null : Number(e.target.value),
-                                      })
-                                    }
-                                  />
-                                ) : (
-                                  <ValueTip value={v[f.key] ?? omsuV?.[f.key] ?? null} updatedAt={v.updatedAt} author="ЦИО" />
-                                )}
-                                {(f.key === 'v2026' || f.key === 'v2025') && (v.status === 'not_filled' || v.status === 'draft' || v.status === 'returned') && v[f.key] !== null && (
-                                  <Button size="sm" variant="outline" className="h-6 text-[10px] px-2 mt-1 border-blue-200 hover:bg-blue-50" onClick={() => setSignTarget({ type: 'terr', indId: ind.id, munId: omsu.id })} title="Отправить в МЭФ">
-                                    <Send className="w-3 h-3 mr-1" /> Отправить
-                                  </Button>
-                                )}
-                                {(f.key === 'v2026' || f.key === 'v2025') && v.status === 'pending_mef' && v[f.key] !== null && (
-                                  <div className="flex flex-col items-center gap-1 mt-1">
-                                    <span className="text-[10px] text-amber-600 leading-tight">На согласовании</span>
-                                    <Button size="sm" variant="outline" className="h-6 text-[10px] px-2" onClick={() => dispatch({ type: 'CIO_TERR_RECALL', cioId: CURRENT_CIO, indId: ind.id, munId: omsu.id, actor: cio.short })}>
-                                      <Undo2 className="w-3 h-3 mr-1" /> Отозвать
-                                    </Button>
-                                  </div>
-                                )}
-                                {(f.key === 'v2026' || f.key === 'v2025') && v.status === 'approved' && v[f.key] !== null && (
-                                  <span className="text-[10px] text-green-600 flex items-center gap-0.5 mt-1"><Lock className="w-3 h-3"/> Согласовано МЭФ</span>
-                                )}
-                              </div>
-                            </td>
+                        {VALUE_FIELDS.map((f) => {
+                          const isForecastField = f.key.startsWith('cons') || f.key.startsWith('base');
+                          const isInputField = f.key === 'v2026' || f.key === 'v2025' || isForecastField;
+                          const isOmsuLocked = !!omsuV?.lockedFields?.[f.key] || (!!omsuV?.lockedByMef && isInputField);
+                          const isCioLocked = !!v?.lockedFields?.[f.key] || (!!v?.lockedByMef && isInputField);
 
-                          </Fragment>
-                        ))}
+                          return (
+                            <Fragment key={f.key}>
+                              {/* Столбец ОМСУ */}
+                              <td className={`p-1.5 text-center border-l ${(f.key === 'v2026' || f.key === 'v2025') ? 'bg-amber-50/30' : fieldTint(f.key)}`}>
+                                <div className="flex flex-col items-center justify-center gap-1">
+                                  {isOmsuLocked ? (
+                                    <div className="flex flex-col items-center justify-center gap-0.5">
+                                      <div
+                                        className="flex items-center gap-1 font-semibold text-amber-950 bg-amber-50/90 px-2 py-1 rounded border border-amber-300 shadow-xs"
+                                        title="Значение установлено куратором МЭФ в Рабочем месте МЭФ с автосогласованием"
+                                      >
+                                        <Lock className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                                        <span>{omsuV?.[f.key] ?? '—'}</span>
+                                      </div>
+                                      <span className="text-[9px] text-amber-800 font-medium">Зафиксировано МЭФ</span>
+                                    </div>
+                                  ) : (
+                                    <>
+                                      <div className={omsuV?.[f.key] != null && v[f.key] != null && omsuV[f.key] !== v[f.key] ? 'text-red-600 font-bold' : ''}>
+                                        <ValueTip value={omsuV?.[f.key] ?? null} updatedAt={omsuV?.updatedAt ?? null} author={omsuV?.signedBy ?? 'ОМСУ'} />
+                                      </div>
+                                      {(f.key === 'v2026' || f.key === 'v2025') && omsuV && <OmsuStatusBadge status={omsuV.status} />}
+                                      {(f.key === 'v2026' || f.key === 'v2025') && omsuV?.status === 'pending_cio' && (
+                                        <div className="flex gap-1 mt-1">
+                                          <Button size="icon-sm" variant="outline" className="h-6 w-6 text-green-600 hover:text-green-700" onClick={() => dispatch({ type: 'CIO_APPROVE', munId: omsu.id, indId: ind.id, actor: cio.short })} title="Согласовать">
+                                            <CheckCircle2 className="h-3.5 w-3.5" />
+                                          </Button>
+                                          <Button size="icon-sm" variant="outline" className="h-6 w-6 text-red-500 hover:text-red-600" onClick={() => setReturnTarget({ munId: omsu.id, indId: ind.id })} title="Вернуть">
+                                            <Undo2 className="h-3.5 w-3.5" />
+                                          </Button>
+                                        </div>
+                                      )}
+                                      {(f.key === 'v2026' || f.key === 'v2025') && omsuV?.status === 'approved' && (
+                                        <div className="flex gap-1 mt-1">
+                                          <Button size="icon-sm" variant="outline" className="h-6 w-6 text-red-500 hover:text-red-600" onClick={() => setReturnTarget({ munId: omsu.id, indId: ind.id })} title="Вернуть">
+                                            <Undo2 className="h-3.5 w-3.5" />
+                                          </Button>
+                                        </div>
+                                      )}
+                                    </>
+                                  )}
+                                </div>
+                              </td>
+                              {/* Столбец ЦИО */}
+                              <td className={`p-1.5 text-center ${(f.key === 'v2026' || f.key === 'v2025') ? 'bg-amber-50/30' : fieldTint(f.key)}`}>
+                                <div className="flex flex-col items-center justify-center gap-1">
+                                  {isCioLocked ? (
+                                    <div className="flex flex-col items-center justify-center gap-0.5">
+                                      <div
+                                        className="flex items-center gap-1 font-semibold text-blue-950 bg-blue-50/90 px-2 py-1 rounded border border-blue-300 shadow-xs"
+                                        title="Значение установлено куратором МЭФ в Рабочем месте МЭФ с автосогласованием. Редактирование ЦИО заблокировано"
+                                      >
+                                        <Lock className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                                        <span>{v[f.key] ?? '—'}</span>
+                                      </div>
+                                      <span className="text-[9px] text-blue-800 font-medium">Заблокировано МЭФ</span>
+                                    </div>
+                                  ) : isInputField ? (
+                                    <>
+                                      <Input
+                                        type="number"
+                                        step="0.1"
+                                        className="h-8 w-[76px] text-center mx-auto bg-white px-1 font-medium border-amber-300"
+                                        placeholder="—"
+                                        value={v[f.key] ?? ''}
+                                        disabled={v.status === 'pending_mef' || v.status === 'approved'}
+                                        onChange={(e) =>
+                                          dispatch({
+                                            type: 'CIO_TERR_SET_VALUE',
+                                            cioId: activeCio,
+                                            indId: ind.id,
+                                            munId: omsu.id,
+                                            field: f.key,
+                                            value: e.target.value === '' ? null : Number(e.target.value),
+                                          })
+                                        }
+                                      />
+                                      {(v.status === 'not_filled' || v.status === 'draft' || v.status === 'returned') && v[f.key] !== null && (
+                                        <Button size="sm" variant="outline" className="h-6 text-[10px] px-2 mt-1 border-blue-200 hover:bg-blue-50" onClick={() => setSignTarget({ type: 'terr', indId: ind.id, munId: omsu.id })} title="Отправить в МЭФ">
+                                          <Send className="w-3 h-3 mr-1" /> Отправить
+                                        </Button>
+                                      )}
+                                      {v.status === 'pending_mef' && v[f.key] !== null && (
+                                        <div className="flex flex-col items-center gap-1 mt-1">
+                                          <span className="text-[10px] text-amber-600 leading-tight">На согласовании</span>
+                                          <Button size="sm" variant="outline" className="h-6 text-[10px] px-2" onClick={() => dispatch({ type: 'CIO_TERR_RECALL', cioId: activeCio, indId: ind.id, munId: omsu.id, actor: cio.short })}>
+                                            <Undo2 className="w-3 h-3 mr-1" /> Отозвать
+                                          </Button>
+                                        </div>
+                                      )}
+                                      {v.status === 'approved' && v[f.key] !== null && (
+                                        <span className="text-[10px] text-green-600 flex items-center gap-0.5 mt-1"><Lock className="w-3 h-3"/> Согласовано МЭФ</span>
+                                      )}
+                                    </>
+                                  ) : (
+                                    <ValueTip value={v[f.key] ?? null} updatedAt={v.updatedAt} author="ЦИО" />
+                                  )}
+                                </div>
+                              </td>
+                            </Fragment>
+                          );
+                        })}
                         {hasNote && noteColsCount > 0 && (
                           <>
                             {approvers.includes('omsu') && (
@@ -668,16 +735,29 @@ function CioOwnIndicatorsOld({ block = 'obl', myOwnVisible, myFillable, collapse
                       <div className="text-xs text-muted-foreground" style={{ paddingLeft: `${(ind.level - 1) * 16 + 20}px` }}>ед. изм.: {ind.unit} · формула: {ind.formula}</div>
                     </td>
                     {VALUE_FIELDS.map((f) => {
+                      const isForecastField = f.key.startsWith('cons') || f.key.startsWith('base');
+                      const isInputField = f.key === 'v2026' || f.key === 'v2025' || isForecastField;
 
                       return (
                         <td key={f.key} className={`p-1.5 text-center ${fieldTint(f.key)}`}>
-                          {editable && (f.key === 'v2026' || f.key === 'v2025') ? (
+                          {isInputField && (v.lockedByMef || v.lockedFields?.[f.key]) ? (
+                            <div className="flex flex-col items-center justify-center gap-0.5">
+                              <div
+                                className="flex items-center gap-1 font-semibold text-blue-950 bg-blue-50/90 px-2 py-1 rounded border border-blue-300 shadow-xs"
+                                title="Значение установлено куратором МЭФ при предсборе с автосогласованием. Редактирование ЦИО заблокировано"
+                              >
+                                <Lock className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                                <span>{v[f.key] ?? '—'}</span>
+                              </div>
+                              <span className="text-[9px] text-blue-800 font-medium">Заблокировано МЭФ</span>
+                            </div>
+                          ) : editable && isInputField ? (
                             <div className="flex flex-col items-center justify-center gap-1">
                               <WithValueTip show={v[f.key] !== null} updatedAt={v.updatedAt} author={v.signedBy ?? 'Петров С.И.'}>
                                 <Input
                                   type="number"
                                   step="0.1"
-                                  className="h-8 w-[76px] text-center mx-auto bg-white px-1"
+                                  className="h-8 w-[76px] text-center mx-auto bg-white px-1 font-medium"
                                   placeholder="—"
                                   value={v[f.key] ?? ''}
                                   onChange={(e) =>
@@ -691,7 +771,7 @@ function CioOwnIndicatorsOld({ block = 'obl', myOwnVisible, myFillable, collapse
                                   }
                                 />
                               </WithValueTip>
-                              {v[f.key] !== null && (
+                              {(f.key === 'v2026' || f.key === 'v2025') && v[f.key] !== null && (
                                 <Button size="sm" variant="outline" className="h-6 text-[10px] px-2 mt-1 border-blue-200 hover:bg-blue-50" onClick={() => setSignTarget(ind.id)} title="Отправить в МЭФ">
                                   <Send className="w-3 h-3 mr-1" /> Отправить
                                 </Button>
@@ -756,7 +836,11 @@ function CioOwnIndicatorsOld({ block = 'obl', myOwnVisible, myFillable, collapse
 }
 
 
-export function CioWorkspace({ block, hideOmsuApprove = false }: { block: string; hideOmsuApprove?: boolean }) {
+export function CioWorkspace({ block, cioId, onCioChange, hideOmsuApprove = false }: { block: string; cioId?: string; onCioChange?: (id: string) => void; hideOmsuApprove?: boolean }) {
   const isNewLogic = ['mun', 'rating_main', 'ukaz_main'].includes(block);
-  return isNewLogic ? <CioWorkspaceNew block={block} /> : <CioWorkspaceOld block={block} hideOmsuApprove={hideOmsuApprove} />;
+  return isNewLogic ? (
+    <CioWorkspaceNew block={block} cioId={cioId} onCioChange={onCioChange} />
+  ) : (
+    <CioWorkspaceOld block={block} hideOmsuApprove={hideOmsuApprove} />
+  );
 }

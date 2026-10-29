@@ -40,7 +40,15 @@ export type Action =
   | { type: 'MEF_RETURN'; cioIndId: string; cioId: string; actor: string; comment: string }
   | { type: 'MEF_TERR_APPROVE'; cioId: string; indId: string; munId: string; actor: string }
   | { type: 'MEF_TERR_RETURN'; cioId: string; indId: string; munId: string; actor: string; comment: string }
+  | { type: 'MEF_SET_OMSU_VALUE'; munId: string; indId: string; field: ValueFieldKey; value: number | null }
+  | { type: 'MEF_UNLOCK_OMSU_VALUE'; munId: string; indId: string; field?: ValueFieldKey }
+  | { type: 'MEF_SET_CIO_TERR_VALUE'; cioId: string; indId: string; munId: string; field: ValueFieldKey; value: number | null }
+  | { type: 'MEF_UNLOCK_CIO_TERR_VALUE'; cioId: string; indId: string; munId: string; field?: ValueFieldKey }
+  | { type: 'MEF_SET_CIO_OWN_VALUE'; cioIndId: string; cioId: string; field: ValueFieldKey; value: number | null }
+  | { type: 'MEF_UNLOCK_CIO_OWN_VALUE'; cioIndId: string; cioId: string; field?: ValueFieldKey }
   | { type: 'CAMPAIGN_SCHEDULE'; startDate: string; deadlineOmsu: string; deadlineCio: string; deadlineMef: string; period?: string }
+  | { type: 'CAMPAIGN_PRECOLLECT_LAUNCH' }
+  | { type: 'CAMPAIGN_PRECOLLECT_STOP' }
   | { type: 'CAMPAIGN_LAUNCH' }
   | { type: 'CAMPAIGN_STOP' }
   | { type: 'SET_RATING_MODE'; mode: 'preview' | 'final' }
@@ -121,14 +129,26 @@ function reducer(state: AppState, a: Action): AppState {
   switch (a.type) {
     case 'OMSU_SET_VALUE': {
       const cur = state.omsuValues[a.munId][a.indId];
-      if (cur.status === 'approved' || cur.status === 'pending_cio') return state;
+      if (cur.status === 'approved' || cur.status === 'pending_cio' || cur.lockedFields?.[a.field]) return state;
       const next = { ...cur, [a.field]: a.value, updatedAt: now(), comment: undefined };
       
       if (a.field === 'v2026') {
         if (typeof a.value === 'number') {
-          Object.assign(next, calcForecasts(a.value));
+          const calc = calcForecasts(a.value);
+          if (cur.lockedFields) {
+            Object.keys(calc).forEach((k) => {
+              if (cur.lockedFields?.[k]) delete (calc as any)[k];
+            });
+          }
+          Object.assign(next, calc);
         } else {
-          Object.assign(next, { cons2027: null, base2027: null, cons2028: null, base2028: null, cons2029: null, base2029: null });
+          const toClear: any = { cons2027: null, base2027: null, cons2028: null, base2028: null, cons2029: null, base2029: null };
+          if (cur.lockedFields) {
+            Object.keys(toClear).forEach((k) => {
+              if (cur.lockedFields?.[k]) delete toClear[k];
+            });
+          }
+          Object.assign(next, toClear);
         }
       }
       
@@ -208,15 +228,27 @@ function reducer(state: AppState, a: Action): AppState {
     }
     case 'CIO_SET_OWN': {
       const cur = state.cioValues[a.cioIndId]?.[a.cioId];
-      if (cur && (cur.status === 'approved' || cur.status === 'pending_mef')) return state;
+      if (cur && (cur.status === 'approved' || cur.status === 'pending_mef' || cur.lockedFields?.[a.field])) return state;
       const base0 = cur ?? { ...emptyValueFields(), status: 'not_filled' as const, updatedAt: null };
       const next = { ...base0, [a.field]: a.value, updatedAt: now(), comment: undefined };
       
       if (a.field === 'v2026') {
         if (typeof a.value === 'number') {
-          Object.assign(next, calcForecasts(a.value));
+          const calc = calcForecasts(a.value);
+          if (cur?.lockedFields) {
+            Object.keys(calc).forEach((k) => {
+              if (cur.lockedFields?.[k]) delete (calc as any)[k];
+            });
+          }
+          Object.assign(next, calc);
         } else {
-          Object.assign(next, { cons2027: null, base2027: null, cons2028: null, base2028: null, cons2029: null, base2029: null });
+          const toClear: any = { cons2027: null, base2027: null, cons2028: null, base2028: null, cons2029: null, base2029: null };
+          if (cur?.lockedFields) {
+            Object.keys(toClear).forEach((k) => {
+              if (cur.lockedFields?.[k]) delete toClear[k];
+            });
+          }
+          Object.assign(next, toClear);
         }
       }
 
@@ -435,6 +467,331 @@ function reducer(state: AppState, a: Action): AppState {
         notifications: [...state.notifications, { id: ++notifId, at: now(), text: `Территория возвращена МЭФ на доработку: ${a.comment}`, forRoles: ['cio'] }],
       };
     }
+    case 'MEF_SET_OMSU_VALUE': {
+      const cur = state.omsuValues[a.munId]?.[a.indId] || {
+        ...emptyValueFields(),
+        status: 'not_filled',
+        updatedAt: null,
+      };
+      const nextLockedFields = { ...(cur.lockedFields || {}) };
+      if (a.value === null || a.value === undefined || (typeof a.value === 'number' && isNaN(a.value))) {
+        delete nextLockedFields[a.field];
+      } else {
+        nextLockedFields[a.field] = true;
+      }
+      const next = {
+        ...cur,
+        [a.field]: a.value,
+        updatedAt: now(),
+        comment: undefined,
+      };
+      if (a.field === 'v2026') {
+        if (typeof a.value === 'number' && !isNaN(a.value)) {
+          Object.assign(next, calcForecasts(a.value));
+          nextLockedFields.v2026 = true;
+          nextLockedFields.cons2027 = true;
+          nextLockedFields.base2027 = true;
+          nextLockedFields.cons2028 = true;
+          nextLockedFields.base2028 = true;
+          nextLockedFields.cons2029 = true;
+          nextLockedFields.base2029 = true;
+        } else {
+          Object.assign(next, { cons2027: null, base2027: null, cons2028: null, base2028: null, cons2029: null, base2029: null });
+          delete nextLockedFields.v2026;
+          delete nextLockedFields.cons2027;
+          delete nextLockedFields.base2027;
+          delete nextLockedFields.cons2028;
+          delete nextLockedFields.base2028;
+          delete nextLockedFields.cons2029;
+          delete nextLockedFields.base2029;
+        }
+      }
+      const hasAnyLocked = Object.values(nextLockedFields).some(Boolean);
+      next.lockedByMef = hasAnyLocked;
+      next.lockedFields = nextLockedFields;
+      next.status = hasAnyLocked ? ('approved' as const) : hasAnyValue(next) ? ('draft' as const) : ('not_filled' as const);
+      if (hasAnyLocked) {
+        next.signedBy = 'МЭФ (автосогласование)';
+      }
+      const munName = state.omsus.find(m => m.id === a.munId)?.name || a.munId;
+      const indNum = state.indicators.find(i => i.id === a.indId)?.num || a.indId;
+      return {
+        ...state,
+        omsuValues: {
+          ...state.omsuValues,
+          [a.munId]: {
+            ...(state.omsuValues[a.munId] || {}),
+            [a.indId]: next,
+          },
+        },
+        history: [
+          ...state.history,
+          { at: now(), actor: 'Куратор МЭФ', action: `Предсбор МЭФ: установлено значение ОМСУ «${munName}» по пок. ${indNum} (${a.field}: ${a.value}) с автосогласованием и блокировкой` },
+        ],
+      };
+    }
+    case 'MEF_UNLOCK_OMSU_VALUE': {
+      const cur = state.omsuValues[a.munId]?.[a.indId];
+      if (!cur) return state;
+      const nextLockedFields = { ...(cur.lockedFields || {}) };
+      if (a.field) {
+        delete nextLockedFields[a.field];
+        if (a.field === 'v2026') {
+          delete nextLockedFields.cons2027; delete nextLockedFields.base2027;
+          delete nextLockedFields.cons2028; delete nextLockedFields.base2028;
+          delete nextLockedFields.cons2029; delete nextLockedFields.base2029;
+        }
+      } else {
+        for (const k in nextLockedFields) delete (nextLockedFields as any)[k];
+      }
+      const hasAnyLocked = Object.values(nextLockedFields).some(Boolean);
+      const next = {
+        ...cur,
+        lockedByMef: hasAnyLocked,
+        lockedFields: nextLockedFields,
+        status: hasAnyLocked ? ('approved' as const) : ('draft' as const),
+        updatedAt: now(),
+      };
+      const munName = state.omsus.find(m => m.id === a.munId)?.name || a.munId;
+      const indNum = state.indicators.find(i => i.id === a.indId)?.num || a.indId;
+      return {
+        ...state,
+        omsuValues: {
+          ...state.omsuValues,
+          [a.munId]: {
+            ...state.omsuValues[a.munId],
+            [a.indId]: next,
+          },
+        },
+        notifications: [
+          ...state.notifications,
+          {
+            id: ++notifId,
+            at: now(),
+            text: `МЭФ возвратил право изменения значения ОМСУ «${munName}» по показателю ${indNum}`,
+            forRoles: ['omsu'],
+          },
+        ],
+        history: [
+          ...state.history,
+          { at: now(), actor: 'Куратор МЭФ', action: `МЭФ снял блокировку и вернул право изменения значения ОМСУ «${munName}» (пок. ${indNum})` },
+        ],
+      };
+    }
+    case 'MEF_SET_CIO_TERR_VALUE': {
+      const cur = state.cioTerritoryValues[a.cioId]?.[a.indId]?.[a.munId] || {
+        ...emptyValueFields(),
+        status: 'not_filled',
+        updatedAt: null,
+      };
+      const nextLockedFields = { ...(cur.lockedFields || {}) };
+      if (a.value === null || a.value === undefined || (typeof a.value === 'number' && isNaN(a.value))) {
+        delete nextLockedFields[a.field];
+      } else {
+        nextLockedFields[a.field] = true;
+      }
+      const next = {
+        ...cur,
+        [a.field]: a.value,
+        updatedAt: now(),
+        comment: undefined,
+      };
+      if (a.field === 'v2026') {
+        if (typeof a.value === 'number' && !isNaN(a.value)) {
+          Object.assign(next, calcForecasts(a.value));
+          nextLockedFields.v2026 = true;
+          nextLockedFields.cons2027 = true;
+          nextLockedFields.base2027 = true;
+          nextLockedFields.cons2028 = true;
+          nextLockedFields.base2028 = true;
+          nextLockedFields.cons2029 = true;
+          nextLockedFields.base2029 = true;
+        } else {
+          Object.assign(next, { cons2027: null, base2027: null, cons2028: null, base2028: null, cons2029: null, base2029: null });
+          delete nextLockedFields.v2026;
+          delete nextLockedFields.cons2027;
+          delete nextLockedFields.base2027;
+          delete nextLockedFields.cons2028;
+          delete nextLockedFields.base2028;
+          delete nextLockedFields.cons2029;
+          delete nextLockedFields.base2029;
+        }
+      }
+      const hasAnyLocked = Object.values(nextLockedFields).some(Boolean);
+      next.lockedByMef = hasAnyLocked;
+      next.lockedFields = nextLockedFields;
+      next.status = hasAnyLocked ? ('approved' as const) : hasAnyValue(next) ? ('draft' as const) : ('not_filled' as const);
+      if (hasAnyLocked) {
+        next.signedBy = 'МЭФ (автосогласование)';
+      }
+      const munName = state.omsus.find(m => m.id === a.munId)?.name || a.munId;
+      const indNum = state.indicators.find(i => i.id === a.indId)?.num || a.indId;
+      const cioName = state.cios.find(c => c.id === a.cioId)?.short || a.cioId;
+      return {
+        ...state,
+        cioTerritoryValues: {
+          ...state.cioTerritoryValues,
+          [a.cioId]: {
+            ...(state.cioTerritoryValues[a.cioId] || {}),
+            [a.indId]: {
+              ...(state.cioTerritoryValues[a.cioId]?.[a.indId] || {}),
+              [a.munId]: next,
+            },
+          },
+        },
+        history: [
+          ...state.history,
+          { at: now(), actor: 'Куратор МЭФ', action: `Предсбор МЭФ: установлено значение ЦИО «${cioName}» по территории «${munName}» (пок. ${indNum}, ${a.field}: ${a.value}) с автосогласованием и блокировкой` },
+        ],
+      };
+    }
+    case 'MEF_UNLOCK_CIO_TERR_VALUE': {
+      const cur = state.cioTerritoryValues[a.cioId]?.[a.indId]?.[a.munId];
+      if (!cur) return state;
+      const nextLockedFields = { ...(cur.lockedFields || {}) };
+      if (a.field) {
+        delete nextLockedFields[a.field];
+        if (a.field === 'v2026') {
+          delete nextLockedFields.cons2027; delete nextLockedFields.base2027;
+          delete nextLockedFields.cons2028; delete nextLockedFields.base2028;
+          delete nextLockedFields.cons2029; delete nextLockedFields.base2029;
+        }
+      } else {
+        for (const k in nextLockedFields) delete (nextLockedFields as any)[k];
+      }
+      const hasAnyLocked = Object.values(nextLockedFields).some(Boolean);
+      const next = {
+        ...cur,
+        lockedByMef: hasAnyLocked,
+        lockedFields: nextLockedFields,
+        status: hasAnyLocked ? ('approved' as const) : ('draft' as const),
+        updatedAt: now(),
+      };
+      const munName = state.omsus.find(m => m.id === a.munId)?.name || a.munId;
+      const indNum = state.indicators.find(i => i.id === a.indId)?.num || a.indId;
+      const cioName = state.cios.find(c => c.id === a.cioId)?.short || a.cioId;
+      return {
+        ...state,
+        cioTerritoryValues: {
+          ...state.cioTerritoryValues,
+          [a.cioId]: {
+            ...state.cioTerritoryValues[a.cioId],
+            [a.indId]: {
+              ...state.cioTerritoryValues[a.cioId]?.[a.indId],
+              [a.munId]: next,
+            },
+          },
+        },
+        notifications: [
+          ...state.notifications,
+          {
+            id: ++notifId,
+            at: now(),
+            text: `МЭФ возвратил право изменения значения ЦИО «${cioName}» по территории «${munName}» (пок. ${indNum})`,
+            forRoles: ['cio'],
+          },
+        ],
+        history: [
+          ...state.history,
+          { at: now(), actor: 'Куратор МЭФ', action: `МЭФ снял блокировку и вернул право изменения значения ЦИО «${cioName}» по территории «${munName}» (пок. ${indNum})` },
+        ],
+      };
+    }
+    case 'MEF_SET_CIO_OWN_VALUE': {
+      const cur = state.cioValues[a.cioIndId]?.[a.cioId] || {
+        ...emptyValueFields(),
+        status: 'not_filled',
+        updatedAt: null,
+      };
+      const next = {
+        ...cur,
+        [a.field]: a.value,
+        updatedAt: now(),
+        status: 'approved' as const,
+        signedBy: 'МЭФ (автосогласование)',
+        lockedByMef: true,
+        lockedFields: { ...(cur.lockedFields || {}), [a.field]: true },
+        comment: undefined,
+      };
+      if (a.field === 'v2026') {
+        if (typeof a.value === 'number') {
+          Object.assign(next, calcForecasts(a.value));
+          next.lockedFields = {
+            ...next.lockedFields,
+            v2026: true,
+            cons2027: true, base2027: true,
+            cons2028: true, base2028: true,
+            cons2029: true, base2029: true,
+          };
+        } else {
+          Object.assign(next, { cons2027: null, base2027: null, cons2028: null, base2028: null, cons2029: null, base2029: null });
+        }
+      }
+      const indNum = state.indicators.find(i => i.id === a.cioIndId)?.num || a.cioIndId;
+      const cioName = state.cios.find(c => c.id === a.cioId)?.short || a.cioId;
+      return {
+        ...state,
+        cioValues: {
+          ...state.cioValues,
+          [a.cioIndId]: {
+            ...(state.cioValues[a.cioIndId] || {}),
+            [a.cioId]: next,
+          },
+        },
+        history: [
+          ...state.history,
+          { at: now(), actor: 'Куратор МЭФ', action: `Предсбор МЭФ: установлено значение ЦИО «${cioName}» (пок. ${indNum}, ${a.field}: ${a.value}) с автосогласованием и блокировкой` },
+        ],
+      };
+    }
+    case 'MEF_UNLOCK_CIO_OWN_VALUE': {
+      const cur = state.cioValues[a.cioIndId]?.[a.cioId];
+      if (!cur) return state;
+      const nextLockedFields = { ...(cur.lockedFields || {}) };
+      if (a.field) {
+        delete nextLockedFields[a.field];
+        if (a.field === 'v2026') {
+          delete nextLockedFields.cons2027; delete nextLockedFields.base2027;
+          delete nextLockedFields.cons2028; delete nextLockedFields.base2028;
+          delete nextLockedFields.cons2029; delete nextLockedFields.base2029;
+        }
+      } else {
+        for (const k in nextLockedFields) delete (nextLockedFields as any)[k];
+      }
+      const hasAnyLocked = Object.values(nextLockedFields).some(Boolean);
+      const next = {
+        ...cur,
+        lockedByMef: hasAnyLocked,
+        lockedFields: nextLockedFields,
+        status: hasAnyLocked ? ('approved' as const) : ('draft' as const),
+        updatedAt: now(),
+      };
+      const indNum = state.indicators.find(i => i.id === a.cioIndId)?.num || a.cioIndId;
+      const cioName = state.cios.find(c => c.id === a.cioId)?.short || a.cioId;
+      return {
+        ...state,
+        cioValues: {
+          ...state.cioValues,
+          [a.cioIndId]: {
+            ...state.cioValues[a.cioIndId],
+            [a.cioId]: next,
+          },
+        },
+        notifications: [
+          ...state.notifications,
+          {
+            id: ++notifId,
+            at: now(),
+            text: `МЭФ возвратил право изменения значения ЦИО «${cioName}» по показателю ${indNum}`,
+            forRoles: ['cio'],
+          },
+        ],
+        history: [
+          ...state.history,
+          { at: now(), actor: 'Куратор МЭФ', action: `МЭФ снял блокировку и вернул право изменения значения ЦИО «${cioName}» (пок. ${indNum})` },
+        ],
+      };
+    }
     case 'CAMPAIGN_SCHEDULE':
       return {
         ...state,
@@ -448,6 +805,49 @@ function reducer(state: AppState, a: Action): AppState {
           period: a.period !== undefined ? a.period : state.campaign.period,
         },
         history: [...state.history, { at: now(), actor: 'Куратор МЭФ', action: `Установлены параметры сбора: период «${a.period ?? state.campaign.period}», запуск ${a.startDate}` }],
+      };
+    case 'CAMPAIGN_PRECOLLECT_LAUNCH':
+      return {
+        ...state,
+        finalPublished: false,
+        ratingMode: 'preview',
+        campaign: {
+          ...state.campaign,
+          status: 'precollecting',
+          precollectLaunchedAt: now(),
+          launchedAt: state.campaign.launchedAt || now(),
+        },
+        notifications: [
+          ...state.notifications,
+          {
+            id: ++notifId,
+            at: now(),
+            text: `Запущен предсбор МЭФ «${state.campaign.name} — ${state.campaign.period}». Куратор производит предварительный ввод и автосогласование значений. Введённые ячейки блокируются для ОМСУ и ЦИО`,
+            forRoles: ['omsu', 'cio', 'mef', 'admin'],
+          },
+        ],
+        history: [
+          ...state.history,
+          { at: now(), actor: 'МЭФ / Администратор', action: 'Запущен предсбор МЭФ: открыт предзапуск сбора с автосогласованием и блокировкой ячеек' },
+        ],
+      };
+    case 'CAMPAIGN_PRECOLLECT_STOP':
+      return {
+        ...state,
+        campaign: { ...state.campaign, status: 'draft' },
+        notifications: [
+          ...state.notifications,
+          {
+            id: ++notifId,
+            at: now(),
+            text: `Предсбор МЭФ «${state.campaign.name} — ${state.campaign.period}» завершён`,
+            forRoles: ['omsu', 'cio', 'mef', 'admin'],
+          },
+        ],
+        history: [
+          ...state.history,
+          { at: now(), actor: 'Куратор МЭФ', action: 'Завершён предсбор МЭФ' },
+        ],
       };
     case 'CAMPAIGN_LAUNCH':
       return {
@@ -602,13 +1002,26 @@ function reducer(state: AppState, a: Action): AppState {
       };
     case 'CIO_TERR_SET_VALUE': {
       const cur = state.cioTerritoryValues[a.cioId]?.[a.indId]?.[a.munId];
+      if (cur?.lockedFields?.[a.field]) return state;
       const base0 = cur ?? { ...emptyValueFields(), status: 'not_filled' as const, updatedAt: null };
       const next = { ...base0, [a.field]: a.value, updatedAt: now(), comment: undefined };
       if (a.field === 'v2026') {
         if (typeof a.value === 'number') {
-          Object.assign(next, calcForecasts(a.value));
+          const calc = calcForecasts(a.value);
+          if (cur?.lockedFields) {
+            Object.keys(calc).forEach((k) => {
+              if (cur.lockedFields?.[k]) delete (calc as any)[k];
+            });
+          }
+          Object.assign(next, calc);
         } else {
-          Object.assign(next, { cons2027: null, base2027: null, cons2028: null, base2028: null, cons2029: null, base2029: null });
+          const toClear: any = { cons2027: null, base2027: null, cons2028: null, base2028: null, cons2029: null, base2029: null };
+          if (cur?.lockedFields) {
+            Object.keys(toClear).forEach((k) => {
+              if (cur.lockedFields?.[k]) delete toClear[k];
+            });
+          }
+          Object.assign(next, toClear);
         }
       }
       next.status = hasAnyValue(next) ? 'draft' : 'not_filled';
