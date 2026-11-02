@@ -70,7 +70,7 @@ function MefWorkspaceNew({ block = 'mun' }: { block?: string }) {
             onClick={() => setCloseModalOpen(true)}
             title="Массовое закрытие ввода и утверждение показателей по ОМСУ и ЦИО"
           >
-            <CheckSquare className="h-4 w-4" /> Массовый ввод
+            <CheckSquare className="h-4 w-4" /> Массовое утверждение
           </Button>
         </div>
       </div>
@@ -455,7 +455,7 @@ function MefWorkspaceOld({ block = 'mun' }: { block?: string }) {
             onClick={() => setCloseModalOpen(true)}
             title="Массовое закрытие ввода и утверждение показателей по ОМСУ и ЦИО"
           >
-            <CheckSquare className="h-4 w-4" /> Массовый ввод
+            <CheckSquare className="h-4 w-4" /> Массовое утверждение
           </Button>
         </div>
       </div>
