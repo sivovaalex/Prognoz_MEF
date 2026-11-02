@@ -47,8 +47,16 @@ export type Action =
   | { type: 'MEF_SET_CIO_OWN_VALUE'; cioIndId: string; cioId: string; field: ValueFieldKey; value: number | null }
   | { type: 'MEF_UNLOCK_CIO_OWN_VALUE'; cioIndId: string; cioId: string; field?: ValueFieldKey }
   | { type: 'CAMPAIGN_SCHEDULE'; startDate: string; deadlineOmsu: string; deadlineCio: string; deadlineMef: string; period?: string }
-  | { type: 'CAMPAIGN_PRECOLLECT_LAUNCH' }
-  | { type: 'CAMPAIGN_PRECOLLECT_STOP' }
+  | {
+      type: 'MASS_INDICATOR_LOCK';
+      source: 'omsu' | 'cio';
+      indId: string;
+      fieldKeys: ValueFieldKey[];
+      munId?: string;
+      cioId?: string;
+      action: 'hard_approve' | 'approve' | 'cancel';
+      actor: string;
+    }
   | { type: 'CAMPAIGN_LAUNCH' }
   | { type: 'CAMPAIGN_STOP' }
   | { type: 'SET_RATING_MODE'; mode: 'preview' | 'final' }
@@ -137,7 +145,7 @@ function reducer(state: AppState, a: Action): AppState {
           const calc = calcForecasts(a.value);
           if (cur.lockedFields) {
             Object.keys(calc).forEach((k) => {
-              if (cur.lockedFields?.[k]) delete (calc as any)[k];
+              if ((cur.lockedFields as any)?.[k]) delete (calc as any)[k];
             });
           }
           Object.assign(next, calc);
@@ -145,7 +153,7 @@ function reducer(state: AppState, a: Action): AppState {
           const toClear: any = { cons2027: null, base2027: null, cons2028: null, base2028: null, cons2029: null, base2029: null };
           if (cur.lockedFields) {
             Object.keys(toClear).forEach((k) => {
-              if (cur.lockedFields?.[k]) delete toClear[k];
+              if ((cur.lockedFields as any)?.[k]) delete toClear[k];
             });
           }
           Object.assign(next, toClear);
@@ -237,7 +245,7 @@ function reducer(state: AppState, a: Action): AppState {
           const calc = calcForecasts(a.value);
           if (cur?.lockedFields) {
             Object.keys(calc).forEach((k) => {
-              if (cur.lockedFields?.[k]) delete (calc as any)[k];
+              if ((cur.lockedFields as any)?.[k]) delete (calc as any)[k];
             });
           }
           Object.assign(next, calc);
@@ -245,7 +253,7 @@ function reducer(state: AppState, a: Action): AppState {
           const toClear: any = { cons2027: null, base2027: null, cons2028: null, base2028: null, cons2029: null, base2029: null };
           if (cur?.lockedFields) {
             Object.keys(toClear).forEach((k) => {
-              if (cur.lockedFields?.[k]) delete toClear[k];
+              if ((cur.lockedFields as any)?.[k]) delete toClear[k];
             });
           }
           Object.assign(next, toClear);
@@ -526,7 +534,7 @@ function reducer(state: AppState, a: Action): AppState {
         },
         history: [
           ...state.history,
-          { at: now(), actor: 'Куратор МЭФ', action: `Предсбор МЭФ: установлено значение ОМСУ «${munName}» по пок. ${indNum} (${a.field}: ${a.value}) с автосогласованием и блокировкой` },
+          { at: now(), actor: 'Куратор МЭФ', action: `Режим Администратора: установлено значение ОМСУ «${munName}» по пок. ${indNum} (${a.field}: ${a.value}) с автосогласованием и блокировкой` },
         ],
       };
     }
@@ -641,7 +649,7 @@ function reducer(state: AppState, a: Action): AppState {
         },
         history: [
           ...state.history,
-          { at: now(), actor: 'Куратор МЭФ', action: `Предсбор МЭФ: установлено значение ЦИО «${cioName}» по территории «${munName}» (пок. ${indNum}, ${a.field}: ${a.value}) с автосогласованием и блокировкой` },
+          { at: now(), actor: 'Куратор МЭФ', action: `Режим Администратора: установлено значение ЦИО «${cioName}» по территории «${munName}» (пок. ${indNum}, ${a.field}: ${a.value}) с автосогласованием и блокировкой` },
         ],
       };
     }
@@ -740,7 +748,7 @@ function reducer(state: AppState, a: Action): AppState {
         },
         history: [
           ...state.history,
-          { at: now(), actor: 'Куратор МЭФ', action: `Предсбор МЭФ: установлено значение ЦИО «${cioName}» (пок. ${indNum}, ${a.field}: ${a.value}) с автосогласованием и блокировкой` },
+          { at: now(), actor: 'Куратор МЭФ', action: `Режим Администратора: установлено значение ЦИО «${cioName}» (пок. ${indNum}, ${a.field}: ${a.value}) с автосогласованием и блокировкой` },
         ],
       };
     }
@@ -806,49 +814,232 @@ function reducer(state: AppState, a: Action): AppState {
         },
         history: [...state.history, { at: now(), actor: 'Куратор МЭФ', action: `Установлены параметры сбора: период «${a.period ?? state.campaign.period}», запуск ${a.startDate}` }],
       };
-    case 'CAMPAIGN_PRECOLLECT_LAUNCH':
-      return {
-        ...state,
-        finalPublished: false,
-        ratingMode: 'preview',
-        campaign: {
-          ...state.campaign,
-          status: 'precollecting',
-          precollectLaunchedAt: now(),
-          launchedAt: state.campaign.launchedAt || now(),
-        },
-        notifications: [
-          ...state.notifications,
-          {
-            id: ++notifId,
-            at: now(),
-            text: `Запущен предсбор МЭФ «${state.campaign.name} — ${state.campaign.period}». Куратор производит предварительный ввод и автосогласование значений. Введённые ячейки блокируются для ОМСУ и ЦИО`,
-            forRoles: ['omsu', 'cio', 'mef', 'admin'],
-          },
-        ],
-        history: [
-          ...state.history,
-          { at: now(), actor: 'МЭФ / Администратор', action: 'Запущен предсбор МЭФ: открыт предзапуск сбора с автосогласованием и блокировкой ячеек' },
-        ],
-      };
-    case 'CAMPAIGN_PRECOLLECT_STOP':
-      return {
-        ...state,
-        campaign: { ...state.campaign, status: 'draft' },
-        notifications: [
-          ...state.notifications,
-          {
-            id: ++notifId,
-            at: now(),
-            text: `Предсбор МЭФ «${state.campaign.name} — ${state.campaign.period}» завершён`,
-            forRoles: ['omsu', 'cio', 'mef', 'admin'],
-          },
-        ],
-        history: [
-          ...state.history,
-          { at: now(), actor: 'Куратор МЭФ', action: 'Завершён предсбор МЭФ' },
-        ],
-      };
+        case 'MASS_INDICATOR_LOCK': {
+      const ind = state.indicators.find((i) => i.id === a.indId);
+      const indNum = ind?.num || a.indId;
+      const indName = ind?.name || '';
+      const actionText =
+        a.action === 'hard_approve'
+          ? 'Утверждено (нельзя отклонить из отчёта)'
+          : a.action === 'approve'
+          ? 'Утверждено'
+          : 'Отменено утверждение';
+
+      if (a.source === 'omsu') {
+        const nextOmsuValues = { ...state.omsuValues };
+        const targetMunIds =
+          !a.munId || a.munId === 'all'
+            ? state.omsus.filter((m) => m.isActive !== false).map((m) => m.id)
+            : [a.munId];
+
+        targetMunIds.forEach((munId) => {
+          const cur = nextOmsuValues[munId]?.[a.indId] || {
+            ...emptyValueFields(),
+            status: 'not_filled',
+            updatedAt: null,
+          };
+          const nextLockedFields = { ...(cur.lockedFields || {}) };
+          const nextHardLockedFields = { ...(cur.hardLockedFields || {}) };
+
+          if (a.action === 'cancel') {
+            a.fieldKeys.forEach((f) => {
+              delete nextLockedFields[f];
+              delete nextHardLockedFields[f];
+            });
+            const hasAnyLocked = Object.values(nextLockedFields).some(Boolean);
+            nextOmsuValues[munId] = {
+              ...nextOmsuValues[munId],
+              [a.indId]: {
+                ...cur,
+                lockedByMef: hasAnyLocked,
+                lockedFields: nextLockedFields,
+                hardLockedFields: nextHardLockedFields,
+                status: hasAnyLocked ? 'approved' : hasAnyValue(cur) ? 'draft' : 'not_filled',
+                updatedAt: now(),
+              },
+            };
+          } else {
+            const isHard = a.action === 'hard_approve';
+            a.fieldKeys.forEach((f) => {
+              nextLockedFields[f] = true;
+              if (isHard) {
+                nextHardLockedFields[f] = true;
+              } else {
+                delete nextHardLockedFields[f];
+              }
+            });
+            nextOmsuValues[munId] = {
+              ...nextOmsuValues[munId],
+              [a.indId]: {
+                ...cur,
+                lockedByMef: true,
+                lockedFields: nextLockedFields,
+                hardLockedFields: nextHardLockedFields,
+                status: 'approved',
+                signedBy: isHard ? 'МЭФ (утверждено без права отклонения)' : 'МЭФ (утверждено)',
+                updatedAt: now(),
+              },
+            };
+          }
+        });
+
+        const targetDesc =
+          !a.munId || a.munId === 'all'
+            ? 'все ОМСУ (массивом)'
+            : state.omsus.find((m) => m.id === a.munId)?.name || a.munId;
+
+        return {
+          ...state,
+          omsuValues: nextOmsuValues,
+          notifications: [
+            ...state.notifications,
+            {
+              id: ++notifId,
+              at: now(),
+              text: `Режим Администратора: ${actionText} по показателю «${indNum}. ${indName}» (${targetDesc})`,
+              forRoles: ['omsu', 'cio', 'mef', 'admin'],
+            },
+          ],
+          history: [
+            ...state.history,
+            {
+              at: now(),
+              actor: a.actor || 'МЭФ / Администратор',
+              action: `Закрытие ввода: ${actionText} показателя «${indNum}» (${targetDesc}, поля: ${a.fieldKeys.join(', ')})`,
+            },
+          ],
+        };
+      } else {
+        const cioId = a.cioId || (ind ? ind.cioId : state.cios[0]?.id);
+        const cioName = state.cios.find((c) => c.id === cioId)?.short || cioId;
+        const nextCioTerrValues = { ...state.cioTerritoryValues };
+        const nextCioValues = { ...state.cioValues };
+
+        const terrMap = nextCioTerrValues[cioId]?.[a.indId]
+          ? { ...nextCioTerrValues[cioId][a.indId] }
+          : {};
+        const allMunIds = state.omsus.map((m) => m.id);
+
+        allMunIds.forEach((munId) => {
+          const cur = terrMap[munId] || {
+            ...emptyValueFields(),
+            status: 'not_filled',
+            updatedAt: null,
+          };
+          const nextLockedFields = { ...(cur.lockedFields || {}) };
+          const nextHardLockedFields = { ...(cur.hardLockedFields || {}) };
+
+          if (a.action === 'cancel') {
+            a.fieldKeys.forEach((f) => {
+              delete nextLockedFields[f];
+              delete nextHardLockedFields[f];
+            });
+            const hasAnyLocked = Object.values(nextLockedFields).some(Boolean);
+            terrMap[munId] = {
+              ...cur,
+              lockedByMef: hasAnyLocked,
+              lockedFields: nextLockedFields,
+              hardLockedFields: nextHardLockedFields,
+              status: hasAnyLocked ? 'approved' : hasAnyValue(cur) ? 'draft' : 'not_filled',
+              updatedAt: now(),
+            };
+          } else {
+            const isHard = a.action === 'hard_approve';
+            a.fieldKeys.forEach((f) => {
+              nextLockedFields[f] = true;
+              if (isHard) {
+                nextHardLockedFields[f] = true;
+              } else {
+                delete nextHardLockedFields[f];
+              }
+            });
+            terrMap[munId] = {
+              ...cur,
+              lockedByMef: true,
+              lockedFields: nextLockedFields,
+              hardLockedFields: nextHardLockedFields,
+              status: 'approved',
+              signedBy: isHard ? 'МЭФ (утверждено без права отклонения)' : 'МЭФ (утверждено)',
+              updatedAt: now(),
+            };
+          }
+        });
+
+        nextCioTerrValues[cioId] = {
+          ...(nextCioTerrValues[cioId] || {}),
+          [a.indId]: terrMap,
+        };
+
+        const curOwn = nextCioValues[a.indId]?.[cioId] || {
+          ...emptyValueFields(),
+          status: 'not_filled',
+          updatedAt: null,
+        };
+        const ownLockedFields = { ...(curOwn.lockedFields || {}) };
+        const ownHardLockedFields = { ...(curOwn.hardLockedFields || {}) };
+
+        if (a.action === 'cancel') {
+          a.fieldKeys.forEach((f) => {
+            delete ownLockedFields[f];
+            delete ownHardLockedFields[f];
+          });
+          const hasAny = Object.values(ownLockedFields).some(Boolean);
+          nextCioValues[a.indId] = {
+            ...(nextCioValues[a.indId] || {}),
+            [cioId]: {
+              ...curOwn,
+              lockedByMef: hasAny,
+              lockedFields: ownLockedFields,
+              hardLockedFields: ownHardLockedFields,
+              status: hasAny ? 'approved' : hasAnyValue(curOwn) ? 'draft' : 'not_filled',
+              updatedAt: now(),
+            },
+          };
+        } else {
+          const isHard = a.action === 'hard_approve';
+          a.fieldKeys.forEach((f) => {
+            ownLockedFields[f] = true;
+            if (isHard) ownHardLockedFields[f] = true;
+            else delete ownHardLockedFields[f];
+          });
+          nextCioValues[a.indId] = {
+            ...(nextCioValues[a.indId] || {}),
+            [cioId]: {
+              ...curOwn,
+              lockedByMef: true,
+              lockedFields: ownLockedFields,
+              hardLockedFields: ownHardLockedFields,
+              status: 'approved',
+              signedBy: isHard ? 'МЭФ (утверждено без права отклонения)' : 'МЭФ (утверждено)',
+              updatedAt: now(),
+            },
+          };
+        }
+
+        return {
+          ...state,
+          cioTerritoryValues: nextCioTerrValues,
+          cioValues: nextCioValues,
+          notifications: [
+            ...state.notifications,
+            {
+              id: ++notifId,
+              at: now(),
+              text: `Режим Администратора: ${actionText} по показателю «${indNum}. ${indName}» (ЦИО «${cioName}»)`,
+              forRoles: ['cio', 'mef', 'admin'],
+            },
+          ],
+          history: [
+            ...state.history,
+            {
+              at: now(),
+              actor: a.actor || 'МЭФ / Администратор',
+              action: `Закрытие ввода: ${actionText} показателя «${indNum}» (ЦИО «${cioName}», поля: ${a.fieldKeys.join(', ')})`,
+            },
+          ],
+        };
+      }
+    }
     case 'CAMPAIGN_LAUNCH':
       return {
         ...state,
@@ -1010,7 +1201,7 @@ function reducer(state: AppState, a: Action): AppState {
           const calc = calcForecasts(a.value);
           if (cur?.lockedFields) {
             Object.keys(calc).forEach((k) => {
-              if (cur.lockedFields?.[k]) delete (calc as any)[k];
+              if ((cur.lockedFields as any)?.[k]) delete (calc as any)[k];
             });
           }
           Object.assign(next, calc);
@@ -1018,7 +1209,7 @@ function reducer(state: AppState, a: Action): AppState {
           const toClear: any = { cons2027: null, base2027: null, cons2028: null, base2028: null, cons2029: null, base2029: null };
           if (cur?.lockedFields) {
             Object.keys(toClear).forEach((k) => {
-              if (cur.lockedFields?.[k]) delete toClear[k];
+              if ((cur.lockedFields as any)?.[k]) delete toClear[k];
             });
           }
           Object.assign(next, toClear);

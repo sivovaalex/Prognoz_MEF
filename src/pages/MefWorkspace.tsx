@@ -1,4 +1,4 @@
-import { useState, useEffect, Fragment } from 'react';
+import { useState, Fragment } from 'react';
 import { useStore } from '@/lib/store';
 import { VALUE_FIELDS, VALUE_GROUPS } from '@/lib/types';
 import { EMPTY_TREE_FILTER, chevronParents, visibleTree, type TreeFilter } from '@/lib/indTree';
@@ -8,7 +8,8 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Undo2, CheckCircle2, Info, Lock, Send, PlayCircle, StopCircle, Sparkles } from 'lucide-react';
+import { Undo2, CheckCircle2, Info, Lock, Send, CheckSquare, ShieldCheck } from 'lucide-react';
+import { CloseIndicatorsModal } from '@/components/CloseIndicatorsModal';
 import { fieldTint } from '@/components/ValueColumns';
 import { CioStatusBadge } from '@/components/StatusBadge';
 import { ValueTip } from '@/components/ValueTip';
@@ -28,15 +29,11 @@ export function MefWorkspace({ block = 'mun' }: { block?: string }) {
 }
 
 function MefWorkspaceNew({ block = 'mun' }: { block?: string }) {
-  const { state, dispatch } = useStore();
-  const isPrecollect = state.campaign.status === 'precollecting';
+  const { state } = useStore();
   const [treeFilter, setTreeFilter] = useState<TreeFilter>(EMPTY_TREE_FILTER);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
-  const [showOmsu, setShowOmsu] = useState(isPrecollect);
-
-  useEffect(() => {
-    if (isPrecollect) setShowOmsu(true);
-  }, [isPrecollect]);
+  const [showOmsu, setShowOmsu] = useState(true);
+  const [closeModalOpen, setCloseModalOpen] = useState(false);
 
   const parents = chevronParents(state.indicators);
   const toggleNode = (id: string) => setCollapsed((p) => ({ ...p, [id]: !p[id] }));
@@ -50,58 +47,38 @@ function MefWorkspaceNew({ block = 'mun' }: { block?: string }) {
         <div>
           <div className="flex items-center gap-2">
             <h2 className="text-lg font-semibold">Рабочее место МЭФ — Согласование прогноза</h2>
-            {isPrecollect ? (
-              <Badge className="bg-purple-100 text-purple-800 border-purple-300 flex items-center gap-1">
-                <Sparkles className="h-3 w-3 text-purple-600 animate-spin" /> Режим «Предсбор МЭФ» активен
-              </Badge>
-            ) : state.campaign.status === 'collecting' ? (
+            <Badge className="bg-blue-100 text-blue-800 border-blue-300 flex items-center gap-1">
+              <ShieldCheck className="h-3.5 w-3.5 text-blue-700" /> Режим Администратора
+            </Badge>
+            {state.campaign.status === 'collecting' ? (
               <Badge className="bg-amber-100 text-amber-800 border-amber-300">Сбор данных запущен</Badge>
+            ) : state.campaign.status === 'completed' ? (
+              <Badge variant="outline" className="text-slate-600 border-slate-300">Сбор завершён (доступен ввод МЭФ)</Badge>
             ) : (
-              <Badge variant="outline">Сбор не запущен</Badge>
+              <Badge variant="outline" className="text-slate-600 border-slate-300">Сбор не запущен (доступен ввод МЭФ)</Badge>
             )}
           </div>
           <p className="text-sm text-muted-foreground mt-0.5">
-            Куратор МЭФ / Администратор: ввод значений в столбцы ОМСУ и ЦИО с автосогласованием и блокировкой ячеек.
+            Куратор МЭФ / Администратор: ввод и корректировка значений в любые ячейки (ОМСУ, ЦИО, МЭФ) в любой сбор (в том числе завершённые).
           </p>
         </div>
 
         <div className="flex items-center gap-2">
-          {!isPrecollect && state.campaign.status !== 'collecting' && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="border-purple-300 text-purple-700 hover:bg-purple-50 font-medium"
-              onClick={() => dispatch({ type: 'CAMPAIGN_PRECOLLECT_LAUNCH' })}
-              title="Запустить режим предсбора МЭФ для предварительного ввода значений ОМСУ и ЦИО"
-            >
-              <PlayCircle className="h-4 w-4 mr-1 text-purple-600" /> Включить предсбор МЭФ
-            </Button>
-          )}
-          {isPrecollect && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="text-red-600 border-red-200 hover:bg-red-50"
-              onClick={() => dispatch({ type: 'CAMPAIGN_PRECOLLECT_STOP' })}
-              title="Завершить режим предсбора МЭФ"
-            >
-              <StopCircle className="h-4 w-4 mr-1" /> Завершить предсбор
-            </Button>
-          )}
+          <Button
+            size="sm"
+            className="bg-[#1e5c8f] hover:bg-[#1e5c8f]/90 text-white font-medium flex items-center gap-1.5 shadow-xs"
+            onClick={() => setCloseModalOpen(true)}
+            title="Массовое закрытие ввода и утверждение показателей по ОМСУ и ЦИО"
+          >
+            <CheckSquare className="h-4 w-4" /> Массовый ввод
+          </Button>
         </div>
       </div>
 
-      {isPrecollect && (
-        <div className="rounded-lg border border-purple-200 bg-purple-50 p-3 text-xs text-purple-900 flex items-start gap-2 shadow-sm">
-          <Info className="h-4 w-4 text-purple-700 mt-0.5 shrink-0" />
-          <div className="space-y-0.5 leading-relaxed">
-            <span className="font-semibold text-purple-950 block">Активен функционал «Предсбор МЭФ»:</span>
-            <span>
-              Вы можете вводить значения непосредственно в столбцы <b>ОМСУ</b> и <b>ЦИО</b>. При вводе значения автоматически согласуются и блокируются от изменения в рабочих местах ОМСУ и ЦИО (со значком замочка <Lock className="inline h-3 w-3 text-amber-600" />). При необходимости МЭФ может вернуть право редактирования по кнопке <b>«Вернуть»</b>.
-            </span>
-          </div>
-        </div>
-      )}
+      <CloseIndicatorsModal
+        open={closeModalOpen}
+        onOpenChange={setCloseModalOpen}
+      />
 
       <MefTerritoryIndicators
         block={block}
@@ -114,7 +91,6 @@ function MefWorkspaceNew({ block = 'mun' }: { block?: string }) {
         setTreeFilter={setTreeFilter}
         showOmsu={showOmsu}
         setShowOmsu={setShowOmsu}
-        isPrecollect={isPrecollect}
       />
     </div>
   );
@@ -213,8 +189,10 @@ function MefTerritoryIndicators({ block = 'mun', visible, fillable, collapsed, t
                       <tr key={omsu.id} className={`border-b ${safeV.status === 'pending_mef' ? 'bg-amber-50/60' : 'hover:bg-slate-50'}`}>
                         <td className="p-2 font-medium pl-6">{omsu.name}</td>
                         {VALUE_FIELDS.map((f) => {
-                          const isOmsuLocked = !!omsuVal?.lockedFields?.[f.key] || (!!omsuVal?.lockedByMef && (f.key === 'v2026' || f.key === 'v2025' || f.key.startsWith('cons') || f.key.startsWith('base')));
-                          const isCioLocked = !!safeV?.lockedFields?.[f.key] || (!!safeV?.lockedByMef && (f.key === 'v2026' || f.key === 'v2025' || f.key.startsWith('cons') || f.key.startsWith('base')));
+                          const isOmsuHardLocked = !!omsuVal?.hardLockedFields?.[f.key];
+   const isOmsuLocked = isOmsuHardLocked || !!omsuVal?.lockedFields?.[f.key] || (!!omsuVal?.lockedByMef && (f.key === 'v2026' || f.key === 'v2025' || f.key.startsWith('cons') || f.key.startsWith('base')));
+                          const isCioHardLocked = !!safeV?.hardLockedFields?.[f.key];
+   const isCioLocked = isCioHardLocked || !!safeV?.lockedFields?.[f.key] || (!!safeV?.lockedByMef && (f.key === 'v2026' || f.key === 'v2025' || f.key.startsWith('cons') || f.key.startsWith('base')));
 
                           return (
                             <Fragment key={f.key}>
@@ -447,6 +425,7 @@ function MefWorkspaceOld({ block = 'mun' }: { block?: string }) {
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [returnTarget, setReturnTarget] = useState<{ cioId: string; indId: string } | null>(null);
   const [comment, setComment] = useState('');
+  const [closeModalOpen, setCloseModalOpen] = useState(false);
 
   const approvers = state.blockSettings[block]?.approvers || ['cio', 'mef'];
   const hasNote = state.blockSettings[block]?.hasNote || false;
@@ -460,8 +439,31 @@ function MefWorkspaceOld({ block = 'mun' }: { block?: string }) {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <div><h2 className="text-lg font-semibold">Согласование показателей ЦИО</h2><p className="text-sm text-muted-foreground">Проверка и утверждение данных ЦИО.</p></div>
+        <div>
+          <div className="flex items-center gap-2">
+            <h2 className="text-lg font-semibold">Согласование показателей ЦИО</h2>
+            <Badge className="bg-blue-100 text-blue-800 border-blue-300 flex items-center gap-1">
+              <ShieldCheck className="h-3.5 w-3.5 text-blue-700" /> Режим Администратора
+            </Badge>
+          </div>
+          <p className="text-sm text-muted-foreground">Проверка и утверждение данных ЦИО.</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            className="bg-[#1e5c8f] hover:bg-[#1e5c8f]/90 text-white font-medium flex items-center gap-1.5 shadow-xs"
+            onClick={() => setCloseModalOpen(true)}
+            title="Массовое закрытие ввода и утверждение показателей по ОМСУ и ЦИО"
+          >
+            <CheckSquare className="h-4 w-4" /> Массовый ввод
+          </Button>
+        </div>
       </div>
+
+      <CloseIndicatorsModal
+        open={closeModalOpen}
+        onOpenChange={setCloseModalOpen}
+      />
       <IndToolbar filter={treeFilter} onChange={setTreeFilter} shown={visible.length} total={fillable.length} />
       <div className="rounded-md border border-blue-200 bg-blue-50 p-3 text-sm flex gap-2">
         <Info className="h-4 w-4 text-blue-700 mt-0.5 shrink-0" />
@@ -561,7 +563,8 @@ function MefWorkspaceOld({ block = 'mun' }: { block?: string }) {
                             {VALUE_FIELDS.map((f) => {
                               const isForecastField = f.key.startsWith('cons') || f.key.startsWith('base');
                               const isTargetField = f.key === 'v2026' || f.key === 'v2025' || isForecastField;
-                              const isCioLocked = !!v.lockedByMef || !!v.lockedFields?.[f.key];
+                              const isCioHardLocked = !!v?.hardLockedFields?.[f.key];
+   const isCioLocked = isCioHardLocked || !!v.lockedByMef || !!v.lockedFields?.[f.key];
                               return (
                                 <Fragment key={f.key}>
                                   <td className={`p-1.5 text-center border-l ${isTargetField ? 'bg-amber-50/30' : fieldTint(f.key)}`}>

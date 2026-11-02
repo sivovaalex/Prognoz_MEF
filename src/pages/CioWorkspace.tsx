@@ -76,14 +76,7 @@ function CioWorkspaceNew({ block = 'mun', cioId: propCioId, onCioChange }: { blo
         </div>
       </div>
 
-      {state.campaign.status === 'precollecting' && (
-        <div className="rounded-md border border-purple-200 bg-purple-50 p-3 text-sm text-purple-900 flex items-start gap-2 shadow-xs">
-          <Info className="h-4 w-4 text-purple-700 mt-0.5 shrink-0" />
-          <span>
-            <b>Идёт предсбор МЭФ:</b> куратор МЭФ производит предварительный ввод и автосогласование значений. Ячейки, зафиксированные МЭФ, отмечены значком замочка <Lock className="inline h-3.5 w-3.5 text-blue-600 mx-0.5" /> и заблокированы от редактирования.
-          </span>
-        </div>
-      )}
+      
 
       <div className="flex items-center justify-between">
         <h3 className="font-medium text-slate-800">Согласование показателей ОМСУ</h3>
@@ -740,7 +733,7 @@ function CioOwnIndicatorsOld({ block = 'obl', myOwnVisible, myFillable, collapse
 
                       return (
                         <td key={f.key} className={`p-1.5 text-center ${fieldTint(f.key)}`}>
-                          {isInputField && (v.lockedByMef || v.lockedFields?.[f.key]) ? (
+                          {isInputField && (v.hardLockedFields?.[f.key] || v.lockedByMef || v.lockedFields?.[f.key]) ? (
                             <div className="flex flex-col items-center justify-center gap-0.5">
                               <div
                                 className="flex items-center gap-1 font-semibold text-blue-950 bg-blue-50/90 px-2 py-1 rounded border border-blue-300 shadow-xs"
