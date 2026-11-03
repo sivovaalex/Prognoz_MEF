@@ -316,6 +316,11 @@ export function CloseIndicatorsModal({
                           >
                             <span className="font-mono text-slate-500 mr-1.5">{ind.num}</span>
                             <span>{ind.name}</span>
+                            {ind.closed && (
+                              <span className="ml-1.5 text-[10px] text-red-600 bg-red-50 border border-red-200 px-1 py-0.5 rounded font-normal">
+                                Закрыт от ввода
+                              </span>
+                            )}
                           </div>
                         ))}
                       </div>

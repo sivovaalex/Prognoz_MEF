@@ -1,6 +1,6 @@
 import { useState, Fragment } from 'react';
 import { useStore } from '@/lib/store';
-import { VALUE_FIELDS, VALUE_GROUPS } from '@/lib/types';
+import { VALUE_FIELDS, VALUE_GROUPS, getFormulaForField } from '@/lib/types';
 import { EMPTY_TREE_FILTER, chevronParents, visibleTree, type TreeFilter } from '@/lib/indTree';
 import { IndToolbar, TreeToggle } from '@/components/IndToolbar';
 import { Card, CardContent } from '@/components/ui/card';
@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Undo2, CheckCircle2, Info, Lock, Send, CheckSquare, ShieldCheck } from 'lucide-react';
+import { Undo2, CheckCircle2, Info, Lock, Send, CheckSquare, ShieldCheck, Calculator } from 'lucide-react';
 import { CloseIndicatorsModal } from '@/components/CloseIndicatorsModal';
 import { fieldTint } from '@/components/ValueColumns';
 import { CioStatusBadge } from '@/components/StatusBadge';
@@ -174,11 +174,17 @@ function MefTerritoryIndicators({ block = 'mun', visible, fillable, collapsed, t
                       <div className="flex items-center gap-1" style={{ paddingLeft: `${(ind.level - 1) * 16}px` }}>
                         <TreeToggle hasChildren={parents.has(ind.id)} collapsed={!!collapsed[ind.id]} onToggle={() => toggleNode(ind.id)} />
                         <span>{ind.num} {ind.name} <span className="font-normal text-muted-foreground text-xs ml-2">({ind.unit})</span></span>
+                        {ind.closed && (
+                          <Badge variant="outline" className="ml-2 text-red-700 bg-red-50 border-red-200 text-xs inline-flex items-center gap-1 font-normal">
+                            <Lock className="w-3 h-3" /> Закрыт от ввода
+                          </Badge>
+                        )}
                       </div>
                     </td>
                   </tr>
                   {!collapsed[ind.id] && activeOmsus.map((omsu) => {
                     const cioId = ind.cioId;
+                    const isIndClosed = !!ind.closed || (Array.isArray(ind.closedForOmsuIds) && ind.closedForOmsuIds.includes(omsu.id));
                     const v = state.cioTerritoryValues[cioId]?.[ind.id]?.[omsu.id];
                     if (!v && !showOmsu) return null; 
                     const safeV = v || { v2023: null, v2024: null, v2025: null, v2026: null, cons2027: null, base2027: null, cons2028: null, base2028: null, cons2029: null, base2029: null, status: 'not_filled', updatedAt: null };
@@ -187,12 +193,21 @@ function MefTerritoryIndicators({ block = 'mun', visible, fillable, collapsed, t
                     const omsuVal = state.omsuValues[omsu.id]?.[ind.id];
                     return (
                       <tr key={omsu.id} className={`border-b ${safeV.status === 'pending_mef' ? 'bg-amber-50/60' : 'hover:bg-slate-50'}`}>
-                        <td className="p-2 font-medium pl-6">{omsu.name}</td>
+                        <td className="p-2 font-medium pl-6">
+                          <div className="flex items-center gap-1.5">
+                            <span>{omsu.name}</span>
+                            {isIndClosed && (
+                              <span className="text-[10px] px-1 py-0.5 rounded bg-red-50 text-red-700 border border-red-200">Закрыт</span>
+                            )}
+                          </div>
+                        </td>
                         {VALUE_FIELDS.map((f) => {
+                          const cellFormula = getFormulaForField(ind, f.key);
+                          const isFormulaLocked = !!cellFormula;
                           const isOmsuHardLocked = !!omsuVal?.hardLockedFields?.[f.key];
-   const isOmsuLocked = isOmsuHardLocked || !!omsuVal?.lockedFields?.[f.key] || (!!omsuVal?.lockedByMef && (f.key === 'v2026' || f.key === 'v2025' || f.key.startsWith('cons') || f.key.startsWith('base')));
+                          const isOmsuLocked = isOmsuHardLocked || !!omsuVal?.lockedFields?.[f.key] || (!!omsuVal?.lockedByMef && (f.key === 'v2026' || f.key === 'v2025' || f.key.startsWith('cons') || f.key.startsWith('base')));
                           const isCioHardLocked = !!safeV?.hardLockedFields?.[f.key];
-   const isCioLocked = isCioHardLocked || !!safeV?.lockedFields?.[f.key] || (!!safeV?.lockedByMef && (f.key === 'v2026' || f.key === 'v2025' || f.key.startsWith('cons') || f.key.startsWith('base')));
+                          const isCioLocked = isCioHardLocked || !!safeV?.lockedFields?.[f.key] || (!!safeV?.lockedByMef && (f.key === 'v2026' || f.key === 'v2025' || f.key.startsWith('cons') || f.key.startsWith('base')));
 
                           return (
                             <Fragment key={f.key}>
@@ -202,7 +217,16 @@ function MefTerritoryIndicators({ block = 'mun', visible, fillable, collapsed, t
                                     <Input
                                       type="number"
                                       step="0.1"
-                                      className={`h-8 w-[76px] text-center mx-auto bg-white px-1 font-medium ${isOmsuLocked ? 'border-amber-500 bg-amber-50/50 text-amber-950 font-bold ring-1 ring-amber-400' : 'border-amber-300'}`}
+                                      disabled={isIndClosed || isFormulaLocked}
+                                      className={`h-8 w-[76px] text-center mx-auto px-1 font-medium ${
+                                        isIndClosed
+                                          ? 'bg-slate-100 text-slate-400 border-slate-300 cursor-not-allowed'
+                                          : isFormulaLocked
+                                          ? 'bg-slate-100 text-slate-600 border-slate-300 cursor-not-allowed font-mono'
+                                          : isOmsuLocked
+                                          ? 'bg-amber-50/50 text-amber-950 font-bold border-amber-500 ring-1 ring-amber-400'
+                                          : 'bg-white border-amber-300'
+                                      }`}
                                       placeholder="—"
                                       value={omsuVal?.[f.key] ?? ''}
                                       onChange={(e) => {
@@ -215,12 +239,28 @@ function MefTerritoryIndicators({ block = 'mun', visible, fillable, collapsed, t
                                           value: val,
                                         });
                                       }}
-                                      title={isOmsuLocked ? 'Значение введено МЭФ (заблокировано для ОМСУ)' : 'Ввод значения ОМСУ куратором МЭФ с автосогласованием'}
+                                      title={
+                                        isIndClosed
+                                          ? 'Показатель закрыт от ввода и согласования'
+                                          : isFormulaLocked
+                                          ? `Значение рассчитывается по формуле: ${cellFormula}`
+                                          : isOmsuLocked
+                                          ? 'Значение введено МЭФ (заблокировано для ОМСУ)'
+                                          : 'Ввод значения ОМСУ куратором МЭФ с автосогласованием'
+                                      }
                                     />
-                                    {isOmsuLocked ? (
+                                    {isIndClosed ? (
+                                      <span className="text-[10px] text-red-600 font-medium flex items-center gap-0.5">
+                                        <Lock className="w-2.5 h-2.5" /> Закрыт
+                                      </span>
+                                    ) : isFormulaLocked ? (
+                                      <span className="text-[10px] text-blue-700 font-medium flex items-center gap-0.5 bg-blue-50 px-1 rounded border border-blue-200" title={`Формула: ${cellFormula}`}>
+                                        <Calculator className="w-2.5 h-2.5" /> Формула
+                                      </span>
+                                    ) : isOmsuLocked ? (
                                       <div className="flex flex-col items-center gap-0.5 mt-0.5">
                                         <span className="text-[10px] text-amber-800 font-semibold flex items-center gap-0.5 bg-amber-100/70 px-1 rounded whitespace-nowrap">
-                                          <Lock className="w-3 h-3 text-amber-700" /> Введено МЭФ
+                                          <Lock className="w-3 h-3 text-amber-700" /> {isOmsuHardLocked ? 'Утверждено (нельзя отклонить)' : 'Введено МЭФ'}
                                         </span>
                                         <Button
                                           size="sm"
@@ -253,7 +293,16 @@ function MefTerritoryIndicators({ block = 'mun', visible, fillable, collapsed, t
                                   <Input
                                     type="number"
                                     step="0.1"
-                                    className={`h-8 w-[76px] text-center mx-auto bg-white px-1 font-medium ${isCioLocked ? 'border-blue-500 bg-blue-50/50 text-blue-950 font-bold ring-1 ring-blue-400' : 'border-blue-300'}`}
+                                    disabled={isIndClosed || isFormulaLocked}
+                                    className={`h-8 w-[76px] text-center mx-auto px-1 font-medium ${
+                                      isIndClosed
+                                        ? 'bg-slate-100 text-slate-400 border-slate-300 cursor-not-allowed'
+                                        : isFormulaLocked
+                                        ? 'bg-slate-100 text-slate-600 border-slate-300 cursor-not-allowed font-mono'
+                                        : isCioLocked
+                                        ? 'bg-blue-50/50 text-blue-950 font-bold border-blue-500 ring-1 ring-blue-400'
+                                        : 'bg-white border-blue-300'
+                                    }`}
                                     placeholder="—"
                                     value={safeV[f.key] ?? ''}
                                     onChange={(e) => {
@@ -267,12 +316,28 @@ function MefTerritoryIndicators({ block = 'mun', visible, fillable, collapsed, t
                                         value: val,
                                       });
                                     }}
-                                    title={isCioLocked ? 'Значение введено МЭФ (заблокировано для ЦИО)' : 'Ввод значения ЦИО куратором МЭФ с автосогласованием'}
+                                    title={
+                                      isIndClosed
+                                        ? 'Показатель закрыт от ввода и согласования'
+                                        : isFormulaLocked
+                                        ? `Значение рассчитывается по формуле: ${cellFormula}`
+                                        : isCioLocked
+                                        ? 'Значение введено МЭФ (заблокировано для ЦИО)'
+                                        : 'Ввод значения ЦИО куратором МЭФ с автосогласованием'
+                                    }
                                   />
-                                  {isCioLocked ? (
+                                  {isIndClosed ? (
+                                    <span className="text-[10px] text-red-600 font-medium flex items-center gap-0.5">
+                                      <Lock className="w-2.5 h-2.5" /> Закрыт
+                                    </span>
+                                  ) : isFormulaLocked ? (
+                                    <span className="text-[10px] text-blue-700 font-medium flex items-center gap-0.5 bg-blue-50 px-1 rounded border border-blue-200" title={`Формула: ${cellFormula}`}>
+                                      <Calculator className="w-2.5 h-2.5" /> Формула
+                                    </span>
+                                  ) : isCioLocked ? (
                                     <div className="flex flex-col items-center gap-0.5 mt-0.5">
                                       <span className="text-[10px] text-blue-800 font-semibold flex items-center gap-0.5 bg-blue-100/70 px-1 rounded whitespace-nowrap">
-                                        <Lock className="w-3 h-3 text-blue-700" /> Введено МЭФ
+                                        <Lock className="w-3 h-3 text-blue-700" /> {isCioHardLocked ? 'Утверждено (нельзя отклонить)' : 'Введено МЭФ'}
                                       </span>
                                       <Button
                                         size="sm"
@@ -320,42 +385,63 @@ function MefTerritoryIndicators({ block = 'mun', visible, fillable, collapsed, t
                                 </div>
                               </td>
                             <td className={`p-1.5 text-center ${f.key === 'v2026' || f.key === 'v2025' ? 'bg-amber-50/30' : fieldTint(f.key)}`}>
-                              {(f.key === 'v2026' || f.key === 'v2025') ? (
-                                <div className="flex flex-col items-center gap-1">
-                                  <Input
-                                    type="number"
-                                    step="0.1"
-                                    className="h-8 w-[76px] text-center mx-auto bg-white px-1 font-medium border-amber-300"
-                                    placeholder="—"
-                                    value={mefV[f.key] ?? ''}
-                                    disabled={safeV.status === 'approved'}
-                                    onChange={(e) => dispatch({ type: 'MEF_TERR_SET_VALUE', indId: ind.id, cioId, munId: omsu.id, field: f.key, value: e.target.value === '' ? null : Number(e.target.value) })}
-                                  />
-                                  {safeV.status !== 'approved' && mefV[f.key] !== null && mefV.status === 'draft' && (
-                                    <Button size="sm" variant="outline" className="h-6 text-[10px] px-2 mt-1 text-blue-600 hover:text-blue-700" onClick={() => dispatch({ type: 'MEF_TERR_SEND_OWN', indId: ind.id, cioId, munId: omsu.id })} title="Сохранить">
-                                      <Send className="h-3 w-3 mr-1" /> Сохранить
-                                    </Button>
-                                  )}
-                                  {safeV.status !== 'approved' && mefV.status === 'sent' && (
-                                    <div className="flex flex-col items-center gap-1 mt-1">
-                                      <span className="text-[10px] text-amber-600 leading-tight">Отправлено</span>
-                                      <Button size="sm" variant="outline" className="h-6 text-[10px] px-2 text-red-500 hover:text-red-600" onClick={() => dispatch({ type: 'MEF_TERR_RECALL_OWN', indId: ind.id, cioId, munId: omsu.id })} title="Отозвать">
-                                        <Undo2 className="h-3 w-3 mr-1" /> Отозвать
+                              <div className="flex flex-col items-center gap-1">
+                                <Input
+                                  type="number"
+                                  step="0.1"
+                                  disabled={isIndClosed || isFormulaLocked}
+                                  className={`h-8 w-[76px] text-center mx-auto px-1 font-medium ${
+                                    isIndClosed
+                                      ? 'bg-slate-100 text-slate-400 border-slate-300 cursor-not-allowed'
+                                      : isFormulaLocked
+                                      ? 'bg-slate-100 text-slate-600 border-slate-300 cursor-not-allowed font-mono'
+                                      : 'bg-white border-amber-300'
+                                  }`}
+                                  placeholder="—"
+                                  value={mefV[f.key] ?? ''}
+                                  onChange={(e) => dispatch({ type: 'MEF_TERR_SET_VALUE', indId: ind.id, cioId, munId: omsu.id, field: f.key, value: e.target.value === '' ? null : Number(e.target.value) })}
+                                  title={
+                                    isIndClosed
+                                      ? 'Показатель закрыт от ввода и согласования'
+                                      : isFormulaLocked
+                                      ? `Значение рассчитывается по формуле: ${cellFormula}`
+                                      : 'Значение МЭФ (доступно для редактирования МЭФ и Администратором)'
+                                  }
+                                />
+                                {isIndClosed ? (
+                                  <span className="text-[10px] text-red-600 font-medium flex items-center gap-0.5">
+                                    <Lock className="w-2.5 h-2.5" /> Закрыт
+                                  </span>
+                                ) : isFormulaLocked ? (
+                                  <span className="text-[10px] text-blue-700 font-medium flex items-center gap-0.5 bg-blue-50 px-1 rounded border border-blue-200" title={`Формула: ${cellFormula}`}>
+                                    <Calculator className="w-2.5 h-2.5" /> Формула
+                                  </span>
+                                ) : (
+                                  <>
+                                    {mefV[f.key] !== null && mefV.status === 'draft' && (
+                                      <Button size="sm" variant="outline" className="h-6 text-[10px] px-2 mt-1 text-blue-600 hover:text-blue-700" onClick={() => dispatch({ type: 'MEF_TERR_SEND_OWN', indId: ind.id, cioId, munId: omsu.id })} title="Сохранить значение МЭФ">
+                                        <Send className="h-3 w-3 mr-1" /> Сохранить
                                       </Button>
-                                    </div>
-                                  )}
-                                  {safeV.status === 'approved' && (
-                                    <div className="flex flex-col items-center gap-1 mt-1">
-                                      <span className="text-[10px] text-green-600 flex items-center gap-0.5"><Lock className="w-3 h-3"/> Сохранено</span>
-                                      <Button size="sm" variant="outline" className="h-6 text-[10px] px-2 text-red-500 hover:text-red-600" onClick={() => dispatch({ type: 'MEF_TERR_RECALL_OWN', indId: ind.id, cioId, munId: omsu.id })} title="Отозвать">
-                                        <Undo2 className="h-3 w-3 mr-1" /> Отозвать
-                                      </Button>
-                                    </div>
-                                  )}
-                                </div>
-                              ) : (
-                                <ValueTip value={mefV[f.key] ?? safeV[f.key]} updatedAt={mefV.updatedAt} author="МЭФ" />
-                              )}
+                                    )}
+                                    {mefV.status === 'sent' && (
+                                      <div className="flex flex-col items-center gap-1 mt-1">
+                                        <span className="text-[10px] text-amber-600 leading-tight">Отправлено</span>
+                                        <Button size="sm" variant="outline" className="h-6 text-[10px] px-2 text-red-500 hover:text-red-600" onClick={() => dispatch({ type: 'MEF_TERR_RECALL_OWN', indId: ind.id, cioId, munId: omsu.id })} title="Отозвать">
+                                          <Undo2 className="h-3 w-3 mr-1" /> Отозвать
+                                        </Button>
+                                      </div>
+                                    )}
+                                    {mefV.status === 'approved' && (
+                                      <div className="flex flex-col items-center gap-1 mt-1">
+                                        <span className="text-[10px] text-green-600 flex items-center gap-0.5"><Lock className="w-3 h-3"/> Сохранено</span>
+                                        <Button size="sm" variant="outline" className="h-6 text-[10px] px-2 text-red-500 hover:text-red-600" onClick={() => dispatch({ type: 'MEF_TERR_RECALL_OWN', indId: ind.id, cioId, munId: omsu.id })} title="Отозвать">
+                                          <Undo2 className="h-3 w-3 mr-1" /> Отозвать
+                                        </Button>
+                                      </div>
+                                    )}
+                                  </>
+                                )}
+                              </div>
                             </td>
                           </Fragment>
                         );
@@ -555,7 +641,17 @@ function MefWorkspaceOld({ block = 'mun' }: { block?: string }) {
                                   </span>
                                 )}
                                 <div>
-                                  {ri === 0 && <span className="font-medium">{ind.num} {ind.name} <span className="font-normal text-muted-foreground">({ind.unit})</span><br /></span>}
+                                  {ri === 0 && (
+                                    <span className="font-medium">
+                                      {ind.num} {ind.name} <span className="font-normal text-muted-foreground">({ind.unit})</span>
+                                      {ind.closed && (
+                                        <Badge variant="outline" className="ml-2 text-red-700 bg-red-50 border-red-200 text-xs inline-flex items-center gap-1 font-normal">
+                                          <Lock className="w-3 h-3" /> Закрыт от ввода
+                                        </Badge>
+                                      )}
+                                      <br />
+                                    </span>
+                                  )}
                                   <span className="text-sm font-semibold text-slate-700">ЦИО: {cioObj?.short || cioId}</span>
                                 </div>
                               </div>
@@ -563,8 +659,11 @@ function MefWorkspaceOld({ block = 'mun' }: { block?: string }) {
                             {VALUE_FIELDS.map((f) => {
                               const isForecastField = f.key.startsWith('cons') || f.key.startsWith('base');
                               const isTargetField = f.key === 'v2026' || f.key === 'v2025' || isForecastField;
+                              const isIndClosed = !!ind.closed;
+                              const cellFormula = getFormulaForField(ind, f.key);
+                              const isFormulaLocked = !!cellFormula;
                               const isCioHardLocked = !!v?.hardLockedFields?.[f.key];
-   const isCioLocked = isCioHardLocked || !!v.lockedByMef || !!v.lockedFields?.[f.key];
+                              const isCioLocked = isCioHardLocked || !!v.lockedByMef || !!v.lockedFields?.[f.key];
                               return (
                                 <Fragment key={f.key}>
                                   <td className={`p-1.5 text-center border-l ${isTargetField ? 'bg-amber-50/30' : fieldTint(f.key)}`}>
@@ -573,7 +672,16 @@ function MefWorkspaceOld({ block = 'mun' }: { block?: string }) {
                                         <Input
                                           type="number"
                                           step="0.1"
-                                          className={`h-8 w-[76px] text-center mx-auto bg-white px-1 font-medium ${isCioLocked ? 'border-blue-500 bg-blue-50/50 text-blue-950 font-bold ring-1 ring-blue-400' : 'border-blue-300'}`}
+                                          disabled={isIndClosed || isFormulaLocked}
+                                          className={`h-8 w-[76px] text-center mx-auto px-1 font-medium ${
+                                            isIndClosed
+                                              ? 'bg-slate-100 text-slate-400 border-slate-300 cursor-not-allowed'
+                                              : isFormulaLocked
+                                              ? 'bg-slate-100 text-slate-600 border-slate-300 cursor-not-allowed font-mono'
+                                              : isCioLocked
+                                              ? 'bg-blue-50/50 text-blue-950 font-bold border-blue-500 ring-1 ring-blue-400'
+                                              : 'bg-white border-blue-300'
+                                          }`}
                                           placeholder="—"
                                           value={v[f.key] ?? ''}
                                           onChange={(e) => {
@@ -586,12 +694,28 @@ function MefWorkspaceOld({ block = 'mun' }: { block?: string }) {
                                               value: val,
                                             });
                                           }}
-                                          title={isCioLocked ? 'Значение введено МЭФ (заблокировано для ЦИО)' : 'Ввод значения ЦИО куратором МЭФ с автосогласованием'}
+                                          title={
+                                            isIndClosed
+                                              ? 'Показатель закрыт от ввода и согласования'
+                                              : isFormulaLocked
+                                              ? `Значение рассчитывается по формуле: ${cellFormula}`
+                                              : isCioLocked
+                                              ? 'Значение введено МЭФ (заблокировано для ЦИО)'
+                                              : 'Ввод значения ЦИО куратором МЭФ с автосогласованием'
+                                          }
                                         />
-                                        {isCioLocked ? (
+                                        {isIndClosed ? (
+                                          <span className="text-[10px] text-red-600 font-medium flex items-center gap-0.5">
+                                            <Lock className="w-2.5 h-2.5" /> Закрыт
+                                          </span>
+                                        ) : isFormulaLocked ? (
+                                          <span className="text-[10px] text-blue-700 font-medium flex items-center gap-0.5 bg-blue-50 px-1 rounded border border-blue-200" title={`Формула: ${cellFormula}`}>
+                                            <Calculator className="w-2.5 h-2.5" /> Формула
+                                          </span>
+                                        ) : isCioLocked ? (
                                           <div className="flex flex-col items-center gap-0.5 mt-0.5">
                                             <span className="text-[10px] text-blue-800 font-semibold flex items-center gap-0.5 bg-blue-100/70 px-1 rounded">
-                                              <Lock className="w-3 h-3 text-blue-700" /> Введено МЭФ
+                                              <Lock className="w-3 h-3 text-blue-700" /> {isCioHardLocked ? 'Утверждено (нельзя отклонить)' : 'Введено МЭФ'}
                                             </span>
                                             <Button
                                               size="sm"
@@ -644,43 +768,63 @@ function MefWorkspaceOld({ block = 'mun' }: { block?: string }) {
                                     )}
                                   </td>
                                 <td className={`p-1.5 text-center ${f.key === 'v2026' || f.key === 'v2025' ? 'bg-amber-50/30' : fieldTint(f.key)}`}>
-                                  {(f.key === 'v2026' || f.key === 'v2025') ? (
-                                    <div className="flex flex-col items-center gap-1">
-                                      <Input
-                                        type="number"
-                                        step="0.1"
-                                        className="h-8 w-[76px] text-center mx-auto bg-white px-1 font-medium border-amber-300"
-                                        placeholder="—"
-                                        value={mefV[f.key] ?? ''}
-                                        disabled={v.status === 'approved'}
-                                        onChange={(e) => dispatch({ type: 'MEF_SET_OWN', cioIndId: ind.id, cioId, field: f.key, value: e.target.value === '' ? null : Number(e.target.value) })}
-                                      />
-
-                                      {v.status !== 'approved' && mefV[f.key] !== null && mefV.status === 'draft' && (
-                                        <Button size="sm" variant="outline" className="h-6 text-[10px] px-2 mt-1 text-blue-600 hover:text-blue-700" onClick={() => dispatch({ type: 'MEF_SEND_OWN', cioIndId: ind.id, cioId })} title="Сохранить">
-                                          <Send className="h-3 w-3 mr-1" /> Сохранить
-                                        </Button>
-                                      )}
-                                      {v.status !== 'approved' && mefV.status === 'sent' && (
-                                        <div className="flex flex-col items-center gap-1 mt-1">
-                                          <span className="text-[10px] text-amber-600 leading-tight">Отправлено</span>
-                                          <Button size="sm" variant="outline" className="h-6 text-[10px] px-2 text-red-500 hover:text-red-600" onClick={() => dispatch({ type: 'MEF_RECALL_OWN', cioIndId: ind.id, cioId })} title="Отозвать">
-                                            <Undo2 className="h-3 w-3 mr-1" /> Отозвать
+                                  <div className="flex flex-col items-center gap-1">
+                                    <Input
+                                      type="number"
+                                      step="0.1"
+                                      disabled={isIndClosed || isFormulaLocked}
+                                      className={`h-8 w-[76px] text-center mx-auto px-1 font-medium ${
+                                        isIndClosed
+                                          ? 'bg-slate-100 text-slate-400 border-slate-300 cursor-not-allowed'
+                                          : isFormulaLocked
+                                          ? 'bg-slate-100 text-slate-600 border-slate-300 cursor-not-allowed font-mono'
+                                          : 'bg-white border-amber-300'
+                                      }`}
+                                      placeholder="—"
+                                      value={mefV[f.key] ?? ''}
+                                      onChange={(e) => dispatch({ type: 'MEF_SET_OWN', cioIndId: ind.id, cioId, field: f.key, value: e.target.value === '' ? null : Number(e.target.value) })}
+                                      title={
+                                        isIndClosed
+                                          ? 'Показатель закрыт от ввода и согласования'
+                                          : isFormulaLocked
+                                          ? `Значение рассчитывается по формуле: ${cellFormula}`
+                                          : 'Значение МЭФ (доступно для редактирования МЭФ и Администратором)'
+                                      }
+                                    />
+                                    {isIndClosed ? (
+                                      <span className="text-[10px] text-red-600 font-medium flex items-center gap-0.5">
+                                        <Lock className="w-2.5 h-2.5" /> Закрыт
+                                      </span>
+                                    ) : isFormulaLocked ? (
+                                      <span className="text-[10px] text-blue-700 font-medium flex items-center gap-0.5 bg-blue-50 px-1 rounded border border-blue-200" title={`Формула: ${cellFormula}`}>
+                                        <Calculator className="w-2.5 h-2.5" /> Формула
+                                      </span>
+                                    ) : (
+                                      <>
+                                        {mefV[f.key] !== null && mefV.status === 'draft' && (
+                                          <Button size="sm" variant="outline" className="h-6 text-[10px] px-2 mt-1 text-blue-600 hover:text-blue-700" onClick={() => dispatch({ type: 'MEF_SEND_OWN', cioIndId: ind.id, cioId })} title="Сохранить значение МЭФ">
+                                            <Send className="h-3 w-3 mr-1" /> Сохранить
                                           </Button>
-                                        </div>
-                                      )}
-                                      {v.status === 'approved' && (
-                                        <div className="flex flex-col items-center gap-1 mt-1">
-                                          <span className="text-[10px] text-green-600 flex items-center gap-0.5"><Lock className="w-3 h-3"/> Сохранено</span>
-                                          <Button size="sm" variant="outline" className="h-6 text-[10px] px-2 text-red-500 hover:text-red-600" onClick={() => dispatch({ type: 'MEF_RECALL_OWN', cioIndId: ind.id, cioId })} title="Отозвать">
-                                            <Undo2 className="h-3 w-3 mr-1" /> Отозвать
-                                          </Button>
-                                        </div>
-                                      )}
-                                    </div>
-                                  ) : (
-                                    <ValueTip value={mefV[f.key] ?? v[f.key]} updatedAt={mefV.updatedAt} author="МЭФ" />
-                                  )}
+                                        )}
+                                        {mefV.status === 'sent' && (
+                                          <div className="flex flex-col items-center gap-1 mt-1">
+                                            <span className="text-[10px] text-amber-600 leading-tight">Отправлено</span>
+                                            <Button size="sm" variant="outline" className="h-6 text-[10px] px-2 text-red-500 hover:text-red-600" onClick={() => dispatch({ type: 'MEF_RECALL_OWN', cioIndId: ind.id, cioId })} title="Отозвать">
+                                              <Undo2 className="h-3 w-3 mr-1" /> Отозвать
+                                            </Button>
+                                          </div>
+                                        )}
+                                        {mefV.status === 'approved' && (
+                                          <div className="flex flex-col items-center gap-1 mt-1">
+                                            <span className="text-[10px] text-green-600 flex items-center gap-0.5"><Lock className="w-3 h-3"/> Сохранено</span>
+                                            <Button size="sm" variant="outline" className="h-6 text-[10px] px-2 text-red-500 hover:text-red-600" onClick={() => dispatch({ type: 'MEF_RECALL_OWN', cioIndId: ind.id, cioId })} title="Отозвать">
+                                              <Undo2 className="h-3 w-3 mr-1" /> Отозвать
+                                            </Button>
+                                          </div>
+                                        )}
+                                      </>
+                                    )}
+                                  </div>
                                 </td>
                               </Fragment>
                             );

@@ -1,7 +1,7 @@
 import { Fragment, useState } from 'react';
 import { useStore } from '@/lib/store';
 import { CURRENT_CIO } from '@/lib/data';
-import { VALUE_FIELDS, VALUE_GROUPS, emptyValueFields } from '@/lib/types';
+import { VALUE_FIELDS, VALUE_GROUPS, emptyValueFields, getFormulaForField } from '@/lib/types';
 import { EMPTY_TREE_FILTER, chevronParents, visibleTree, type TreeFilter } from '@/lib/indTree';
 import { IndToolbar, TreeToggle } from '@/components/IndToolbar';
 import { OmsuStatusBadge, CioStatusBadge } from '@/components/StatusBadge';
@@ -20,7 +20,7 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/dialog';
-import { CheckCircle2, Undo2, Send, Lock, Info, ChevronDown, ChevronRight } from 'lucide-react';
+import { CheckCircle2, Undo2, Send, Lock, Info, ChevronDown, ChevronRight, Calculator } from 'lucide-react';
 
 const GROUP_HEAD: Record<string, string> = {
   report: 'bg-green-50/70',
@@ -218,6 +218,11 @@ function CioTerritoryIndicators({ block = 'mun', cioId, myOwnVisible, myFillable
                           onToggle={() => toggleNode(ind.id)}
                         />
                         <span>{ind.num} {ind.name} <span className="font-normal text-muted-foreground text-xs ml-2">({ind.unit})</span></span>
+                        {ind.closed && (
+                          <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded border border-red-200 bg-red-50 text-red-700 inline-flex items-center gap-1 font-normal">
+                            <Lock className="w-3 h-3" /> Закрыт от ввода
+                          </span>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -232,8 +237,12 @@ function CioTerritoryIndicators({ block = 'mun', cioId, myOwnVisible, myFillable
                         {VALUE_FIELDS.map((f) => {
                           const isForecastField = f.key.startsWith('cons') || f.key.startsWith('base');
                           const isInputField = f.key === 'v2026' || f.key === 'v2025' || isForecastField;
+                          const isIndClosed = !!ind.closed || (Array.isArray(ind.closedForOmsuIds) && ind.closedForOmsuIds.includes(omsu.id));
+                          const cellFormula = getFormulaForField(ind, f.key);
+                          const isFormulaLocked = !!cellFormula;
                           const isOmsuLocked = !!omsuV?.lockedFields?.[f.key] || (!!omsuV?.lockedByMef && isInputField);
-                          const isCioLocked = !!v?.lockedFields?.[f.key] || (!!v?.lockedByMef && isInputField);
+                          const isCioHardLocked = !!v?.hardLockedFields?.[f.key];
+                          const isCioLocked = isCioHardLocked || !!v?.lockedFields?.[f.key] || (!!v?.lockedByMef && isInputField);
 
                           return (
                             <Fragment key={f.key}>
@@ -281,7 +290,29 @@ function CioTerritoryIndicators({ block = 'mun', cioId, myOwnVisible, myFillable
                               {/* Столбец ЦИО */}
                               <td className={`p-1.5 text-center ${(f.key === 'v2026' || f.key === 'v2025') ? 'bg-amber-50/30' : fieldTint(f.key)}`}>
                                 <div className="flex flex-col items-center justify-center gap-1">
-                                  {isCioLocked ? (
+                                  {isIndClosed ? (
+                                    <div className="flex flex-col items-center justify-center gap-0.5">
+                                      <div
+                                        className="flex items-center gap-1 text-xs text-slate-400 bg-slate-100 px-2 py-1 rounded border border-slate-200"
+                                        title="Показатель закрыт от ввода и согласования"
+                                      >
+                                        <Lock className="w-3 h-3 text-slate-400 shrink-0" />
+                                        <span>{v[f.key] ?? '—'}</span>
+                                      </div>
+                                      <span className="text-[9px] text-slate-400 font-medium">Закрыт</span>
+                                    </div>
+                                  ) : isFormulaLocked ? (
+                                    <div className="flex flex-col items-center justify-center gap-0.5">
+                                      <div
+                                        className="flex items-center gap-1 font-mono text-xs text-slate-700 bg-slate-100 px-1.5 py-1 rounded border border-slate-300 shadow-xs"
+                                        title={`Значение рассчитывается по формуле: ${cellFormula}`}
+                                      >
+                                        <Calculator className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                                        <span>{v[f.key] ?? '—'}</span>
+                                      </div>
+                                      <span className="text-[9px] text-blue-800 font-medium">Формула</span>
+                                    </div>
+                                  ) : isCioLocked ? (
                                     <div className="flex flex-col items-center justify-center gap-0.5">
                                       <div
                                         className="flex items-center gap-1 font-semibold text-blue-950 bg-blue-50/90 px-2 py-1 rounded border border-blue-300 shadow-xs"
@@ -290,7 +321,7 @@ function CioTerritoryIndicators({ block = 'mun', cioId, myOwnVisible, myFillable
                                         <Lock className="w-3.5 h-3.5 text-blue-600 shrink-0" />
                                         <span>{v[f.key] ?? '—'}</span>
                                       </div>
-                                      <span className="text-[9px] text-blue-800 font-medium">Заблокировано МЭФ</span>
+                                      <span className="text-[9px] text-blue-800 font-medium">{isCioHardLocked ? 'Утверждено МЭФ (нельзя отклонить)' : 'Заблокировано МЭФ'}</span>
                                     </div>
                                   ) : isInputField ? (
                                     <>
@@ -742,7 +773,7 @@ function CioOwnIndicatorsOld({ block = 'obl', myOwnVisible, myFillable, collapse
                                 <Lock className="w-3.5 h-3.5 text-blue-600 shrink-0" />
                                 <span>{v[f.key] ?? '—'}</span>
                               </div>
-                              <span className="text-[9px] text-blue-800 font-medium">Заблокировано МЭФ</span>
+                              <span className="text-[9px] text-blue-800 font-medium">{v.hardLockedFields?.[f.key] ? 'Утверждено МЭФ (нельзя отклонить)' : 'Заблокировано МЭФ'}</span>
                             </div>
                           ) : editable && isInputField ? (
                             <div className="flex flex-col items-center justify-center gap-1">

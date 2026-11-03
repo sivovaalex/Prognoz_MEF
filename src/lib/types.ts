@@ -91,6 +91,38 @@ export interface Indicator {
 
 /** Заполняемый показатель (не группа) */
 export const isFillable = (i: Indicator): boolean => !i.isGroup;
+/** Проверка, является ли строка формулы действующей расчетной формулой */
+export function isCalculationFormula(formula?: string | null): boolean {
+  if (!formula) return false;
+  const f = formula.trim();
+  if (f === '' || f === '—' || f === '-' || f === 'X') return false;
+  return true;
+}
+
+/** Получение действующей формулы для конкретного поля показателя */
+export function getFormulaForField(ind: Indicator | undefined | null, fieldKey: string): string | null {
+  if (!ind) return null;
+  // Отчётные годы (2023, 2024, 2025)
+  if (fieldKey === 'v2023' || fieldKey === 'v2024' || fieldKey === 'v2025') {
+    if (isCalculationFormula(ind.formulaReport)) return ind.formulaReport!.trim();
+    return null;
+  }
+  // Оценочный год (2026)
+  if (fieldKey === 'v2026') {
+    if (isCalculationFormula(ind.formulaEstimate)) return ind.formulaEstimate!.trim();
+    if (isCalculationFormula(ind.formula) && (ind.formula!.includes('/') || ind.formula!.includes('*') || ind.formula!.includes('+') || ind.formula!.includes('-'))) {
+      return ind.formula!.trim();
+    }
+    return null;
+  }
+  // Прогнозные годы (2027, 2028, 2029)
+  if (fieldKey.startsWith('cons') || fieldKey.startsWith('base')) {
+    if (isCalculationFormula(ind.formula)) return ind.formula!.trim();
+    return null;
+  }
+  return null;
+}
+
 
 /** Набор заполняемых полей показателя: отчёт 2023–2025, оценка 2026, прогнозы 2027–2029 (2 варианта) */
 export const VALUE_FIELDS = [

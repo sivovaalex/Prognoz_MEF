@@ -1,7 +1,7 @@
 import { useState, Fragment } from 'react';
 import { useStore } from '@/lib/store';
 import { CURRENT_OMSU } from '@/lib/data';
-import { VALUE_FIELDS } from '@/lib/types';
+import { VALUE_FIELDS, getFormulaForField } from '@/lib/types';
 import { EMPTY_TREE_FILTER, chevronParents, visibleTree, type TreeFilter } from '@/lib/indTree';
 import { IndToolbar, TreeToggle } from '@/components/IndToolbar';
 import { ValueGroupHeader, fieldTint } from '@/components/ValueColumns';
@@ -20,7 +20,7 @@ import {
 import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { Send, Undo2, Lock, Info, ChevronDown, Users } from 'lucide-react';
+import { Send, Undo2, Lock, Info, ChevronDown, Users, Calculator } from 'lucide-react';
 
 /** Сводка статусов по набору показателей сферы */
 export function dirStats(inds: { id: string }[], values: Record<string, { status: string } | undefined>) {
@@ -264,9 +264,11 @@ export function OmsuForm({ block, munId: propMunId, onMunIdChange }: { block?: s
                           {VALUE_FIELDS.map((f) => {
                             const isForecastField = f.key.startsWith('cons') || f.key.startsWith('base');
                             const isInputField = f.key === 'v2026' || f.key === 'v2025' || isForecastField;
+                            const cellFormula = getFormulaForField(ind, f.key);
+                            const isFormulaLocked = !!cellFormula;
                             const isHardLocked = !!v?.hardLockedFields?.[f.key];
    const isLockedByMef = isHardLocked || !!v?.lockedFields?.[f.key] || (!!v?.lockedByMef && isInputField);
-                            const editable = !closedForMe && !isLockedByMef && isCurrentOmsu && (v.status === 'not_filled' || v.status === 'draft' || v.status === 'returned');
+                            const editable = !closedForMe && !isLockedByMef && !isFormulaLocked && isCurrentOmsu && (v.status === 'not_filled' || v.status === 'draft' || v.status === 'returned');
 
                             return (
                               <td key={f.key} className={`p-1.5 text-center ${fieldTint(f.key)}`}>
@@ -280,7 +282,29 @@ export function OmsuForm({ block, munId: propMunId, onMunIdChange }: { block?: s
                                         <Lock className="w-3.5 h-3.5 text-amber-600 shrink-0" />
                                         <span>{v[f.key] ?? '—'}</span>
                                       </div>
-                                      <span className="text-[9px] text-amber-800 font-medium">Заблокировано МЭФ</span>
+                                      <span className="text-[9px] text-amber-800 font-medium">{isHardLocked ? 'Утверждено МЭФ (нельзя отклонить)' : 'Заблокировано МЭФ'}</span>
+                                    </div>
+                                  ) : isFormulaLocked ? (
+                                    <div className="flex flex-col items-center justify-center gap-0.5">
+                                      <div
+                                        className="flex items-center gap-1 font-mono text-xs text-slate-700 bg-slate-100 px-1.5 py-1 rounded border border-slate-300 shadow-xs"
+                                        title={`Значение рассчитывается автоматически по формуле: ${cellFormula}`}
+                                      >
+                                        <Calculator className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                                        <span>{v[f.key] ?? '—'}</span>
+                                      </div>
+                                      <span className="text-[9px] text-blue-800 font-medium">Формула</span>
+                                    </div>
+                                  ) : closedForMe ? (
+                                    <div className="flex flex-col items-center justify-center gap-0.5">
+                                      <div
+                                        className="flex items-center gap-1 text-xs text-slate-400 bg-slate-100 px-2 py-1 rounded border border-slate-200"
+                                        title="Показатель закрыт от ввода и согласования"
+                                      >
+                                        <Lock className="w-3 h-3 text-slate-400 shrink-0" />
+                                        <span>{v[f.key] ?? '—'}</span>
+                                      </div>
+                                      <span className="text-[9px] text-slate-400 font-medium">Закрыт</span>
                                     </div>
                                   ) : editable && isInputField ? (
                                     <WithValueTip show={v[f.key] !== null} updatedAt={v.updatedAt} author={v.signedBy ?? 'Иванова А.П.'}>
