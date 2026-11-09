@@ -159,18 +159,82 @@ export function emptyValueFields(): Record<ValueFieldKey, null> {
   };
 }
 
+/**
+ * Специальные строковые значения ячеек:
+ * '-' или '—' — Прочерк: явление отсутствует (нет значения)
+ * '...' или '…' — Троеточие: сведения отсутствуют (нет статистики для показателя)
+ * В формулах оба значения учитываются как пустые (null).
+ */
+export type CellSpecialValue = '-' | '—' | '...';
+export type CellValue = number | CellSpecialValue | null;
+
+/** Является ли значение числовым */
+export function isNumericValue(v: any): v is number {
+  return typeof v === 'number' && !isNaN(v);
+}
+
+/** Является ли значение специальным (прочерк или троеточие) */
+export function isSpecialCellValue(v: any): v is CellSpecialValue {
+  return v === '-' || v === '—' || v === '...' || v === '…';
+}
+
+/** Проверка, считается ли значение пустым для формул и расчетов */
+export function isCellEmptyForFormula(v: any): boolean {
+  return v === null || v === undefined || v === '' || v === '-' || v === '—' || v === '...' || v === '…';
+}
+
+/** Парсинг пользовательского ввода в ячейку */
+export function parseCellValue(input: string): CellValue {
+  let trimmed = input.trim();
+  if (trimmed === '') return null;
+  // Прочерк: явление отсутствует (нет значения)
+  if (trimmed === '-' || trimmed === '—' || trimmed === '–' || trimmed.toLowerCase() === 'прочерк') {
+    return '-';
+  }
+  // Троеточие: сведения отсутствуют (нет статистики для показателя)
+  if (trimmed === '...' || trimmed === '…' || trimmed === '..' || trimmed.toLowerCase() === 'троеточие') {
+    return '...';
+  }
+  // Поддержка дефиса/минуса для отрицательных чисел
+  trimmed = trimmed.replace(/[—–]/g, '-');
+  // Поддержка запятой в качестве десятичного разделителя
+  const normalized = trimmed.replace(',', '.');
+  const num = Number(normalized);
+  if (!isNaN(num)) {
+    return num;
+  }
+  if (trimmed === '-') return '-';
+  if (trimmed === '.') return '...';
+  return null;
+}
+
+/** Форматирование значения для отображения в поле ввода */
+export function formatCellValueForInput(v: CellValue | undefined): string {
+  if (v === null || v === undefined) return '';
+  if (v === '-' || v === '—') return '—';
+  if (v === '...') return '...';
+  return String(v);
+}
+
+/** Описание значения ячейки для подсказок (тултипов) */
+export function getCellValueDescription(v: CellValue | undefined): string | null {
+  if (v === '-' || v === '—') return 'Прочерк (нет значения)';
+  if (v === '...') return 'Троеточие (нет статистики для показателя)';
+  return null;
+}
+
 /** Значения показателя по годам/вариантам */
 export interface IndicatorValues {
-  v2023: number | null;    // отчёт 2023
-  v2024: number | null;    // отчёт 2024
-  v2025: number | null;    // отчёт 2025
-  v2026: number | null;    // оценка 2026 (рейтинговый год)
-  cons2027: number | null; // 2027, вариант 1 (консервативный)
-  base2027: number | null; // 2027, вариант 2 (базовый)
-  cons2028: number | null; // 2028, вариант 1 (консервативный)
-  base2028: number | null; // 2028, вариант 2 (базовый)
-  cons2029: number | null; // 2029, вариант 1 (консервативный)
-  base2029: number | null; // 2029, вариант 2 (базовый)
+  v2023: CellValue;    // отчёт 2023
+  v2024: CellValue;    // отчёт 2024
+  v2025: CellValue;    // отчёт 2025
+  v2026: CellValue;    // оценка 2026 (рейтинговый год)
+  cons2027: CellValue; // 2027, вариант 1 (консервативный)
+  base2027: CellValue; // 2027, вариант 2 (базовый)
+  cons2028: CellValue; // 2028, вариант 1 (консервативный)
+  base2028: CellValue; // 2028, вариант 2 (базовый)
+  cons2029: CellValue; // 2029, вариант 1 (консервативный)
+  base2029: CellValue; // 2029, вариант 2 (базовый)
 }
 
 export interface OmsuValue extends IndicatorValues {

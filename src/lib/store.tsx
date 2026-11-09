@@ -1,16 +1,26 @@
 import React, { createContext, useContext, useReducer } from 'react';
 import { VALUE_FIELDS, emptyValueFields, deriveNoteStatus } from './types';
-import type { AppState, Indicator, Direction, RoleId, ValueFieldKey, NoteTemplate, NoteOmsuData, NoteCellStatus } from './types';
+import type { AppState, Indicator, Direction, RoleId, ValueFieldKey, NoteTemplate, NoteOmsuData, NoteCellStatus, CellValue } from './types';
 import { buildInitialState } from './data';
 import { isDescendant, isIndActive, renumberAll, subtreeIds } from './indTree';
 
 /** Заполнено ли хотя бы одно поле значения */
-function hasAnyValue(v: Record<ValueFieldKey, number | null>): boolean {
+function hasAnyValue(v: Record<ValueFieldKey, CellValue>): boolean {
   return VALUE_FIELDS.some((f) => v[f.key] !== null);
 }
 
 const r2 = (v: number) => Math.round(v * 100) / 100;
-function calcForecasts(v2026: number) {
+function calcForecasts(v2026: CellValue) {
+  if (typeof v2026 !== 'number' || isNaN(v2026)) {
+    return {
+      cons2027: null,
+      base2027: null,
+      cons2028: null,
+      base2028: null,
+      cons2029: null,
+      base2029: null,
+    };
+  }
   return {
     cons2027: r2(v2026 * 1.0),
     base2027: r2(v2026 * 1.02),
@@ -22,29 +32,29 @@ function calcForecasts(v2026: number) {
 }
 
 export type Action =
-  | { type: 'OMSU_SET_VALUE'; munId: string; indId: string; field: ValueFieldKey; value: number | null }
+  | { type: 'OMSU_SET_VALUE'; munId: string; indId: string; field: ValueFieldKey; value: CellValue }
   | { type: 'OMSU_SIGN_SEND'; munId: string; indId: string; actor: string }
   | { type: 'OMSU_RECALL'; munId: string; indId: string; actor: string }
   | { type: 'CIO_APPROVE'; munId: string; indId: string; actor: string }
   | { type: 'CIO_RETURN'; munId: string; indId: string; actor: string; comment: string }
-  | { type: 'CIO_SET_OWN'; cioIndId: string; cioId: string; field: ValueFieldKey; value: number | null }
+  | { type: 'CIO_SET_OWN'; cioIndId: string; cioId: string; field: ValueFieldKey; value: CellValue }
   | { type: 'CIO_SIGN_OWN'; cioIndId: string; cioId: string; actor: string }
   | { type: 'CIO_RECALL_OWN'; cioIndId: string; cioId: string; actor: string }
-  | { type: 'MEF_SET_OWN'; cioIndId: string; cioId: string; field: ValueFieldKey; value: number | null }
+  | { type: 'MEF_SET_OWN'; cioIndId: string; cioId: string; field: ValueFieldKey; value: CellValue }
   | { type: 'MEF_SEND_OWN'; cioIndId: string; cioId: string }
   | { type: 'MEF_RECALL_OWN'; cioIndId: string; cioId: string }
-  | { type: 'MEF_TERR_SET_VALUE'; cioId: string; indId: string; munId: string; field: ValueFieldKey; value: number | null }
+  | { type: 'MEF_TERR_SET_VALUE'; cioId: string; indId: string; munId: string; field: ValueFieldKey; value: CellValue }
   | { type: 'MEF_TERR_SEND_OWN'; cioId: string; indId: string; munId: string }
   | { type: 'MEF_TERR_RECALL_OWN'; cioId: string; indId: string; munId: string }
   | { type: 'MEF_APPROVE'; cioIndId: string; cioId: string; actor: string }
   | { type: 'MEF_RETURN'; cioIndId: string; cioId: string; actor: string; comment: string }
   | { type: 'MEF_TERR_APPROVE'; cioId: string; indId: string; munId: string; actor: string }
   | { type: 'MEF_TERR_RETURN'; cioId: string; indId: string; munId: string; actor: string; comment: string }
-  | { type: 'MEF_SET_OMSU_VALUE'; munId: string; indId: string; field: ValueFieldKey; value: number | null }
+  | { type: 'MEF_SET_OMSU_VALUE'; munId: string; indId: string; field: ValueFieldKey; value: CellValue }
   | { type: 'MEF_UNLOCK_OMSU_VALUE'; munId: string; indId: string; field?: ValueFieldKey }
-  | { type: 'MEF_SET_CIO_TERR_VALUE'; cioId: string; indId: string; munId: string; field: ValueFieldKey; value: number | null }
+  | { type: 'MEF_SET_CIO_TERR_VALUE'; cioId: string; indId: string; munId: string; field: ValueFieldKey; value: CellValue }
   | { type: 'MEF_UNLOCK_CIO_TERR_VALUE'; cioId: string; indId: string; munId: string; field?: ValueFieldKey }
-  | { type: 'MEF_SET_CIO_OWN_VALUE'; cioIndId: string; cioId: string; field: ValueFieldKey; value: number | null }
+  | { type: 'MEF_SET_CIO_OWN_VALUE'; cioIndId: string; cioId: string; field: ValueFieldKey; value: CellValue }
   | { type: 'MEF_UNLOCK_CIO_OWN_VALUE'; cioIndId: string; cioId: string; field?: ValueFieldKey }
   | { type: 'CAMPAIGN_SCHEDULE'; startDate: string; deadlineOmsu: string; deadlineCio: string; deadlineMef: string; period?: string }
   | {
@@ -74,7 +84,7 @@ export type Action =
   | { type: 'UPDATE_DICT_ITEM'; dict: 'cios' | 'omsus' | 'units'; item: any }
   | { type: 'TOGGLE_DICT_ITEM'; dict: 'cios' | 'omsus' | 'units'; id: string }
   | { type: 'UPDATE_BLOCK_SETTINGS'; block: string; approvers: ('omsu' | 'cio' | 'mef')[]; reportingPeriods: string[]; estimatedPeriods: string[]; forecastPeriods: string[]; hasNote: boolean; }
-  | { type: 'CIO_TERR_SET_VALUE'; cioId: string; indId: string; munId: string; field: ValueFieldKey; value: number | null }
+  | { type: 'CIO_TERR_SET_VALUE'; cioId: string; indId: string; munId: string; field: ValueFieldKey; value: CellValue }
   | { type: 'CIO_TERR_SIGN'; cioId: string; indId: string; munId: string; actor: string }
   | { type: 'CIO_TERR_RECALL'; cioId: string; indId: string; munId: string; actor: string }
   | { type: 'SET_INDICATOR_NOTE'; indId: string; munId?: string; cioId?: string; target: 'omsu' | 'cio' | 'mef'; note: string }

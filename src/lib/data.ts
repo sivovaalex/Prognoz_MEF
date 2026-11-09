@@ -1,7 +1,7 @@
 import { emptyValueFields, noteCellKey, noteRowCellCount, deriveNoteStatus } from './types';
 import type {
   AppState, Cio, CioValue, Direction, Indicator,
-  Municipality, OmsuValue, Role, MefValue,
+  Municipality, OmsuValue, Role, MefValue, CellValue,
   NoteTemplate, NoteOmsuData, NoteCioData, NoteCampaign, NoteCellStatus,
 } from './types';
 
@@ -507,7 +507,7 @@ export const CURRENT_EVAL_YEAR = 2026;
 export const ARCHIVE_YEARS: number[] = Array.from({ length: 10 }, (_, i) => CURRENT_EVAL_YEAR - i);
 
 /** Строка архива: отчёты r1–r3 (Y-3…Y-1), оценка e (Y), прогнозы c1/b1…c3/b3 (Y+1…Y+3, 2 варианта) */
-export type ArchiveRow = Record<string, number | null>;
+export type ArchiveRow = Record<string, CellValue>;
 /** munId -> indId -> слот -> значение */
 export type ArchiveOmsuValues = Record<string, Record<string, ArchiveRow>>;
 
@@ -615,7 +615,7 @@ function buildMefValues(indicators: Indicator[], cioValues: Record<string, Recor
     const cv = cioValues[ind.id]?.[ind.cioId];
     if (cv && cv.status === 'approved') {
       const mefV = { ...cv, status: 'approved' as const, updatedAt: '24.07.2026 12:00' };
-      if (c < 2 && mefV.v2026 !== null) {
+      if (c < 2 && typeof mefV.v2026 === 'number') {
         mefV.v2026 = Number((mefV.v2026 * 1.1).toFixed(2));
         Object.assign(mefV, makeFields(mefV.v2026));
       }
@@ -639,7 +639,7 @@ function buildMefTerritoryValues(indicators: Indicator[], omsus: Municipality[],
       const cv = cioTerritoryValues[ind.cioId]?.[ind.id]?.[m.id];
       if (cv && cv.status === 'approved') {
         const mefV = { ...cv, status: 'approved' as const, updatedAt: '24.07.2026 12:00' };
-        if (c < 2 && mefV.v2026 !== null) {
+        if (c < 2 && typeof mefV.v2026 === 'number') {
           mefV.v2026 = Number((mefV.v2026 * 1.1).toFixed(2));
           Object.assign(mefV, makeFields(mefV.v2026));
         }

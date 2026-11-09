@@ -14,6 +14,7 @@ import { fieldTint } from '@/components/ValueColumns';
 import { CioStatusBadge } from '@/components/StatusBadge';
 import { ValueTip } from '@/components/ValueTip';
 import { Input } from '@/components/ui/input';
+import { CellInput } from '@/components/CellInput';
 
 const GROUP_HEAD: Record<string, string> = {
   report: 'bg-green-50/70',
@@ -214,11 +215,9 @@ function MefTerritoryIndicators({ block = 'mun', visible, fillable, collapsed, t
                               {showOmsu && (
                                 <td className={`p-1.5 text-center border-l ${f.key === 'v2026' || f.key === 'v2025' ? 'bg-amber-50/30' : fieldTint(f.key)}`}>
                                   <div className="flex flex-col items-center gap-1">
-                                    <Input
-                                      type="number"
-                                      step="0.1"
+                                    <CellInput
                                       disabled={isIndClosed || isFormulaLocked}
-                                      className={`h-8 w-[76px] text-center mx-auto px-1 font-medium ${
+                                      className={`h-8 w-[76px] px-1 font-medium ${
                                         isIndClosed
                                           ? 'bg-slate-100 text-slate-400 border-slate-300 cursor-not-allowed'
                                           : isFormulaLocked
@@ -228,9 +227,8 @@ function MefTerritoryIndicators({ block = 'mun', visible, fillable, collapsed, t
                                           : 'bg-white border-amber-300'
                                       }`}
                                       placeholder="—"
-                                      value={omsuVal?.[f.key] ?? ''}
-                                      onChange={(e) => {
-                                        const val = e.target.value === '' ? null : Number(e.target.value);
+                                      value={omsuVal?.[f.key] ?? null}
+                                      onChange={(val) => {
                                         dispatch({
                                           type: 'MEF_SET_OMSU_VALUE',
                                           munId: omsu.id,
@@ -290,11 +288,9 @@ function MefTerritoryIndicators({ block = 'mun', visible, fillable, collapsed, t
                               )}
                               <td className={`p-1.5 text-center ${!showOmsu ? 'border-l' : ''} ${f.key === 'v2026' || f.key === 'v2025' ? 'bg-amber-50/30' : fieldTint(f.key)}`}>
                                 <div className="flex flex-col items-center gap-1">
-                                  <Input
-                                    type="number"
-                                    step="0.1"
+                                  <CellInput
                                     disabled={isIndClosed || isFormulaLocked}
-                                    className={`h-8 w-[76px] text-center mx-auto px-1 font-medium ${
+                                    className={`h-8 w-[76px] px-1 font-medium ${
                                       isIndClosed
                                         ? 'bg-slate-100 text-slate-400 border-slate-300 cursor-not-allowed'
                                         : isFormulaLocked
@@ -304,9 +300,8 @@ function MefTerritoryIndicators({ block = 'mun', visible, fillable, collapsed, t
                                         : 'bg-white border-blue-300'
                                     }`}
                                     placeholder="—"
-                                    value={safeV[f.key] ?? ''}
-                                    onChange={(e) => {
-                                      const val = e.target.value === '' ? null : Number(e.target.value);
+                                    value={safeV[f.key] ?? null}
+                                    onChange={(val) => {
                                       dispatch({
                                         type: 'MEF_SET_CIO_TERR_VALUE',
                                         cioId,
@@ -386,11 +381,9 @@ function MefTerritoryIndicators({ block = 'mun', visible, fillable, collapsed, t
                               </td>
                             <td className={`p-1.5 text-center ${f.key === 'v2026' || f.key === 'v2025' ? 'bg-amber-50/30' : fieldTint(f.key)}`}>
                               <div className="flex flex-col items-center gap-1">
-                                <Input
-                                  type="number"
-                                  step="0.1"
+                                <CellInput
                                   disabled={isIndClosed || isFormulaLocked}
-                                  className={`h-8 w-[76px] text-center mx-auto px-1 font-medium ${
+                                  className={`h-8 w-[76px] px-1 font-medium ${
                                     isIndClosed
                                       ? 'bg-slate-100 text-slate-400 border-slate-300 cursor-not-allowed'
                                       : isFormulaLocked
@@ -398,8 +391,8 @@ function MefTerritoryIndicators({ block = 'mun', visible, fillable, collapsed, t
                                       : 'bg-white border-amber-300'
                                   }`}
                                   placeholder="—"
-                                  value={mefV[f.key] ?? ''}
-                                  onChange={(e) => dispatch({ type: 'MEF_TERR_SET_VALUE', indId: ind.id, cioId, munId: omsu.id, field: f.key, value: e.target.value === '' ? null : Number(e.target.value) })}
+                                  value={mefV[f.key] ?? null}
+                                  onChange={(val) => dispatch({ type: 'MEF_TERR_SET_VALUE', indId: ind.id, cioId, munId: omsu.id, field: f.key, value: val })}
                                   title={
                                     isIndClosed
                                       ? 'Показатель закрыт от ввода и согласования'
@@ -669,11 +662,9 @@ function MefWorkspaceOld({ block = 'mun' }: { block?: string }) {
                                   <td className={`p-1.5 text-center border-l ${isTargetField ? 'bg-amber-50/30' : fieldTint(f.key)}`}>
                                     {isTargetField ? (
                                       <div className="flex flex-col items-center gap-1">
-                                        <Input
-                                          type="number"
-                                          step="0.1"
+                                        <CellInput
                                           disabled={isIndClosed || isFormulaLocked}
-                                          className={`h-8 w-[76px] text-center mx-auto px-1 font-medium ${
+                                          className={`h-8 w-[76px] px-1 font-medium ${
                                             isIndClosed
                                               ? 'bg-slate-100 text-slate-400 border-slate-300 cursor-not-allowed'
                                               : isFormulaLocked
@@ -683,9 +674,8 @@ function MefWorkspaceOld({ block = 'mun' }: { block?: string }) {
                                               : 'bg-white border-blue-300'
                                           }`}
                                           placeholder="—"
-                                          value={v[f.key] ?? ''}
-                                          onChange={(e) => {
-                                            const val = e.target.value === '' ? null : Number(e.target.value);
+                                          value={v[f.key] ?? null}
+                                          onChange={(val) => {
                                             dispatch({
                                               type: 'MEF_SET_CIO_OWN_VALUE',
                                               cioIndId: ind.id,
@@ -769,11 +759,9 @@ function MefWorkspaceOld({ block = 'mun' }: { block?: string }) {
                                   </td>
                                 <td className={`p-1.5 text-center ${f.key === 'v2026' || f.key === 'v2025' ? 'bg-amber-50/30' : fieldTint(f.key)}`}>
                                   <div className="flex flex-col items-center gap-1">
-                                    <Input
-                                      type="number"
-                                      step="0.1"
+                                    <CellInput
                                       disabled={isIndClosed || isFormulaLocked}
-                                      className={`h-8 w-[76px] text-center mx-auto px-1 font-medium ${
+                                      className={`h-8 w-[76px] px-1 font-medium ${
                                         isIndClosed
                                           ? 'bg-slate-100 text-slate-400 border-slate-300 cursor-not-allowed'
                                           : isFormulaLocked
@@ -781,8 +769,8 @@ function MefWorkspaceOld({ block = 'mun' }: { block?: string }) {
                                           : 'bg-white border-amber-300'
                                       }`}
                                       placeholder="—"
-                                      value={mefV[f.key] ?? ''}
-                                      onChange={(e) => dispatch({ type: 'MEF_SET_OWN', cioIndId: ind.id, cioId, field: f.key, value: e.target.value === '' ? null : Number(e.target.value) })}
+                                      value={mefV[f.key] ?? null}
+                                      onChange={(val) => dispatch({ type: 'MEF_SET_OWN', cioIndId: ind.id, cioId, field: f.key, value: val })}
                                       title={
                                         isIndClosed
                                           ? 'Показатель закрыт от ввода и согласования'

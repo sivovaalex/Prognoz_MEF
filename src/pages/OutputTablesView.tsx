@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useStore } from '@/lib/store';
-import { VALUE_FIELDS, VALUE_GROUPS } from '@/lib/types';
+import { VALUE_FIELDS, VALUE_GROUPS, type CellValue } from '@/lib/types';
 import { CURRENT_EVAL_YEAR, buildArchiveOmsuValues, SER_DEFAULT_PERIODS, UKAZ_DEFAULT_PERIODS } from '@/lib/data';
 import { EMPTY_TREE_FILTER, chevronParents, visibleTree, type TreeFilter } from '@/lib/indTree';
 import { IndToolbar, TreeToggle } from '@/components/IndToolbar';
@@ -102,12 +102,12 @@ function OutputTableCio() {
   const values = state.omsuValues[selectedOmsuId] || {};
 
   // Значение ячейки: текущий год — из стора, архивный год — из «БД»
-  const getVal = (indId: string, key: string): number | null => {
+  const getVal = (indId: string, key: string): CellValue => {
     if (isCurrentYear) {
       const v = values[indId];
       if (!v) return null;
-      const val = (v as unknown as Record<string, number | null | undefined>)[key];
-      return typeof val === 'number' ? val : null;
+      const val = (v as unknown as Record<string, CellValue | undefined>)[key];
+      return val ?? null;
     }
     return archiveVals?.[selectedOmsuId]?.[indId]?.[key] ?? null;
   };

@@ -10,6 +10,8 @@ import { SignDialog } from '@/components/SignDialog';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { CellInput } from '@/components/CellInput';
+import { fmt } from '@/lib/rating';
 import { Badge } from '@/components/ui/badge';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
@@ -280,7 +282,7 @@ export function OmsuForm({ block, munId: propMunId, onMunIdChange }: { block?: s
                                         title="Значение установлено куратором МЭФ в Рабочем месте МЭФ с автосогласованием. Ввод заблокирован"
                                       >
                                         <Lock className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                                        <span>{v[f.key] ?? '—'}</span>
+                                        <span>{fmt(v[f.key])}</span>
                                       </div>
                                       <span className="text-[9px] text-amber-800 font-medium">{isHardLocked ? 'Утверждено МЭФ (нельзя отклонить)' : 'Заблокировано МЭФ'}</span>
                                     </div>
@@ -291,7 +293,7 @@ export function OmsuForm({ block, munId: propMunId, onMunIdChange }: { block?: s
                                         title={`Значение рассчитывается автоматически по формуле: ${cellFormula}`}
                                       >
                                         <Calculator className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                                        <span>{v[f.key] ?? '—'}</span>
+                                        <span>{fmt(v[f.key])}</span>
                                       </div>
                                       <span className="text-[9px] text-blue-800 font-medium">Формула</span>
                                     </div>
@@ -308,19 +310,17 @@ export function OmsuForm({ block, munId: propMunId, onMunIdChange }: { block?: s
                                     </div>
                                   ) : editable && isInputField ? (
                                     <WithValueTip show={v[f.key] !== null} updatedAt={v.updatedAt} author={v.signedBy ?? 'Иванова А.П.'}>
-                                      <Input
-                                        type="number"
-                                        step="0.01"
-                                        className="h-8 w-[76px] text-center mx-auto px-1 bg-white font-medium"
+                                      <CellInput
+                                        className="h-8 w-[76px] bg-white font-medium"
                                         placeholder="—"
-                                        value={v[f.key] ?? ''}
-                                        onChange={(e) =>
+                                        value={v[f.key] ?? null}
+                                        onChange={(val) =>
                                           dispatch({
                                             type: 'OMSU_SET_VALUE',
                                             munId,
                                             indId: ind.id,
                                             field: f.key,
-                                            value: e.target.value === '' ? null : Number(e.target.value),
+                                            value: val,
                                           })
                                         }
                                       />

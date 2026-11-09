@@ -11,6 +11,8 @@ import { SignDialog } from '@/components/SignDialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { CellInput } from '@/components/CellInput';
+import { fmt } from '@/lib/rating';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -256,7 +258,7 @@ function CioTerritoryIndicators({ block = 'mun', cioId, myOwnVisible, myFillable
                                         title="Значение установлено куратором МЭФ в Рабочем месте МЭФ с автосогласованием"
                                       >
                                         <Lock className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                                        <span>{omsuV?.[f.key] ?? '—'}</span>
+                                        <span>{fmt(omsuV?.[f.key])}</span>
                                       </div>
                                       <span className="text-[9px] text-amber-800 font-medium">Зафиксировано МЭФ</span>
                                     </div>
@@ -297,7 +299,7 @@ function CioTerritoryIndicators({ block = 'mun', cioId, myOwnVisible, myFillable
                                         title="Показатель закрыт от ввода и согласования"
                                       >
                                         <Lock className="w-3 h-3 text-slate-400 shrink-0" />
-                                        <span>{v[f.key] ?? '—'}</span>
+                                        <span>{fmt(v[f.key])}</span>
                                       </div>
                                       <span className="text-[9px] text-slate-400 font-medium">Закрыт</span>
                                     </div>
@@ -325,21 +327,19 @@ function CioTerritoryIndicators({ block = 'mun', cioId, myOwnVisible, myFillable
                                     </div>
                                   ) : isInputField ? (
                                     <>
-                                      <Input
-                                        type="number"
-                                        step="0.1"
-                                        className="h-8 w-[76px] text-center mx-auto bg-white px-1 font-medium border-amber-300"
+                                      <CellInput
+                                        className="h-8 w-[76px] bg-white font-medium border-amber-300"
                                         placeholder="—"
-                                        value={v[f.key] ?? ''}
+                                        value={v[f.key] ?? null}
                                         disabled={v.status === 'pending_mef' || v.status === 'approved'}
-                                        onChange={(e) =>
+                                        onChange={(val) =>
                                           dispatch({
                                             type: 'CIO_TERR_SET_VALUE',
                                             cioId: activeCio,
                                             indId: ind.id,
                                             munId: omsu.id,
                                             field: f.key,
-                                            value: e.target.value === '' ? null : Number(e.target.value),
+                                            value: val,
                                           })
                                         }
                                       />
@@ -778,19 +778,17 @@ function CioOwnIndicatorsOld({ block = 'obl', myOwnVisible, myFillable, collapse
                           ) : editable && isInputField ? (
                             <div className="flex flex-col items-center justify-center gap-1">
                               <WithValueTip show={v[f.key] !== null} updatedAt={v.updatedAt} author={v.signedBy ?? 'Петров С.И.'}>
-                                <Input
-                                  type="number"
-                                  step="0.1"
-                                  className="h-8 w-[76px] text-center mx-auto bg-white px-1 font-medium"
+                                <CellInput
+                                  className="h-8 w-[76px] bg-white font-medium"
                                   placeholder="—"
-                                  value={v[f.key] ?? ''}
-                                  onChange={(e) =>
+                                  value={v[f.key] ?? null}
+                                  onChange={(val) =>
                                     dispatch({
                                       type: 'CIO_SET_OWN',
                                       cioIndId: ind.id,
                                       cioId: CURRENT_CIO,
                                       field: f.key,
-                                      value: e.target.value === '' ? null : Number(e.target.value),
+                                      value: val,
                                     })
                                   }
                                 />

@@ -1,4 +1,4 @@
-import type { AppState, Indicator } from './types';
+import type { AppState, Indicator, CellValue } from './types';
 import { MUNICIPALITIES } from './data';
 
 /** Тип расчёта рейтинга */
@@ -53,7 +53,7 @@ export interface DirectionRating {
 /** Выбор значения в зависимости от режима рейтинга и квартала (оценка 2026 — рейтинговый год) */
 function pickValue(state: AppState, munId: string, indId: string, mode: 'preview' | 'final', period: number) {
   const v = state.omsuValues[munId]?.[indId];
-  if (!v || v.v2026 === null) return { value: null, approved: false };
+  if (!v || v.v2026 === null || typeof v.v2026 !== 'number') return { value: null, approved: false };
   const approved = v.status === 'approved';
   if (mode === 'final' && !approved) return { value: null, approved: false };
   return { value: r2(v.v2026 * quarterFactor(munId, indId, period)), approved };
@@ -236,7 +236,12 @@ export function allApproved(state: AppState): boolean {
   return s.approved === s.total;
 }
 
-export function fmt(v: number | null, digits = 2): string {
+export function fmt(v: CellValue | undefined, digits = 2): string {
   if (v === null || v === undefined) return '—';
-  return v.toLocaleString('ru-RU', { minimumFractionDigits: 0, maximumFractionDigits: digits });
+  if (v === '-' || v === '—') return '—';
+  if (v === '...') return '...';
+  if (typeof v === 'number') {
+    return v.toLocaleString('ru-RU', { minimumFractionDigits: 0, maximumFractionDigits: digits });
+  }
+  return String(v);
 }
