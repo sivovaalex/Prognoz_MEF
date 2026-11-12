@@ -91,6 +91,7 @@ export function Setup({ block = 'mun' }: { block?: string }) {
       calcException: '',
       isReference: false,
       hasRatingParams: false,
+      ratingValueFormula: '',
       ratingFormula: '',
       ratingFormulaZato: '',
     });
@@ -334,6 +335,7 @@ export function Setup({ block = 'mun' }: { block?: string }) {
                                 !!ind.calcException ||
                                 !!ind.ratingFormula
                               ),
+                              ratingValueFormula: ind.ratingValueFormula || '',
                               ratingFormula: ind.ratingFormula || '',
                               ratingFormulaZato: ind.ratingFormulaZato || '',
                             });
@@ -379,6 +381,7 @@ export function Setup({ block = 'mun' }: { block?: string }) {
                                       !!ind.calcException ||
                                       !!ind.ratingFormula
                                     ),
+                                    ratingValueFormula: ind.ratingValueFormula || '',
                                     ratingFormula: ind.ratingFormula || '',
                                     ratingFormulaZato: ind.ratingFormulaZato || '',
                                   });
@@ -845,13 +848,27 @@ export function Setup({ block = 'mun' }: { block?: string }) {
                       </div>
                     </div>
 
-                    {/* Формулы рейтинга: Общий и ЗАТО */}
+                    {/* Формула значения рейтинга */}
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-medium text-slate-700">Формула значения рейтинга:</Label>
+                      <div className="relative">
+                        <Input
+                          placeholder="Формула расчета значения рейтинга..."
+                          value={editInd.ratingValueFormula || ''}
+                          onChange={(e) => setEditInd({ ...editInd, ratingValueFormula: e.target.value })}
+                          className="h-9 text-xs font-mono rounded-lg border-slate-200 pr-9"
+                        />
+                        <Pencil className="w-3.5 h-3.5 text-slate-400 absolute right-3 top-2.5 pointer-events-none" />
+                      </div>
+                    </div>
+
+                    {/* Формулы места по значению рейтинга: Общий и ЗАТО */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-1.5">
-                        <Label className="text-xs font-medium text-slate-700">Формула рейтинга (Общий):</Label>
+                        <Label className="text-xs font-medium text-slate-700">Формула места по значению рейтинга:</Label>
                         <div className="relative">
                           <Input
-                            placeholder="Формула расчета рейтинга..."
+                            placeholder="Формула расчета места по значению рейтинга..."
                             value={editInd.ratingFormula || ''}
                             onChange={(e) => setEditInd({ ...editInd, ratingFormula: e.target.value })}
                             className="h-9 text-xs font-mono rounded-lg border-slate-200 pr-9"
@@ -862,12 +879,12 @@ export function Setup({ block = 'mun' }: { block?: string }) {
 
                       <div className="space-y-1.5">
                         <Label className={cn("text-xs font-medium", editInd.zato ? "text-slate-700" : "text-slate-400")}>
-                          Формула рейтинга ЗАТО:
+                          Формула Места по значению рейтинга ЗАТО:
                         </Label>
                         <div className="relative">
                           <Input
                             disabled={!editInd.zato}
-                            placeholder={editInd.zato ? "Формула расчета рейтинга ЗАТО..." : "Включите отметку ЗАТО ниже"}
+                            placeholder={editInd.zato ? "Формула расчета места для ЗАТО..." : "Включите отметку ЗАТО ниже"}
                             value={editInd.ratingFormulaZato || ''}
                             onChange={(e) => setEditInd({ ...editInd, ratingFormulaZato: e.target.value })}
                             className={cn(
@@ -880,9 +897,9 @@ export function Setup({ block = 'mun' }: { block?: string }) {
                       </div>
                     </div>
 
-                    {/* Исключение расчета */}
+                    {/* Исключения расчета (единое для ОМСУ и ЗАТО) */}
                     <div className="space-y-1.5">
-                      <Label className="text-xs font-medium text-slate-700">Исключение расчета:</Label>
+                      <Label className="text-xs font-medium text-slate-700">Исключения расчета:</Label>
                       <div className="relative">
                         <Input
                           placeholder="Дополнительное правило присвоения баллов и мест..."

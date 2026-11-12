@@ -353,8 +353,6 @@ export function RatingView({ role }: { role?: RoleId } = {}) {
                       <SelectItem value="none">Без сортировки</SelectItem>
                       <SelectItem value="place-desc">Место по убыванию</SelectItem>
                       <SelectItem value="place-asc">Место по возрастанию</SelectItem>
-                      <SelectItem value="dynplace-desc">Место динамики по убыванию</SelectItem>
-                      <SelectItem value="dynplace-asc">Место динамики по возрастанию</SelectItem>
                       <SelectItem value="final-desc">Итоговое место по убыванию</SelectItem>
                       <SelectItem value="final-asc">Итоговое место по возрастанию</SelectItem>
                     </SelectContent>
@@ -439,7 +437,6 @@ export function RatingView({ role }: { role?: RoleId } = {}) {
                       <th className={thCls}>Значение</th>
                       <th className={thCls}>Место по значению</th>
                       <th className={thCls}>Динамика</th>
-                      <th className={thCls}>Место по динамике</th>
                       <th className={thCls}>Итоговое место</th>
                     </tr>
                   </thead>
@@ -449,7 +446,6 @@ export function RatingView({ role }: { role?: RoleId } = {}) {
                       <td className={tdCls} style={{ background: rankColor(topPlace, n) }}>{fmt(topScore, 0)}</td>
                       <td className={tdCls} style={{ background: rankColor(topPlace, n) }}>{topPlace ?? '—'}</td>
                       <td className={tdCls}><DynCell delta={dynDelta(selMun + selInd)} /></td>
-                      <td className={tdCls}>{withDyn ? (dynPlaces(selInd)[selMun] ?? '—') : '—'}</td>
                       <td className={tdCls} style={{ background: rankColor(topPlaceShown, n) }}>{topPlaceShown ?? '—'}</td>
                     </tr>
                     {activeDirections.map((d) => {
@@ -465,14 +461,13 @@ export function RatingView({ role }: { role?: RoleId } = {}) {
                           <td className={tdCls} style={{ background: rankColor(dr?.place ?? null, n) }}>{fmt(dr?.score ?? null, 0)}</td>
                           <td className={tdCls} style={{ background: rankColor(dr?.place ?? null, n) }}>{dr?.place ?? '—'}</td>
                           <td className={tdCls}><DynCell delta={dynDelta(selMun + d.id)} /></td>
-                          <td className={tdCls}>{withDyn ? (dynPlaces(d.id)[selMun] ?? '—') : '—'}</td>
                           <td className={tdCls} style={{ background: rankColor(dPlaceShown, n) }}>{dPlaceShown ?? '—'}</td>
                         </tr>,
                         ...inds.map((ind) => {
                           if (ind.isGroup) {
                             return (
                               <tr key={ind.id} className="bg-slate-50/40">
-                                <td className={tdCls} colSpan={6}>
+                                <td className={tdCls} colSpan={5}>
                                   <span className="flex items-center gap-1 font-semibold text-slate-600" style={{ paddingLeft: `${24 + (ind.level - 1) * 18}px` }}>
                                     <TreeToggle
                                       hasChildren={parents.has(ind.id)}
@@ -509,7 +504,6 @@ export function RatingView({ role }: { role?: RoleId } = {}) {
                               </td>
                               <td className={tdCls} style={{ background: rankColor(c?.rank ?? null, n) }}>{c?.rank ?? '—'}</td>
                               <td className={tdCls}><DynCell delta={dynDelta(selMun + ind.id)} /></td>
-                              <td className={tdCls}>{withDyn ? (dynPlaces(ind.id)[selMun] ?? '—') : '—'}</td>
                               <td className={tdCls} style={{ background: rankColor(iPlaceShown, n) }}>{iPlaceShown ?? '—'}</td>
                             </tr>
                           );
@@ -532,7 +526,6 @@ export function RatingView({ role }: { role?: RoleId } = {}) {
                       <th className={thCls}>Значение</th>
                       <th className={thCls}>Место по значению</th>
                       <th className={thCls}>Динамика</th>
-                      <th className={thCls}>Место по динамике</th>
                       <th className={thCls}>Итоговое место</th>
                     </tr>
                   </thead>
@@ -548,7 +541,6 @@ export function RatingView({ role }: { role?: RoleId } = {}) {
                           <td className={tdCls} style={{ background: rankColor(place, n) }}>{fmt(val)}</td>
                           <td className={tdCls} style={{ background: rankColor(place, n) }}>{place ?? '—'}</td>
                           <td className={tdCls}><DynCell delta={dynDelta(r.munId + selInd)} /></td>
-                          <td className={tdCls}>{withDyn ? (dynPlaces(selInd)[r.munId] ?? '—') : '—'}</td>
                           <td className={tdCls} style={{ background: rankColor(finalPlace, n) }}>{finalPlace ?? '—'}</td>
                         </tr>
                       );
@@ -870,9 +862,6 @@ export function ZatoRatingView({ role }: { role?: RoleId } = {}) {
     setTimeout(() => setExportNotice(null), 4000);
   };
 
-  const dynPlaces = (key: string) =>
-    rankValues(zatoRows.map((m) => ({ id: m.munId, value: dynDelta(key + m.munId) })), 'max');
-
   const thCls = 'border border-slate-200 bg-slate-50 px-3 py-2 text-left text-xs font-semibold text-slate-700';
   const tdCls = 'border border-slate-100 px-3 py-1.5 text-xs text-slate-800';
 
@@ -1076,7 +1065,6 @@ export function ZatoRatingView({ role }: { role?: RoleId } = {}) {
                           <th className={thCls}>Значение</th>
                           <th className={thCls}>Место по значению</th>
                           <th className={thCls}>Динамика</th>
-                          <th className={thCls}>Место по динамике</th>
                           <th className={thCls}>Итоговое место</th>
                         </tr>
                       </thead>
@@ -1086,7 +1074,6 @@ export function ZatoRatingView({ role }: { role?: RoleId } = {}) {
                           <td className={tdCls} style={{ background: rankColor(topPlace, zatoN) }}>{fmt(topScore, 0)}</td>
                           <td className={tdCls} style={{ background: rankColor(topPlace, zatoN) }}>{topPlace ?? '—'}</td>
                           <td className={tdCls}><DynCell delta={dynDelta(selMun + selInd)} /></td>
-                          <td className={tdCls}>{withDyn ? (dynPlaces(selInd)[selMun] ?? '—') : '—'}</td>
                           <td className={tdCls} style={{ background: rankColor(topPlace, zatoN) }}>{topPlace ?? '—'}</td>
                         </tr>
                         {activeDirections.map((d) => {
@@ -1099,7 +1086,6 @@ export function ZatoRatingView({ role }: { role?: RoleId } = {}) {
                               <td className={tdCls} style={{ background: rankColor(dr?.place ?? null, zatoN) }}>{fmt(dr?.score ?? null, 0)}</td>
                               <td className={tdCls} style={{ background: rankColor(dr?.place ?? null, zatoN) }}>{dr?.place ?? '—'}</td>
                               <td className={tdCls}><DynCell delta={dynDelta(selMun + d.id)} /></td>
-                              <td className={tdCls}>{withDyn ? (dynPlaces(d.id)[selMun] ?? '—') : '—'}</td>
                               <td className={tdCls} style={{ background: rankColor(dr?.place ?? null, zatoN) }}>{dr?.place ?? '—'}</td>
                             </tr>,
                             ...dirInds.map((ind) => {
@@ -1112,7 +1098,6 @@ export function ZatoRatingView({ role }: { role?: RoleId } = {}) {
                                   </td>
                                   <td className={tdCls} style={{ background: rankColor(c?.rank ?? null, zatoN) }}>{c?.rank ?? '—'}</td>
                                   <td className={tdCls}><DynCell delta={dynDelta(selMun + ind.id)} /></td>
-                                  <td className={tdCls}>{withDyn ? (dynPlaces(ind.id)[selMun] ?? '—') : '—'}</td>
                                   <td className={tdCls} style={{ background: rankColor(c?.rank ?? null, zatoN) }}>{c?.rank ?? '—'}</td>
                                 </tr>
                               );
@@ -1151,7 +1136,6 @@ export function ZatoRatingView({ role }: { role?: RoleId } = {}) {
                           <th className={thCls}>Значение</th>
                           <th className={thCls}>Место по значению</th>
                           <th className={thCls}>Динамика</th>
-                          <th className={thCls}>Место по динамике</th>
                           <th className={thCls}>Итоговое место</th>
                         </tr>
                       </thead>
@@ -1166,7 +1150,6 @@ export function ZatoRatingView({ role }: { role?: RoleId } = {}) {
                               <td className={tdCls} style={{ background: rankColor(place, zatoN) }}>{fmt(val)}</td>
                               <td className={tdCls} style={{ background: rankColor(place, zatoN) }}>{place ?? '—'}</td>
                               <td className={tdCls}><DynCell delta={dynDelta(r.munId + selInd)} /></td>
-                              <td className={tdCls}>{withDyn ? (dynPlaces(selInd)[r.munId] ?? '—') : '—'}</td>
                               <td className={tdCls} style={{ background: rankColor(place, zatoN) }}>{place ?? '—'}</td>
                             </tr>
                           );

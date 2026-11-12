@@ -87,8 +87,9 @@ export interface Indicator {
   calcException?: string;      // исключения расчёта: доп. правило присвоения баллов или мест
   isReference?: boolean;       // Справочно
   hasRatingParams?: boolean;   // Параметры рейтинга включены
-  ratingFormula?: string;      // Формула рейтинга
-  ratingFormulaZato?: string;  // Формула рейтинга ЗАТО
+  ratingValueFormula?: string; // Формула значения рейтинга
+  ratingFormula?: string;      // Формула места по значению рейтинга (ранее Формула рейтинга)
+  ratingFormulaZato?: string;  // Формула Места по значению рейтинга ЗАТО (ранее Формула рейтинга ЗАТО)
 }
 
 /** Заполняемый показатель (не группа) */
