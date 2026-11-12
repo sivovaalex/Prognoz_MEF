@@ -69,6 +69,8 @@ export interface Indicator {
   unit: string;
   optimum: 'max' | 'min'; // что лучше: больше или меньше
   weight: number;
+  weightZato?: number;   // вес в рейтинге ЗАТО
+  order?: number;        // порядковый номер внутри группы
   formula?: string;        // формула базового прогноза
   consCoeff?: string;     // коэффициент консервативного прогноза
   formulaReport?: string;

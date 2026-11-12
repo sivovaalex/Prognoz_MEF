@@ -63,6 +63,10 @@ function pickValue(state: AppState, munId: string, indId: string, mode: 'preview
 const weightOf = (ind: Indicator, calcType: RatingCalcType): number =>
   calcType === 'individual' ? ind.weight || 1 : 1;
 
+/** Вес показателя в рейтинге ЗАТО */
+const weightOfZato = (ind: Indicator, calcType: RatingCalcType): number =>
+  calcType === 'individual' ? (ind.weightZato ?? ind.weight ?? 1) : 1;
+
 /** Ранжирование: лучшее значение = место 1 */
 export function rankValues(values: { id: string; value: number }[], optimum: 'max' | 'min'): Record<string, number> {
   const sorted = [...values].sort((x, y) => (optimum === 'max' ? y.value - x.value : x.value - y.value));
@@ -152,7 +156,7 @@ export function computeZatoRating(state: AppState, mode: 'preview' | 'final', op
     inds.forEach((ind) => {
       const { value, approved } = pickValue(state, m.id, ind.id, mode, period);
       const rank = value !== null ? ranksByInd[ind.id][m.id] ?? null : null;
-      if (rank !== null) score += rank * weightOf(ind, calcType);
+      if (rank !== null) score += rank * weightOfZato(ind, calcType);
       else missing += 1;
       cells[ind.id] = { value, approved, rank };
     });
