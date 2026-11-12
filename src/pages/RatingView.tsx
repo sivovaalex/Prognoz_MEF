@@ -499,12 +499,12 @@ export function RatingView({ role }: { role?: RoleId } = {}) {
                                   <span>{ind.num} {ind.name}</span>
                                 </span>
                               </td>
-                              <td className={tdCls} style={{ background: rankColor(c?.rank ?? null, n) }}>
+                              <td className={tdCls} style={{ background: rankColor(c?.rank ?? null, n, { green: ind.colorZoneGreen, yellow: ind.colorZoneYellow, red: ind.colorZoneRed }) }}>
                                 {fmt(c?.value ?? null)}{c && !c.approved && c.value !== null && mode === 'preview' ? ' *' : ''}
                               </td>
-                              <td className={tdCls} style={{ background: rankColor(c?.rank ?? null, n) }}>{c?.rank ?? '—'}</td>
+                              <td className={tdCls} style={{ background: rankColor(c?.rank ?? null, n, { green: ind.colorZoneGreen, yellow: ind.colorZoneYellow, red: ind.colorZoneRed }) }}>{c?.rank ?? '—'}</td>
                               <td className={tdCls}><DynCell delta={dynDelta(selMun + ind.id)} /></td>
-                              <td className={tdCls} style={{ background: rankColor(iPlaceShown, n) }}>{iPlaceShown ?? '—'}</td>
+                              <td className={tdCls} style={{ background: rankColor(iPlaceShown, n, { green: ind.colorZoneGreen, yellow: ind.colorZoneYellow, red: ind.colorZoneRed }) }}>{iPlaceShown ?? '—'}</td>
                             </tr>
                           );
                         }),
@@ -1093,12 +1093,12 @@ export function ZatoRatingView({ role }: { role?: RoleId } = {}) {
                               return (
                                 <tr key={ind.id}>
                                   <td className={tdCls}><span style={{ paddingLeft: 24 }}>{ind.num} {ind.name}</span></td>
-                                  <td className={tdCls} style={{ background: rankColor(c?.rank ?? null, zatoN) }}>
+                                  <td className={tdCls} style={{ background: rankColor(c?.rank ?? null, zatoN, { green: ind.colorZoneGreen, yellow: ind.colorZoneYellow, red: ind.colorZoneRed }) }}>
                                     {fmt(c?.value ?? null)}{c && !c.approved && c.value !== null && mode === 'preview' ? ' *' : ''}
                                   </td>
-                                  <td className={tdCls} style={{ background: rankColor(c?.rank ?? null, zatoN) }}>{c?.rank ?? '—'}</td>
+                                  <td className={tdCls} style={{ background: rankColor(c?.rank ?? null, zatoN, { green: ind.colorZoneGreen, yellow: ind.colorZoneYellow, red: ind.colorZoneRed }) }}>{c?.rank ?? '—'}</td>
                                   <td className={tdCls}><DynCell delta={dynDelta(selMun + ind.id)} /></td>
-                                  <td className={tdCls} style={{ background: rankColor(c?.rank ?? null, zatoN) }}>{c?.rank ?? '—'}</td>
+                                  <td className={tdCls} style={{ background: rankColor(c?.rank ?? null, zatoN, { green: ind.colorZoneGreen, yellow: ind.colorZoneYellow, red: ind.colorZoneRed }) }}>{c?.rank ?? '—'}</td>
                                 </tr>
                               );
                             }),

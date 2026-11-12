@@ -94,6 +94,9 @@ export function Setup({ block = 'mun' }: { block?: string }) {
       ratingValueFormula: '',
       ratingFormula: '',
       ratingFormulaZato: '',
+      colorZoneGreen: '',
+      colorZoneYellow: '',
+      colorZoneRed: '',
     });
   };
 
@@ -338,6 +341,9 @@ export function Setup({ block = 'mun' }: { block?: string }) {
                               ratingValueFormula: ind.ratingValueFormula || '',
                               ratingFormula: ind.ratingFormula || '',
                               ratingFormulaZato: ind.ratingFormulaZato || '',
+                              colorZoneGreen: ind.colorZoneGreen || '',
+                              colorZoneYellow: ind.colorZoneYellow || '',
+                              colorZoneRed: ind.colorZoneRed || '',
                             });
                           }}
                           className={`border-b ${ind.isGroup ? 'bg-slate-50/80' : 'hover:bg-slate-50 cursor-pointer'} ${
@@ -384,6 +390,9 @@ export function Setup({ block = 'mun' }: { block?: string }) {
                                     ratingValueFormula: ind.ratingValueFormula || '',
                                     ratingFormula: ind.ratingFormula || '',
                                     ratingFormulaZato: ind.ratingFormulaZato || '',
+                                    colorZoneGreen: ind.colorZoneGreen || '',
+                                    colorZoneYellow: ind.colorZoneYellow || '',
+                                    colorZoneRed: ind.colorZoneRed || '',
                                   });
                                 }}>
                                   <Pencil className="h-4 w-4" />
@@ -777,6 +786,8 @@ export function Setup({ block = 'mun' }: { block?: string }) {
                               <span className={(!editInd.closedForOmsuIds || editInd.closedForOmsuIds.length === 0) ? "text-slate-400 text-xs" : "text-slate-800 text-xs font-medium truncate"}>
                                 {(!editInd.closedForOmsuIds || editInd.closedForOmsuIds.length === 0)
                                   ? "Выберите..."
+                                  : (editInd.closedForOmsuIds.length === state.omsus.length)
+                                  ? `Выбраны все ОМСУ (${state.omsus.length})`
                                   : ('Выбрано ОМСУ: ' + editInd.closedForOmsuIds.length)}
                               </span>
                               <ChevronDown className="h-4 w-4 opacity-50 shrink-0 text-slate-500" />
@@ -784,8 +795,37 @@ export function Setup({ block = 'mun' }: { block?: string }) {
                           </PopoverTrigger>
                           <PopoverContent className="w-80 p-2 max-h-60 overflow-y-auto" align="start">
                             <div className="space-y-1">
-                              <div className="text-[11px] font-semibold text-slate-500 px-1.5 py-1 border-b">
-                                Выберите ОМСУ, которым закрыт ввод:
+                              <div className="flex items-center justify-between px-1.5 py-1.5 border-b border-slate-100 mb-1">
+                                <label className="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer select-none">
+                                  <input
+                                    type="checkbox"
+                                    className="h-3.5 w-3.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                                    checked={state.omsus.length > 0 && (editInd.closedForOmsuIds || []).length === state.omsus.length}
+                                    ref={(el) => {
+                                      if (el) {
+                                        const count = (editInd.closedForOmsuIds || []).length;
+                                        el.indeterminate = count > 0 && count < state.omsus.length;
+                                      }
+                                    }}
+                                    onChange={(e) => {
+                                      if (e.target.checked) {
+                                        setEditInd({ ...editInd, closedForOmsuIds: state.omsus.map((o) => o.id) });
+                                      } else {
+                                        setEditInd({ ...editInd, closedForOmsuIds: [] });
+                                      }
+                                    }}
+                                  />
+                                  <span>Выбрать все</span>
+                                </label>
+                                {(editInd.closedForOmsuIds || []).length > 0 && (
+                                  <button
+                                    type="button"
+                                    onClick={() => setEditInd({ ...editInd, closedForOmsuIds: [] })}
+                                    className="text-[11px] text-blue-600 hover:text-blue-800 font-medium"
+                                  >
+                                    Снять все
+                                  </button>
+                                )}
                               </div>
                               {state.omsus.map((o) => {
                                 const isChecked = (editInd.closedForOmsuIds || []).includes(o.id);
@@ -879,7 +919,7 @@ export function Setup({ block = 'mun' }: { block?: string }) {
 
                       <div className="space-y-1.5">
                         <Label className={cn("text-xs font-medium", editInd.zato ? "text-slate-700" : "text-slate-400")}>
-                          Формула Места по значению рейтинга ЗАТО:
+                          Формула места по значению рейтинга ЗАТО:
                         </Label>
                         <div className="relative">
                           <Input
@@ -908,6 +948,58 @@ export function Setup({ block = 'mun' }: { block?: string }) {
                           className="h-9 text-xs rounded-lg border-slate-200 pr-9"
                         />
                         <Pencil className="w-3.5 h-3.5 text-slate-400 absolute right-3 top-2.5 pointer-events-none" />
+                      </div>
+                    </div>
+
+                    {/* Цветовая настройка показателей рейтинга по зонам (единая для всех рейтингов) */}
+                    <div className="space-y-2 pt-1">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-xs font-semibold text-slate-800">
+                          Цветовая настройка показателей рейтинга по зонам:
+                        </Label>
+                        <span className="text-[11px] text-slate-500 font-normal">
+                          единая для всех рейтингов
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <div className="space-y-1.5 p-2.5 rounded-lg border border-emerald-100 bg-emerald-50/30">
+                          <Label className="flex items-center gap-1.5 text-xs font-medium text-emerald-800">
+                            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0" />
+                            Зеленая
+                          </Label>
+                          <Input
+                            placeholder="Значение..."
+                            value={editInd.colorZoneGreen || ''}
+                            onChange={(e) => setEditInd({ ...editInd, colorZoneGreen: e.target.value })}
+                            className="h-8 text-xs bg-white border-emerald-200 focus-visible:ring-emerald-400"
+                          />
+                        </div>
+
+                        <div className="space-y-1.5 p-2.5 rounded-lg border border-amber-100 bg-amber-50/30">
+                          <Label className="flex items-center gap-1.5 text-xs font-medium text-amber-800">
+                            <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shrink-0" />
+                            Желтая
+                          </Label>
+                          <Input
+                            placeholder="Значение..."
+                            value={editInd.colorZoneYellow || ''}
+                            onChange={(e) => setEditInd({ ...editInd, colorZoneYellow: e.target.value })}
+                            className="h-8 text-xs bg-white border-amber-200 focus-visible:ring-amber-400"
+                          />
+                        </div>
+
+                        <div className="space-y-1.5 p-2.5 rounded-lg border border-rose-100 bg-rose-50/30">
+                          <Label className="flex items-center gap-1.5 text-xs font-medium text-rose-800">
+                            <span className="w-2.5 h-2.5 rounded-full bg-rose-500 shrink-0" />
+                            Красная
+                          </Label>
+                          <Input
+                            placeholder="Значение..."
+                            value={editInd.colorZoneRed || ''}
+                            onChange={(e) => setEditInd({ ...editInd, colorZoneRed: e.target.value })}
+                            className="h-8 text-xs bg-white border-rose-200 focus-visible:ring-rose-400"
+                          />
+                        </div>
                       </div>
                     </div>
 

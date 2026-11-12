@@ -209,9 +209,44 @@ export function computeDirectionRatings(state: AppState, rows: MunRating[], opts
   return result;
 }
 
-/** Цвет ячейки по месту: зелёный (лучший) -> жёлтый -> красный (худший) */
-export function rankColor(rank: number | null, maxRank: number): string {
+export interface ColorZones {
+  green?: string;
+  yellow?: string;
+  red?: string;
+}
+
+/** Цвет ячейки по месту: зелёный (лучший) -> жёлтый -> красный (худший) с учётом ручной настройки зон показателя */
+export function rankColor(rank: number | null, maxRank: number, zones?: ColorZones): string {
   if (rank === null || maxRank <= 1) return '#f3f4f6';
+
+  if (zones && (zones.green || zones.yellow || zones.red)) {
+    const inRange = (val: number, expr?: string): boolean => {
+      if (!expr || !expr.trim()) return false;
+      const t = expr.trim();
+      const rangeMatch = t.match(/^(\d+(?:\.\d+)?)\s*(?:-|–|—|\.\.)\s*(\d+(?:\.\d+)?)$/);
+      if (rangeMatch) {
+        const min = parseFloat(rangeMatch[1]);
+        const max = parseFloat(rangeMatch[2]);
+        return val >= min && val <= max;
+      }
+      const lteMatch = t.match(/^<=\s*(\d+(?:\.\d+)?)$/);
+      if (lteMatch) return val <= parseFloat(lteMatch[1]);
+      const ltMatch = t.match(/^<\s*(\d+(?:\.\d+)?)$/);
+      if (ltMatch) return val < parseFloat(ltMatch[1]);
+      const gteMatch = t.match(/^>=\s*(\d+(?:\.\d+)?)$/);
+      if (gteMatch) return val >= parseFloat(gteMatch[1]);
+      const gtMatch = t.match(/^>\s*(\d+(?:\.\d+)?)$/);
+      if (gtMatch) return val > parseFloat(gtMatch[1]);
+      const num = parseFloat(t);
+      if (!isNaN(num)) return val <= num;
+      return false;
+    };
+
+    if (inRange(rank, zones.green)) return '#b7e4a8';
+    if (inRange(rank, zones.yellow)) return '#fff2a0';
+    if (inRange(rank, zones.red)) return '#ffb3a7';
+  }
+
   const t = (rank - 1) / (maxRank - 1); // 0 = лучший
   if (t < 0.34) return '#b7e4a8';
   if (t < 0.67) return '#fff2a0';
