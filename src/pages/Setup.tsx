@@ -22,6 +22,7 @@ import { Plus, Pencil, Settings2, Settings, PowerOff, LineChart, Maximize2, Mini
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 import { CollectionFormSettings } from '@/components/CollectionFormSettings';
+import { FormulaEditorModal } from '@/components/FormulaEditorModal';
 
 export function Setup({ block = 'mun' }: { block?: string }) {
   const { state, dispatch } = useStore();
@@ -34,6 +35,31 @@ export function Setup({ block = 'mun' }: { block?: string }) {
   const [dirError, setDirError] = useState<string | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [indErrors, setIndErrors] = useState<{ num?: string; name?: string }>({});
+  const [formulaModal, setFormulaModal] = useState<{
+    isOpen: boolean;
+    field: string;
+    title: string;
+    value: string;
+  } | null>(null);
+
+  const openFormulaEditor = (field: string, title: string, value: string) => {
+    setFormulaModal({
+      isOpen: true,
+      field,
+      title,
+      value: value || '',
+    });
+  };
+
+  const handleFormulaSave = (newFormula: string) => {
+    if (formulaModal && editInd) {
+      setEditInd({
+        ...editInd,
+        [formulaModal.field]: newFormula,
+      });
+    }
+    setFormulaModal(null);
+  };
 
   // Drag-and-drop: перестановка показателей с автоматической перенумерацией
   const [dragId, setDragId] = useState<string | null>(null);
@@ -678,7 +704,14 @@ export function Setup({ block = 'mun' }: { block?: string }) {
                         onChange={(e) => setEditInd({ ...editInd, formula: e.target.value })}
                         className="h-9 text-xs font-mono rounded-lg border-slate-200 pr-9"
                       />
-                      <Pencil className="w-3.5 h-3.5 text-slate-400 absolute right-3 top-2.5 pointer-events-none" />
+                      <button
+                        type="button"
+                        onClick={() => openFormulaEditor('formula', 'Формула базового прогноза', editInd.formula || '')}
+                        className="absolute right-2 top-2 p-1 text-slate-400 hover:text-blue-600 hover:bg-slate-100 rounded-md transition-colors cursor-pointer"
+                        title="Редактировать формулу"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
                     </div>
                   </div>
 
@@ -691,7 +724,14 @@ export function Setup({ block = 'mun' }: { block?: string }) {
                         onChange={(e) => setEditInd({ ...editInd, consCoeff: e.target.value })}
                         className="h-9 text-xs font-mono rounded-lg border-slate-200 pr-9"
                       />
-                      <Pencil className="w-3.5 h-3.5 text-slate-400 absolute right-3 top-2.5 pointer-events-none" />
+                      <button
+                        type="button"
+                        onClick={() => openFormulaEditor('consCoeff', 'Формула консервативного прогноза', editInd.consCoeff || '')}
+                        className="absolute right-2 top-2 p-1 text-slate-400 hover:text-blue-600 hover:bg-slate-100 rounded-md transition-colors cursor-pointer"
+                        title="Редактировать формулу"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -705,7 +745,14 @@ export function Setup({ block = 'mun' }: { block?: string }) {
                       onChange={(e) => setEditInd({ ...editInd, formulaReport: e.target.value })}
                       className="h-9 text-xs font-mono rounded-lg border-slate-200 pr-9"
                     />
-                    <Pencil className="w-3.5 h-3.5 text-slate-400 absolute right-3 top-2.5 pointer-events-none" />
+                    <button
+                      type="button"
+                      onClick={() => openFormulaEditor('formulaReport', 'Формула отчета', editInd.formulaReport || '')}
+                      className="absolute right-2 top-2 p-1 text-slate-400 hover:text-blue-600 hover:bg-slate-100 rounded-md transition-colors cursor-pointer"
+                      title="Редактировать формулу"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </button>
                   </div>
                 </div>
 
@@ -718,7 +765,14 @@ export function Setup({ block = 'mun' }: { block?: string }) {
                       onChange={(e) => setEditInd({ ...editInd, formulaEstimate: e.target.value })}
                       className="h-9 text-xs font-mono rounded-lg border-slate-200 pr-9"
                     />
-                    <Pencil className="w-3.5 h-3.5 text-slate-400 absolute right-3 top-2.5 pointer-events-none" />
+                    <button
+                      type="button"
+                      onClick={() => openFormulaEditor('formulaEstimate', 'Формула оценки', editInd.formulaEstimate || '')}
+                      className="absolute right-2 top-2 p-1 text-slate-400 hover:text-blue-600 hover:bg-slate-100 rounded-md transition-colors cursor-pointer"
+                      title="Редактировать формулу"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </button>
                   </div>
                 </div>
               </div>
@@ -898,7 +952,14 @@ export function Setup({ block = 'mun' }: { block?: string }) {
                           onChange={(e) => setEditInd({ ...editInd, ratingValueFormula: e.target.value })}
                           className="h-9 text-xs font-mono rounded-lg border-slate-200 pr-9"
                         />
-                        <Pencil className="w-3.5 h-3.5 text-slate-400 absolute right-3 top-2.5 pointer-events-none" />
+                        <button
+                          type="button"
+                          onClick={() => openFormulaEditor('ratingValueFormula', 'Формула значения рейтинга', editInd.ratingValueFormula || '')}
+                          className="absolute right-2 top-2 p-1 text-slate-400 hover:text-blue-600 hover:bg-slate-100 rounded-md transition-colors cursor-pointer"
+                          title="Редактировать формулу"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                        </button>
                       </div>
                     </div>
 
@@ -913,7 +974,14 @@ export function Setup({ block = 'mun' }: { block?: string }) {
                             onChange={(e) => setEditInd({ ...editInd, ratingFormula: e.target.value })}
                             className="h-9 text-xs font-mono rounded-lg border-slate-200 pr-9"
                           />
-                          <Pencil className="w-3.5 h-3.5 text-slate-400 absolute right-3 top-2.5 pointer-events-none" />
+                          <button
+                            type="button"
+                            onClick={() => openFormulaEditor('ratingFormula', 'Формула места по значению рейтинга', editInd.ratingFormula || '')}
+                            className="absolute right-2 top-2 p-1 text-slate-400 hover:text-blue-600 hover:bg-slate-100 rounded-md transition-colors cursor-pointer"
+                            title="Редактировать формулу"
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
                         </div>
                       </div>
 
@@ -932,7 +1000,18 @@ export function Setup({ block = 'mun' }: { block?: string }) {
                               !editInd.zato && "bg-slate-50 text-slate-400 cursor-not-allowed"
                             )}
                           />
-                          <Pencil className="w-3.5 h-3.5 text-slate-400 absolute right-3 top-2.5 pointer-events-none" />
+                          <button
+                            type="button"
+                            disabled={!editInd.zato}
+                            onClick={() => editInd.zato && openFormulaEditor('ratingFormulaZato', 'Формула места по значению рейтинга ЗАТО', editInd.ratingFormulaZato || '')}
+                            className={cn(
+                              "absolute right-2 top-2 p-1 rounded-md transition-colors",
+                              editInd.zato ? "text-slate-400 hover:text-blue-600 hover:bg-slate-100 cursor-pointer" : "text-slate-300 cursor-not-allowed"
+                            )}
+                            title="Редактировать формулу"
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -947,7 +1026,14 @@ export function Setup({ block = 'mun' }: { block?: string }) {
                           onChange={(e) => setEditInd({ ...editInd, calcException: e.target.value })}
                           className="h-9 text-xs rounded-lg border-slate-200 pr-9"
                         />
-                        <Pencil className="w-3.5 h-3.5 text-slate-400 absolute right-3 top-2.5 pointer-events-none" />
+                        <button
+                          type="button"
+                          onClick={() => openFormulaEditor('calcException', 'Исключения расчета', editInd.calcException || '')}
+                          className="absolute right-2 top-2 p-1 text-slate-400 hover:text-blue-600 hover:bg-slate-100 rounded-md transition-colors cursor-pointer"
+                          title="Редактировать правило/формулу"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                        </button>
                       </div>
                     </div>
 
@@ -1141,6 +1227,18 @@ export function Setup({ block = 'mun' }: { block?: string }) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Модальное окно редактирования формулы */}
+      {formulaModal && formulaModal.isOpen && (
+        <FormulaEditorModal
+          isOpen={formulaModal.isOpen}
+          onClose={() => setFormulaModal(null)}
+          title={formulaModal.title}
+          initialFormula={formulaModal.value}
+          indicators={state.indicators}
+          onSave={handleFormulaSave}
+        />
+      )}
     </div>
   );
 }

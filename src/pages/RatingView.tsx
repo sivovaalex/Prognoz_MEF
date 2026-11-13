@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useStore } from '@/lib/store';
 
-import { computeRating, computeZatoRating, computeDirectionRatings, rankValues, rankColor, fmt, type RatingCalcType, type MunRating } from '@/lib/rating';
+import { computeRating, computeZatoRating, computeDirectionRatings, rankColor, fmt, type RatingCalcType, type MunRating } from '@/lib/rating';
 import { RATING_DEFAULT_PERIODS } from '@/lib/data';
 import { EMPTY_TREE_FILTER, chevronParents, visibleTree } from '@/lib/indTree';
 import { TreeToggle } from '@/components/IndToolbar';
@@ -9,15 +9,11 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { RoleId } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
-} from '@/components/ui/dialog';
-import { TrendingUp, TrendingDown, Minus, Calculator, Info, FileSpreadsheet, CheckCircle2 } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus, Calculator, FileSpreadsheet, CheckCircle2 } from 'lucide-react';
+import { FormulaEditorModal } from '@/components/FormulaEditorModal';
 
 function now(): string {
   const d = new Date();
@@ -88,7 +84,6 @@ export function RatingView({ role }: { role?: RoleId } = {}) {
 
   const canConfigureFormula = role === 'admin';
   const [isFormulaModalOpen, setIsFormulaModalOpen] = useState(false);
-  const [formulaInput, setFormulaInput] = useState(state.finalRatingFormula || 'СУММ(Ранг_показателя * Вес)');
 
   // ── Выпадающие списки-фильтры ─────────────────────────────────────────────
   // 1. Тип расчёта: исходный алгоритм / индивидуальный вес
@@ -113,8 +108,6 @@ export function RatingView({ role }: { role?: RoleId } = {}) {
   const [selInd, setSelInd] = useState<string>('total');
   // 4. Территория (только не ЗАТО для общего рейтинга)
   const [selMun, setSelMun] = useState<string>(state.omsus.find((m) => !m.isZato)?.id || state.omsus[0]?.id);
-  // 5. С учётом динамики (вкладки «По территории» и «По разделу показателя»)
-  const [withDyn, setWithDyn] = useState(false);
   // Активная вкладка
   const [tab, setTab] = useState('territory');
   // 6. Вкладка «По разделу показателя»: сортировка строк
@@ -128,19 +121,6 @@ export function RatingView({ role }: { role?: RoleId } = {}) {
   // Короткие названия ответственных ЦИО для шапки «По показателям»
   const cioById = useMemo(() => new Map(state.cios.map((c) => [c.id, c])), [state.cios]);
   const dirRows = useMemo(() => computeDirectionRatings(state, rows, { calcType }), [state, rows, calcType]);
-
-  // Динамика: место ОМСУ по динамике (1 = лучшая динамика) среди обычных ОМСУ
-  const dynPlaces = (key: string) =>
-    rankValues(state.omsus.filter((m) => !m.isZato).map((m) => ({ id: m.id, value: dynDelta(key + m.id) })), 'max');
-  // Итоговое место с учётом динамики: ранг по (базовый балл + место по динамике)
-  const dynAdjustedPlace = (key: string, base: Record<string, number | null>, munId: string): number | null => {
-    const dp = dynPlaces(key);
-    const combined = state.omsus
-      .filter((m) => !m.isZato && base[m.id] != null)
-      .map((m) => ({ id: m.id, value: (base[m.id] as number) + dp[m.id] }));
-    if (!combined.length) return null;
-    return rankValues(combined, 'min')[munId] ?? null;
-  };
 
   // Территории: ОМСУ без признака ЗАТО по алфавиту (первая — Балашиха)
   const munsSorted = useMemo(
@@ -185,33 +165,18 @@ export function RatingView({ role }: { role?: RoleId } = {}) {
   // Итоговая строка сводной оценки: по выбранному направлению либо общий рейтинг
   const topScore = selDirection ? (dirRows[selDirection.id]?.[selMun]?.score ?? null) : mun.score;
   const topPlace = selDirection ? (dirRows[selDirection.id]?.[selMun]?.place ?? null) : mun.place;
-
-  // Базовые баллы по всем ОМСУ для расчёта места «с учётом динамики»
-  const topBaseScores: Record<string, number | null> = {};
-  rows.forEach((r) => {
-    topBaseScores[r.munId] = selDirection ? (dirRows[selDirection.id]?.[r.munId]?.score ?? null) : r.score;
-  });
-  const topPlaceShown = withDyn ? dynAdjustedPlace(selInd, topBaseScores, selMun) : topPlace;
-
-  // Вкладка «По разделу показателя»: базовые баллы выбранного раздела (для «итогового места» с динамикой)
-  const dirTabBaseScores: Record<string, number | null> = {};
-  rows.forEach((r) => {
-    dirTabBaseScores[r.munId] = selInd === 'total' ? r.score : (dirRows[selInd]?.[r.munId]?.score ?? null);
-  });
+  const topPlaceShown = topPlace;
 
   // Вкладка «По разделу показателя»: сортировка строк
-  // (без сортировки / место / место динамики / итоговое место — по возрастанию или убыванию)
   const dirSortedRows: MunRating[] = (() => {
     const list = [...rows].sort((a, b) => a.name.localeCompare(b.name, 'ru'));
     if (sortDir === 'none') return list;
-    const dp = dynPlaces(selInd);
     const basePlace = (m: MunRating) =>
       selInd === 'total' ? m.place : (dirRows[selInd]?.[m.munId]?.place ?? null);
     const val = (m: MunRating): number | null => {
-      if (sortDir === 'place-asc' || sortDir === 'place-desc') return basePlace(m);
-      if (sortDir === 'dynplace-asc' || sortDir === 'dynplace-desc') return dp[m.munId] ?? null;
-      if (sortDir === 'final-asc' || sortDir === 'final-desc')
-        return withDyn ? dynAdjustedPlace(selInd, dirTabBaseScores, m.munId) : basePlace(m);
+      if (sortDir === 'place-asc' || sortDir === 'place-desc' || sortDir === 'final-asc' || sortDir === 'final-desc') {
+        return basePlace(m);
+      }
       return null;
     };
     const desc = sortDir.endsWith('-desc');
@@ -332,17 +297,6 @@ export function RatingView({ role }: { role?: RoleId } = {}) {
                 </div>
               </div>
             )}
-            {(tab === 'territory' || tab === 'direction') && (
-              <label className="mb-2 flex cursor-pointer select-none items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                  checked={withDyn}
-                  onChange={(e) => setWithDyn(e.target.checked)}
-                />
-                С учётом динамики
-              </label>
-            )}
             {tab === 'direction' && (
               <div className="space-y-1">
                 <span className="text-xs font-medium text-muted-foreground">Сортировка</span>
@@ -414,10 +368,7 @@ export function RatingView({ role }: { role?: RoleId } = {}) {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => {
-                    setFormulaInput(state.finalRatingFormula || 'СУММ(Ранг_показателя * Вес)');
-                    setIsFormulaModalOpen(true);
-                  }}
+                  onClick={() => setIsFormulaModalOpen(true)}
                   className="flex items-center gap-1.5 border-blue-200 bg-blue-50/60 text-blue-800 hover:bg-blue-100 hover:text-blue-900 font-medium shadow-xs"
                 >
                   <Calculator className="h-4 w-4 text-blue-600" />
@@ -452,9 +403,7 @@ export function RatingView({ role }: { role?: RoleId } = {}) {
                       const dr = dirRows[d.id]?.[selMun];
                       const inds = visible.filter((i) => i.directionId === d.id);
                       if (!inds.length) return [];
-                      const dBase: Record<string, number | null> = {};
-                      rows.forEach((r) => { dBase[r.munId] = dirRows[d.id]?.[r.munId]?.score ?? null; });
-                      const dPlaceShown = withDyn ? dynAdjustedPlace(d.id, dBase, selMun) : (dr?.place ?? null);
+                      const dPlaceShown = dr?.place ?? null;
                       return [
                         <tr key={d.id} className="font-medium bg-slate-50/60">
                           <td className={tdCls}>{d.name}</td>
@@ -484,9 +433,7 @@ export function RatingView({ role }: { role?: RoleId } = {}) {
                             );
                           }
                           const c = mun.cells[ind.id];
-                          const iBase: Record<string, number | null> = {};
-                          rows.forEach((r) => { iBase[r.munId] = r.cells[ind.id]?.rank ?? null; });
-                          const iPlaceShown = withDyn ? dynAdjustedPlace(ind.id, iBase, selMun) : (c?.rank ?? null);
+                          const iPlaceShown = c?.rank ?? null;
                           return (
                             <tr key={ind.id}>
                               <td className={tdCls}>
@@ -534,7 +481,7 @@ export function RatingView({ role }: { role?: RoleId } = {}) {
                       const dr = selInd === 'total' ? null : (dirRows[selInd]?.[r.munId] ?? null);
                       const val = selInd === 'total' ? r.score : (dr?.score ?? null);
                       const place = selInd === 'total' ? r.place : (dr?.place ?? null);
-                      const finalPlace = withDyn ? dynAdjustedPlace(selInd, dirTabBaseScores, r.munId) : place;
+                      const finalPlace = place;
                       return (
                         <tr key={r.munId}>
                           <td className={tdCls}>{idx + 1}. {r.name}</td>
@@ -656,85 +603,22 @@ export function RatingView({ role }: { role?: RoleId } = {}) {
       </Card>
 
       {/* Модальное окно «Настройка итогового рейтинга» */}
-      <Dialog open={isFormulaModalOpen} onOpenChange={setIsFormulaModalOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-base">
-              <Calculator className="h-5 w-5 text-blue-600" />
-              Настройка итогового рейтинга
-            </DialogTitle>
-            <DialogDescription className="text-xs text-muted-foreground">
-              Задайте математическую формулу расчета итогового рейтинга ОМСУ.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 py-2">
-            <div className="space-y-1.5">
-              <Label htmlFor="rating-formula" className="text-sm font-semibold">
-                Формула
-              </Label>
-              <Input
-                id="rating-formula"
-                value={formulaInput}
-                onChange={(e) => setFormulaInput(e.target.value)}
-                placeholder="СУММ(Ранг_показателя * Вес)"
-                className="font-mono text-xs h-9"
-              />
-              <p className="text-[11px] text-muted-foreground">
-                Формула задает алгоритм расчета итогового рейтинга ОМСУ.
-              </p>
-            </div>
-
-            <div className="rounded-md border bg-slate-50 p-2.5 text-xs space-y-1.5">
-              <div className="font-medium text-slate-700 flex items-center gap-1">
-                <Info className="h-3.5 w-3.5 text-blue-500" />
-                Примеры и переменные:
-              </div>
-              <div className="flex flex-wrap gap-1">
-                {[
-                  'СУММ(Ранг_показателя * Вес)',
-                  'СУММ(Балл_направления)',
-                  'СРЗНАЧ(Ранг_показателя)',
-                  'Ранг_показателя',
-                  'Вес',
-                ].map((chip) => (
-                  <button
-                    key={chip}
-                    type="button"
-                    onClick={() => setFormulaInput(chip)}
-                    className="rounded bg-white border border-slate-200 px-1.5 py-0.5 text-[10px] font-mono text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
-                    title={`Вставить "${chip}"`}
-                  >
-                    {chip}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setIsFormulaModalOpen(false)}
-            >
-              Отмена
-            </Button>
-            <Button
-              size="sm"
-              onClick={() => {
-                dispatch({
-                  type: 'SET_FINAL_RATING_FORMULA',
-                  formula: formulaInput.trim() || 'СУММ(Ранг_показателя * Вес)',
-                });
-                setIsFormulaModalOpen(false);
-              }}
-            >
-              Сохранить
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {isFormulaModalOpen && (
+        <FormulaEditorModal
+          isOpen={isFormulaModalOpen}
+          onClose={() => setIsFormulaModalOpen(false)}
+          title="Итоговый рейтинг ОМСУ"
+          initialFormula={state.finalRatingFormula || 'СУММ(Ранг_показателя * Вес)'}
+          indicators={state.indicators}
+          onSave={(formula) => {
+            dispatch({
+              type: 'SET_FINAL_RATING_FORMULA',
+              formula: formula.trim() || 'СУММ(Ранг_показателя * Вес)',
+            });
+            setIsFormulaModalOpen(false);
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -814,7 +698,6 @@ export function ZatoRatingView({ role }: { role?: RoleId } = {}) {
   const canConfigureFormula = role === 'admin';
 
   const [isFormulaModalOpen, setIsFormulaModalOpen] = useState(false);
-  const [formulaInput, setFormulaInput] = useState(state.finalRatingFormulaZato || 'СУММ(Ранг_показателя * Вес)');
 
   const ratingPeriods = useMemo(() => {
     const curName = state.campaign.module === 'rating' && state.campaign.period
@@ -835,7 +718,6 @@ export function ZatoRatingView({ role }: { role?: RoleId } = {}) {
   const [tab, setTab] = useState('zterritory');
   const [selMun, setSelMun] = useState<string>('m52');
   const [selInd, setSelInd] = useState<string>('total');
-  const [withDyn, setWithDyn] = useState(false);
   const [sortDir, setSortDir] = useState<string>('none');
   const [compareSort, setCompareSort] = useState<string>('none');
 
@@ -1004,12 +886,6 @@ export function ZatoRatingView({ role }: { role?: RoleId } = {}) {
                 </Select>
               </div>
             )}
-            {(tab === 'zterritory' || tab === 'zdirection') && (
-              <label className="flex cursor-pointer select-none items-center gap-2 text-sm">
-                <input type="checkbox" className="h-4 w-4 rounded border-gray-300" checked={withDyn} onChange={(e) => setWithDyn(e.target.checked)} />
-                С учётом динамики
-              </label>
-            )}
           </div>
         </CardContent>
       </Card>
@@ -1037,10 +913,7 @@ export function ZatoRatingView({ role }: { role?: RoleId } = {}) {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => {
-                    setFormulaInput(state.finalRatingFormulaZato || 'СУММ(Ранг_показателя * Вес)');
-                    setIsFormulaModalOpen(true);
-                  }}
+                  onClick={() => setIsFormulaModalOpen(true)}
                   className="flex items-center gap-1.5 border-blue-200 bg-blue-50/60 text-blue-800 hover:bg-blue-100 hover:text-blue-900 font-medium shadow-xs"
                 >
                   <Calculator className="h-4 w-4 text-blue-600" />
@@ -1273,85 +1146,22 @@ export function ZatoRatingView({ role }: { role?: RoleId } = {}) {
       </Card>
 
       {/* Модальное окно «Настройка итогового рейтинга ЗАТО» */}
-      <Dialog open={isFormulaModalOpen} onOpenChange={setIsFormulaModalOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-base">
-              <Calculator className="h-5 w-5 text-blue-600" />
-              Настройка итогового рейтинга ЗАТО
-            </DialogTitle>
-            <DialogDescription className="text-xs text-muted-foreground">
-              Задайте математическую формулу расчета итогового рейтинга ОМСУ для закрытых административно-территориальных образований.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 py-2">
-            <div className="space-y-1.5">
-              <Label htmlFor="zato-rating-formula" className="text-sm font-semibold">
-                Формула рейтинга ЗАТО
-              </Label>
-              <Input
-                id="zato-rating-formula"
-                value={formulaInput}
-                onChange={(e) => setFormulaInput(e.target.value)}
-                placeholder="СУММ(Ранг_показателя * Вес)"
-                className="font-mono text-xs h-9"
-              />
-              <p className="text-[11px] text-muted-foreground">
-                Формула задает алгоритм расчета итогового рейтинга для ОМСУ ЗАТО.
-              </p>
-            </div>
-
-            <div className="rounded-md border bg-slate-50 p-2.5 text-xs space-y-1.5">
-              <div className="font-medium text-slate-700 flex items-center gap-1">
-                <Info className="h-3.5 w-3.5 text-blue-500" />
-                Примеры и переменные:
-              </div>
-              <div className="flex flex-wrap gap-1">
-                {[
-                  'СУММ(Ранг_показателя * Вес)',
-                  'СУММ(Балл_направления)',
-                  'СРЗНАЧ(Ранг_показателя)',
-                  'Ранг_показателя',
-                  'Вес',
-                ].map((chip) => (
-                  <button
-                    key={chip}
-                    type="button"
-                    onClick={() => setFormulaInput(chip)}
-                    className="rounded bg-white border border-slate-200 px-1.5 py-0.5 text-[10px] font-mono text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
-                    title={`Вставить "${chip}"`}
-                  >
-                    {chip}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setIsFormulaModalOpen(false)}
-            >
-              Отмена
-            </Button>
-            <Button
-              size="sm"
-              onClick={() => {
-                dispatch({
-                  type: 'SET_FINAL_RATING_FORMULA_ZATO',
-                  formula: formulaInput.trim() || 'СУММ(Ранг_показателя * Вес)',
-                });
-                setIsFormulaModalOpen(false);
-              }}
-            >
-              Сохранить
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {isFormulaModalOpen && (
+        <FormulaEditorModal
+          isOpen={isFormulaModalOpen}
+          onClose={() => setIsFormulaModalOpen(false)}
+          title="Итоговый рейтинг ОМСУ ЗАТО"
+          initialFormula={state.finalRatingFormulaZato || 'СУММ(Ранг_показателя * Вес)'}
+          indicators={state.indicators.filter((i) => i.zato)}
+          onSave={(formula) => {
+            dispatch({
+              type: 'SET_FINAL_RATING_FORMULA_ZATO',
+              formula: formula.trim() || 'СУММ(Ранг_показателя * Вес)',
+            });
+            setIsFormulaModalOpen(false);
+          }}
+        />
+      )}
     </div>
   );
 }
