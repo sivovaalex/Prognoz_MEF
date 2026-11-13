@@ -161,11 +161,7 @@ export function Setup({ block = 'mun' }: { block?: string }) {
     if (isNew) {
       dispatch({ type: 'ADD_INDICATOR', indicator: editInd });
     } else {
-      const oldInd = state.indicators.find(i => i.id === editInd.id);
-      if (oldInd) {
-        dispatch({ type: 'UPDATE_INDICATOR', indicator: { ...oldInd, actualTo: editInd.actualFrom } });
-      }
-      dispatch({ type: 'ADD_INDICATOR', indicator: { ...editInd, id: 'i' + Date.now() }, afterId: oldInd?.id });
+      dispatch({ type: 'UPDATE_INDICATOR', indicator: editInd });
     }
     setEditInd(null);
     setIsFullscreen(false);
