@@ -12,7 +12,9 @@ import { Button } from '@/components/ui/button';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
-import { TrendingUp, TrendingDown, Minus, Calculator, FileSpreadsheet, CheckCircle2 } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus, Calculator, FileSpreadsheet, CheckCircle2, Send } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { FormulaEditorModal } from '@/components/FormulaEditorModal';
 
 function now(): string {
@@ -83,7 +85,10 @@ export function RatingView({ role }: { role?: RoleId } = {}) {
   const mode = state.ratingMode;
 
   const canConfigureFormula = role === 'admin';
+  const canPublish = role === 'mef' || role === 'admin' || !role;
   const [isFormulaModalOpen, setIsFormulaModalOpen] = useState(false);
+  const [isPublishDialogOpen, setIsPublishDialogOpen] = useState(false);
+  const [publishNotice, setPublishNotice] = useState<string | null>(null);
 
   // ── Выпадающие списки-фильтры ─────────────────────────────────────────────
   // 1. Тип расчёта: исходный алгоритм / индивидуальный вес
@@ -202,37 +207,35 @@ export function RatingView({ role }: { role?: RoleId } = {}) {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      {/* Заголовок и переключатель режимов */}
+      <div className="flex flex-wrap items-center justify-between gap-4 pb-1">
         <div>
-          <h2 className="text-lg font-semibold">Сводный рейтинг ОМСУ</h2>
-          <p className="text-sm text-muted-foreground">
+          <h2 className="text-lg font-semibold text-slate-900">Сводный рейтинг ОМСУ</h2>
+          <p className="text-xs text-muted-foreground mt-0.5">
             Период сбора: {selectedPeriodName} · Тип расчёта: {calcType === 'base' ? 'исходный алгоритм' : 'индивидуальный вес'} · Источник данных: ведомственные данные · Обновлено: {now()}
           </p>
         </div>
-        <div className="flex items-center flex-wrap gap-2">
-          {exportNotice && (
-            <div className="text-xs bg-emerald-50 text-emerald-800 border border-emerald-200 px-3 py-1 rounded-md flex items-center gap-1.5 animate-in fade-in">
-              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
-              <span>{exportNotice}</span>
-            </div>
-          )}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleExportExcel}
-            className="h-8 text-xs font-medium gap-1.5 border-slate-300 hover:bg-slate-50 text-slate-700"
-          >
-            <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-600" />
-            Экспорт в Excel
-          </Button>
+
+        {/* Переключатель режимов / вкладок рейтинга */}
+        <div className="inline-flex p-1 bg-slate-100 rounded-lg border border-slate-200/80 gap-1">
           <button
-            className={`rounded-full px-3 py-1 text-xs font-medium border ${mode === 'preview' ? 'bg-amber-100 border-amber-400 text-amber-900' : 'bg-white text-gray-600'}`}
+            type="button"
+            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all cursor-pointer ${
+              mode === 'preview'
+                ? 'bg-amber-100 text-amber-900 border border-amber-300 shadow-xs font-semibold'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+            }`}
             onClick={() => dispatch({ type: 'SET_RATING_MODE', mode: 'preview' })}
           >
             Предварительный (все введённые)
           </button>
           <button
-            className={`rounded-full px-3 py-1 text-xs font-medium border ${mode === 'final' ? 'bg-green-100 border-green-400 text-green-900' : 'bg-white text-gray-600'}`}
+            type="button"
+            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all cursor-pointer ${
+              mode === 'final'
+                ? 'bg-green-100 text-green-900 border border-green-300 shadow-xs font-semibold'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+            }`}
             onClick={() => dispatch({ type: 'SET_RATING_MODE', mode: 'final' })}
           >
             Итоговый (только согласованные)
@@ -243,6 +246,30 @@ export function RatingView({ role }: { role?: RoleId } = {}) {
       {mode === 'preview' && (
         <div className="rounded-md border border-amber-300 bg-amber-50 p-2.5 text-xs text-amber-900">
           Предварительный расчёт: учитываются все введённые данные, в т.ч. несогласованные (выделены «*»). Доступен куратору МЭФ в ходе сбора.
+        </div>
+      )}
+
+      {mode === 'final' && (
+        <div className={`rounded-md border p-2.5 text-xs flex items-center gap-2 ${
+          state.finalPublished
+            ? 'border-emerald-300 bg-emerald-50 text-emerald-950'
+            : 'border-blue-200 bg-blue-50/70 text-blue-900'
+        }`}>
+          <CheckCircle2 className={`h-4 w-4 shrink-0 ${state.finalPublished ? 'text-emerald-600' : 'text-blue-600'}`} />
+          <span>
+            {state.finalPublished ? (
+              <><strong>Итоговый рейтинг официально опубликован.</strong> Сформирован эталонный срез на основе согласованных данных ЦИО и ОМСУ. Кампания зафиксирована.</>
+            ) : (
+              <><strong>Итоговый расчёт:</strong> учитываются только согласованные данные (без «*»). Проверьте результаты перед официальной публикацией.</>
+            )}
+          </span>
+        </div>
+      )}
+
+      {publishNotice && (
+        <div className="rounded-md border border-emerald-300 bg-emerald-50 p-2.5 text-xs text-emerald-900 flex items-center gap-2 animate-in fade-in">
+          <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+          <span>{publishNotice}</span>
         </div>
       )}
 
@@ -348,10 +375,65 @@ export function RatingView({ role }: { role?: RoleId } = {}) {
         </CardContent>
       </Card>
 
-      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-        <span>min</span>
-        <div className="h-3 w-64 rounded" style={{ background: 'linear-gradient(to right, #b7e4a8, #fff2a0, #ffb3a7)' }} />
-        <span>max</span>
+      {/* Шкала цветовой индикации параллельно с кнопками действий */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <span>min</span>
+          <div className="h-3 w-64 rounded" style={{ background: 'linear-gradient(to right, #b7e4a8, #fff2a0, #ffb3a7)' }} />
+          <span>max</span>
+        </div>
+
+        {/* Кнопки действий: Экспорт в Excel и Опубликовать итоговый рейтинг */}
+        <div className="flex items-center flex-wrap gap-2">
+          {exportNotice && (
+            <div className="text-xs bg-emerald-50 text-emerald-800 border border-emerald-200 px-3 py-1 rounded-md flex items-center gap-1.5 animate-in fade-in">
+              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+              <span>{exportNotice}</span>
+            </div>
+          )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExportExcel}
+            className="h-8 text-xs font-medium gap-1.5 border-slate-300 hover:bg-slate-50 text-slate-700 bg-white shadow-xs"
+          >
+            <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-600" />
+            Экспорт в Excel
+          </Button>
+
+          {mode === 'final' && canPublish && (
+            !state.finalPublished ? (
+              <Button
+                size="sm"
+                onClick={() => setIsPublishDialogOpen(true)}
+                className="h-8 text-xs font-medium gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition-all cursor-pointer"
+              >
+                <Send className="h-3.5 w-3.5" />
+                Опубликовать итоговый рейтинг
+              </Button>
+            ) : (
+              <div className="flex items-center gap-1.5">
+                <Badge className="h-8 px-3 bg-emerald-100 text-emerald-800 border border-emerald-300 hover:bg-emerald-100 gap-1.5 text-xs font-medium">
+                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                  Рейтинг опубликован
+                </Badge>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    dispatch({ type: 'UNPUBLISH_FINAL' });
+                    setPublishNotice('Публикация рейтинга отозвана. Режим возвращён в редактирование.');
+                    setTimeout(() => setPublishNotice(null), 4000);
+                  }}
+                  className="h-8 text-[11px] text-slate-500 hover:text-rose-600 hover:bg-rose-50 cursor-pointer"
+                  title="Отозвать публикацию для корректировок"
+                >
+                  Отозвать
+                </Button>
+              </div>
+            )
+          )}
+        </div>
       </div>
 
       <Card>
@@ -619,6 +701,56 @@ export function RatingView({ role }: { role?: RoleId } = {}) {
           }}
         />
       )}
+
+      {/* Диалог подтверждения публикации итогового рейтинга */}
+      <Dialog open={isPublishDialogOpen} onOpenChange={setIsPublishDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-base text-slate-900">
+              <Send className="h-5 w-5 text-emerald-600" />
+              Публикация итогового рейтинга
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-500">
+              Фиксация официальных результатов рейтинга за отчётный период
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-3 text-xs text-slate-700">
+            <p>
+              Вы собираетесь официально опубликовать итоговый сводный рейтинг за период: <strong>{selectedPeriodName}</strong>.
+            </p>
+            <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-3 space-y-2 text-emerald-950">
+              <div className="font-semibold text-emerald-900 flex items-center gap-1.5">
+                <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+                Что произойдёт после публикации:
+              </div>
+              <ul className="list-disc list-inside space-y-1 text-xs text-emerald-900/90 pl-1">
+                <li>Текущие результаты расчёта фиксируются как <strong>эталонный срез</strong> рейтинга;</li>
+                <li>Кампания сбора переводится в статус <strong>«Завершена»</strong>;</li>
+                <li>Муниципалитетам (ОМСУ) и отраслевым органам (ЦИО) будет разослано системное уведомление;</li>
+                <li>Рейтинг станет доступен во всех итоговых и аналитических отчётах.</li>
+              </ul>
+            </div>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" size="sm" onClick={() => setIsPublishDialogOpen(false)}>
+              Отмена
+            </Button>
+            <Button
+              size="sm"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5"
+              onClick={() => {
+                dispatch({ type: 'PUBLISH_FINAL' });
+                setIsPublishDialogOpen(false);
+                setPublishNotice(`Итоговый рейтинг за ${selectedPeriodName} успешно опубликован и зафиксирован!`);
+                setTimeout(() => setPublishNotice(null), 5000);
+              }}
+            >
+              <Send className="h-3.5 w-3.5" />
+              Подтвердить публикацию
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -696,8 +828,11 @@ export function ZatoRatingView({ role }: { role?: RoleId } = {}) {
   const { state, dispatch } = useStore();
   const mode = state.ratingMode;
   const canConfigureFormula = role === 'admin';
+  const canPublish = role === 'mef' || role === 'admin' || !role;
 
   const [isFormulaModalOpen, setIsFormulaModalOpen] = useState(false);
+  const [isPublishDialogOpen, setIsPublishDialogOpen] = useState(false);
+  const [publishNotice, setPublishNotice] = useState<string | null>(null);
 
   const ratingPeriods = useMemo(() => {
     const curName = state.campaign.module === 'rating' && state.campaign.period
@@ -761,37 +896,35 @@ export function ZatoRatingView({ role }: { role?: RoleId } = {}) {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      {/* Заголовок и переключатель режимов */}
+      <div className="flex flex-wrap items-center justify-between gap-4 pb-1">
         <div>
-          <h2 className="text-lg font-semibold">Рейтинг ОМСУ ЗАТО</h2>
-          <p className="text-sm text-muted-foreground">
+          <h2 className="text-lg font-semibold text-slate-900">Рейтинг ОМСУ ЗАТО</h2>
+          <p className="text-xs text-muted-foreground mt-0.5">
             Период сбора: {selectedPeriodName} · Тип расчёта: {calcType === 'base' ? 'исходный алгоритм' : 'индивидуальный вес'} · Источник данных: ведомственные данные · Обновлено: {now()}
           </p>
         </div>
-        <div className="flex items-center flex-wrap gap-2">
-          {exportNotice && (
-            <div className="text-xs bg-emerald-50 text-emerald-800 border border-emerald-200 px-3 py-1 rounded-md flex items-center gap-1.5 animate-in fade-in">
-              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
-              <span>{exportNotice}</span>
-            </div>
-          )}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleExportExcel}
-            className="h-8 text-xs font-medium gap-1.5 border-slate-300 hover:bg-slate-50 text-slate-700"
-          >
-            <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-600" />
-            Экспорт в Excel
-          </Button>
+
+        {/* Переключатель режимов / вкладок рейтинга */}
+        <div className="inline-flex p-1 bg-slate-100 rounded-lg border border-slate-200/80 gap-1">
           <button
-            className={`rounded-full px-3 py-1 text-xs font-medium border ${mode === 'preview' ? 'bg-amber-100 border-amber-400 text-amber-900' : 'bg-white text-gray-600'}`}
+            type="button"
+            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all cursor-pointer ${
+              mode === 'preview'
+                ? 'bg-amber-100 text-amber-900 border border-amber-300 shadow-xs font-semibold'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+            }`}
             onClick={() => dispatch({ type: 'SET_RATING_MODE', mode: 'preview' })}
           >
             Предварительный (все введённые)
           </button>
           <button
-            className={`rounded-full px-3 py-1 text-xs font-medium border ${mode === 'final' ? 'bg-green-100 border-green-400 text-green-900' : 'bg-white text-gray-600'}`}
+            type="button"
+            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all cursor-pointer ${
+              mode === 'final'
+                ? 'bg-green-100 text-green-900 border border-green-300 shadow-xs font-semibold'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+            }`}
             onClick={() => dispatch({ type: 'SET_RATING_MODE', mode: 'final' })}
           >
             Итоговый (только согласованные)
@@ -802,6 +935,30 @@ export function ZatoRatingView({ role }: { role?: RoleId } = {}) {
       {mode === 'preview' && (
         <div className="rounded-md border border-amber-300 bg-amber-50 p-2.5 text-xs text-amber-900">
           Предварительный расчёт ЗАТО: учитываются все введённые данные, в т.ч. несогласованные (выделены «*»).
+        </div>
+      )}
+
+      {mode === 'final' && (
+        <div className={`rounded-md border p-2.5 text-xs flex items-center gap-2 ${
+          state.finalPublished
+            ? 'border-emerald-300 bg-emerald-50 text-emerald-950'
+            : 'border-blue-200 bg-blue-50/70 text-blue-900'
+        }`}>
+          <CheckCircle2 className={`h-4 w-4 shrink-0 ${state.finalPublished ? 'text-emerald-600' : 'text-blue-600'}`} />
+          <span>
+            {state.finalPublished ? (
+              <><strong>Итоговый рейтинг ЗАТО официально опубликован.</strong> Сформирован эталонный срез на основе согласованных данных. Кампания зафиксирована.</>
+            ) : (
+              <><strong>Итоговый расчёт ЗАТО:</strong> учитываются только согласованные данные (без «*»). Проверьте результаты перед официальной публикацией.</>
+            )}
+          </span>
+        </div>
+      )}
+
+      {publishNotice && (
+        <div className="rounded-md border border-emerald-300 bg-emerald-50 p-2.5 text-xs text-emerald-900 flex items-center gap-2 animate-in fade-in">
+          <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+          <span>{publishNotice}</span>
         </div>
       )}
       {/* Фильтры */}
@@ -890,11 +1047,65 @@ export function ZatoRatingView({ role }: { role?: RoleId } = {}) {
         </CardContent>
       </Card>
 
-      {/* Легенда */}
-      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-        <span>min</span>
-        <div className="h-3 w-64 rounded" style={{ background: 'linear-gradient(to right, #b7e4a8, #fff2a0, #ffb3a7)' }} />
-        <span>max</span>
+      {/* Легенда: шкала цветовой индикации параллельно с кнопками действий */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <span>min</span>
+          <div className="h-3 w-64 rounded" style={{ background: 'linear-gradient(to right, #b7e4a8, #fff2a0, #ffb3a7)' }} />
+          <span>max</span>
+        </div>
+
+        {/* Кнопки действий: Экспорт в Excel и Опубликовать итоговый рейтинг */}
+        <div className="flex items-center flex-wrap gap-2">
+          {exportNotice && (
+            <div className="text-xs bg-emerald-50 text-emerald-800 border border-emerald-200 px-3 py-1 rounded-md flex items-center gap-1.5 animate-in fade-in">
+              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+              <span>{exportNotice}</span>
+            </div>
+          )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExportExcel}
+            className="h-8 text-xs font-medium gap-1.5 border-slate-300 hover:bg-slate-50 text-slate-700 bg-white shadow-xs"
+          >
+            <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-600" />
+            Экспорт в Excel
+          </Button>
+
+          {mode === 'final' && canPublish && (
+            !state.finalPublished ? (
+              <Button
+                size="sm"
+                onClick={() => setIsPublishDialogOpen(true)}
+                className="h-8 text-xs font-medium gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition-all cursor-pointer"
+              >
+                <Send className="h-3.5 w-3.5" />
+                Опубликовать итоговый рейтинг
+              </Button>
+            ) : (
+              <div className="flex items-center gap-1.5">
+                <Badge className="h-8 px-3 bg-emerald-100 text-emerald-800 border border-emerald-300 hover:bg-emerald-100 gap-1.5 text-xs font-medium">
+                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                  Рейтинг опубликован
+                </Badge>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    dispatch({ type: 'UNPUBLISH_FINAL' });
+                    setPublishNotice('Публикация рейтинга отозвана. Режим возвращён в редактирование.');
+                    setTimeout(() => setPublishNotice(null), 4000);
+                  }}
+                  className="h-8 text-[11px] text-slate-500 hover:text-rose-600 hover:bg-rose-50 cursor-pointer"
+                  title="Отозвать публикацию для корректировок"
+                >
+                  Отозвать
+                </Button>
+              </div>
+            )
+          )}
+        </div>
       </div>
 
       {/* Таблицы */}
@@ -1162,6 +1373,56 @@ export function ZatoRatingView({ role }: { role?: RoleId } = {}) {
           }}
         />
       )}
+
+      {/* Диалог подтверждения публикации итогового рейтинга */}
+      <Dialog open={isPublishDialogOpen} onOpenChange={setIsPublishDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-base text-slate-900">
+              <Send className="h-5 w-5 text-emerald-600" />
+              Публикация итогового рейтинга
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-500">
+              Фиксация официальных результатов рейтинга за отчётный период
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-3 text-xs text-slate-700">
+            <p>
+              Вы собираетесь официально опубликовать итоговый сводный рейтинг за период: <strong>{selectedPeriodName}</strong>.
+            </p>
+            <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-3 space-y-2 text-emerald-950">
+              <div className="font-semibold text-emerald-900 flex items-center gap-1.5">
+                <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+                Что произойдёт после публикации:
+              </div>
+              <ul className="list-disc list-inside space-y-1 text-xs text-emerald-900/90 pl-1">
+                <li>Текущие результаты расчёта фиксируются как <strong>эталонный срез</strong> рейтинга;</li>
+                <li>Кампания сбора переводится в статус <strong>«Завершена»</strong>;</li>
+                <li>Муниципалитетам (ОМСУ) и отраслевым органам (ЦИО) будет разослано системное уведомление;</li>
+                <li>Рейтинг станет доступен во всех итоговых и аналитических отчётах.</li>
+              </ul>
+            </div>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" size="sm" onClick={() => setIsPublishDialogOpen(false)}>
+              Отмена
+            </Button>
+            <Button
+              size="sm"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5"
+              onClick={() => {
+                dispatch({ type: 'PUBLISH_FINAL' });
+                setIsPublishDialogOpen(false);
+                setPublishNotice(`Итоговый рейтинг за ${selectedPeriodName} успешно опубликован и зафиксирован!`);
+                setTimeout(() => setPublishNotice(null), 5000);
+              }}
+            >
+              <Send className="h-3.5 w-3.5" />
+              Подтвердить публикацию
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

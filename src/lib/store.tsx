@@ -73,6 +73,7 @@ export type Action =
   | { type: 'SET_FINAL_RATING_FORMULA'; formula: string }
   | { type: 'SET_FINAL_RATING_FORMULA_ZATO'; formula: string }
   | { type: 'PUBLISH_FINAL' }
+  | { type: 'UNPUBLISH_FINAL' }
   | { type: 'ADD_INDICATOR'; indicator: Indicator; afterId?: string }
   | { type: 'UPDATE_INDICATOR'; indicator: Indicator }
   | { type: 'MOVE_INDICATOR'; id: string; newParentId: string | null; index: number }
@@ -1093,7 +1094,22 @@ function reducer(state: AppState, a: Action): AppState {
         ...state,
         finalPublished: true,
         campaign: { ...state.campaign, status: 'completed' },
+        notifications: [
+          ...state.notifications,
+          { id: ++notifId, at: now(), text: 'Итоговый сводный рейтинг ОМСУ официально опубликован куратором МЭФ', forRoles: ['omsu', 'cio', 'mef', 'admin'] }
+        ],
         history: [...state.history, { at: now(), actor: 'Куратор МЭФ', action: 'Сформирован и опубликован итоговый сводный рейтинг' }],
+      };
+    case 'UNPUBLISH_FINAL':
+      return {
+        ...state,
+        finalPublished: false,
+        campaign: { ...state.campaign, status: 'collecting' },
+        notifications: [
+          ...state.notifications,
+          { id: ++notifId, at: now(), text: 'Публикация итогового рейтинга отозвана куратором МЭФ', forRoles: ['omsu', 'cio', 'mef', 'admin'] }
+        ],
+        history: [...state.history, { at: now(), actor: 'Куратор МЭФ', action: 'Отозвана публикация итогового сводного рейтинга' }],
       };
 
     case 'ADD_INDICATOR': {
