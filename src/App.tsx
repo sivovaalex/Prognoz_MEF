@@ -264,7 +264,7 @@ function Shell({
           { id: 'contacts-mef' as PageId, label: 'Контакты МЭФ' },
         ]
     : block === 'rating_view'
-      ? (role === 'admin' || role === 'mef'
+      ? (role === 'admin' || role === 'mef' || role === 'cio'
           ? [
               { id: 'rating' as PageId, label: 'Рейтинг ОМСУ' },
               { id: 'rating-zato' as PageId, label: 'Рейтинг ОМСУ ЗАТО' },
