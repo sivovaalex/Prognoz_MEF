@@ -1,4 +1,4 @@
-import { emptyValueFields, noteCellKey, noteRowCellCount, deriveNoteStatus } from './types';
+import { emptyValueFields, noteCellKey, noteRowCellCount, deriveNoteStatus, isNoteCellFilled } from './types';
 import type {
   AppState, Cio, CioValue, Direction, Indicator,
   Municipality, OmsuValue, Role, MefValue, CellValue,
@@ -148,87 +148,87 @@ export const MUNICIPALITIES: Municipality[] = [
 // Показатели с префиксом «Справочно:» — справочные.
 export const INDICATORS: Indicator[] = [
   { id: 'i1', num: '1.1', name: 'Справочно: Численность постоянного населения (на конец года)', directionId: 'd1', cioId: 'c1', unit: 'человек', optimum: 'max', weight: 1, formula: '—', level: 1, parentId: null, actualFrom: '2024-01-01', zato: true },
-  { id: 'i2', num: '1.1.1', name: 'Справочно: Число родившихся', directionId: 'd1', cioId: 'c1', unit: 'человек', optimum: 'max', weight: 1, formula: '—', level: 2, parentId: 'i1' , actualFrom: '2024-01-01' },
-  { id: 'i3', num: '1.1.2', name: 'Справочно: Общий коэффициент рождаемости', directionId: 'd1', cioId: 'c1', unit: 'число родившихся на 1000 человек населения', optimum: 'max', weight: 1, formula: '—', level: 2, parentId: 'i1' , actualFrom: '2024-01-01' },
-  { id: 'i4', num: '1.1.3', name: 'Справочно: Число умерших', directionId: 'd1', cioId: 'c1', unit: 'человек', optimum: 'min', weight: 1, formula: '—', level: 2, parentId: 'i1' , actualFrom: '2024-01-01' },
-  { id: 'i5', num: '1.1.4', name: 'Справочно: Общий коэффициент смертности', directionId: 'd1', cioId: 'c1', unit: 'число умерших на 1000 человек населения', optimum: 'min', weight: 1, formula: '—', level: 2, parentId: 'i1' , actualFrom: '2024-01-01' },
-  { id: 'i6', num: '1.1.5', name: 'Справочно: Естественный прирост (убыль) населения', directionId: 'd1', cioId: 'c1', unit: 'человек', optimum: 'max', weight: 1, formula: '—', level: 2, parentId: 'i1' , actualFrom: '2024-01-01' },
-  { id: 'i7', num: '1.1.6', name: 'Справочно: Коэффициент естественного прироста (убыли) населения', directionId: 'd1', cioId: 'c1', unit: 'на 1000 человек населения', optimum: 'max', weight: 1, formula: '—', level: 2, parentId: 'i1' , actualFrom: '2024-01-01' },
-  { id: 'i8', num: '1.1.7', name: 'Справочно: Миграционный прирост (убыль) населения', directionId: 'd1', cioId: 'c1', unit: 'человек', optimum: 'max', weight: 1, formula: '—', level: 2, parentId: 'i1' , actualFrom: '2024-01-01' },
-  { id: 'i9', num: '1.1.8', name: 'Справочно: Миграционный прирост (убыль) населения с учетом ввода МКД', directionId: 'd1', cioId: 'c1', unit: 'человек', optimum: 'max', weight: 1, formula: '—', level: 2, parentId: 'i1' , actualFrom: '2024-01-01' },
-  { id: 'i10', num: '1.1.9', name: 'Справочно: Уровень обеспеченности населения жильем (на конец года) (за 2024 год)', directionId: 'd1', cioId: 'c1', unit: 'кв.метров на человека', optimum: 'max', weight: 1, formula: '—', level: 2, parentId: 'i1' , actualFrom: '2024-01-01' },
-  { id: 'i11', num: '1.1.10', name: 'Справочно: Общий прирост населения', directionId: 'd1', cioId: 'c1', unit: 'человек', optimum: 'max', weight: 1, formula: '—', level: 2, parentId: 'i1' , actualFrom: '2024-01-01' },
-  { id: 'i12', num: '1.1.11', name: 'Справочно: Численность постоянного населения (среднегодовая)', directionId: 'd1', cioId: 'c1', unit: 'человек', optimum: 'max', weight: 1, formula: '—', level: 2, parentId: 'i1' , actualFrom: '2024-01-01' },
-  { id: 'i13', num: '1.1.12', name: 'по численности постоянного населения, в том числе в возрасте:', directionId: 'd1', cioId: 'c1', unit: '—', optimum: 'max', weight: 0, formula: '—', level: 2, parentId: 'i1', isGroup: true , actualFrom: '2024-01-01' },
-  { id: 'i14', num: '1.1.12.1', name: 'до 3 лет', directionId: 'd1', cioId: 'c1', unit: 'человек', optimum: 'max', weight: 1, formula: '—', level: 3, parentId: 'i13' , actualFrom: '2024-01-01' },
-  { id: 'i15', num: '1.1.12.2', name: 'от 3 до 7 лет', directionId: 'd1', cioId: 'c1', unit: 'человек', optimum: 'max', weight: 1, formula: '—', level: 3, parentId: 'i13' , actualFrom: '2024-01-01' },
-  { id: 'i16', num: '1.1.12.3', name: 'от 7 до 17 лет', directionId: 'd1', cioId: 'c1', unit: 'человек', optimum: 'max', weight: 1, formula: '—', level: 3, parentId: 'i13' , actualFrom: '2024-01-01' },
-  { id: 'i17', num: '1.1.12.3.1', name: 'Справочно: численность постоянного населения в возрасте 0 лет', directionId: 'd1', cioId: 'c1', unit: 'человек', optimum: 'max', weight: 1, formula: '—', level: 4, parentId: 'i16' , actualFrom: '2024-01-01' },
-  { id: 'i18', num: '1.1.12.3.2', name: 'Справочно: численность постоянного населения в возрасте 1 года', directionId: 'd1', cioId: 'c1', unit: 'человек', optimum: 'max', weight: 1, formula: '—', level: 4, parentId: 'i16' , actualFrom: '2024-01-01' },
-  { id: 'i19', num: '1.1.12.3.3', name: 'Справочно: численность постоянного населения в возрасте 2 года', directionId: 'd1', cioId: 'c1', unit: 'человек', optimum: 'max', weight: 1, formula: '—', level: 4, parentId: 'i16' , actualFrom: '2024-01-01' },
-  { id: 'i20', num: '1.1.12.3.4', name: 'Справочно: численность постоянного населения в возрасте 3 года', directionId: 'd1', cioId: 'c1', unit: 'человек', optimum: 'max', weight: 1, formula: '—', level: 4, parentId: 'i16' , actualFrom: '2024-01-01' },
-  { id: 'i21', num: '1.1.12.3.5', name: 'Справочно: численность постоянного населения в возрасте 4 года', directionId: 'd1', cioId: 'c1', unit: 'человек', optimum: 'max', weight: 1, formula: '—', level: 4, parentId: 'i16' , actualFrom: '2024-01-01' },
-  { id: 'i22', num: '1.1.12.3.6', name: 'Справочно: численность постоянного населения в возрасте 5 лет', directionId: 'd1', cioId: 'c1', unit: 'человек', optimum: 'max', weight: 1, formula: '—', level: 4, parentId: 'i16' , actualFrom: '2024-01-01' },
-  { id: 'i23', num: '1.1.12.3.7', name: 'Справочно: численность постоянного населения в возрасте 6 лет', directionId: 'd1', cioId: 'c1', unit: 'человек', optimum: 'max', weight: 1, formula: '—', level: 4, parentId: 'i16' , actualFrom: '2024-01-01' },
-  { id: 'i24', num: '1.1.12.3.8', name: 'Справочно: численность постоянного населения в возрасте 7 лет', directionId: 'd1', cioId: 'c1', unit: 'человек', optimum: 'max', weight: 1, formula: '—', level: 4, parentId: 'i16' , actualFrom: '2024-01-01' },
-  { id: 'i25', num: '1.1.12.3.9', name: 'Справочно: численность постоянного населения в возрасте 8 лет', directionId: 'd1', cioId: 'c1', unit: 'человек', optimum: 'max', weight: 1, formula: '—', level: 4, parentId: 'i16' , actualFrom: '2024-01-01' },
-  { id: 'i26', num: '1.1.12.3.10', name: 'Справочно: численность постоянного населения в возрасте 9 лет', directionId: 'd1', cioId: 'c1', unit: 'человек', optimum: 'max', weight: 1, formula: '—', level: 4, parentId: 'i16' , actualFrom: '2024-01-01' },
-  { id: 'i27', num: '1.1.12.3.11', name: 'Справочно: численность постоянного населения в возрасте 10 лет', directionId: 'd1', cioId: 'c1', unit: 'человек', optimum: 'max', weight: 1, formula: '—', level: 4, parentId: 'i16' , actualFrom: '2024-01-01' },
-  { id: 'i28', num: '1.1.12.3.12', name: 'Справочно: численность постоянного населения в возрасте 11 лет', directionId: 'd1', cioId: 'c1', unit: 'человек', optimum: 'max', weight: 1, formula: '—', level: 4, parentId: 'i16' , actualFrom: '2024-01-01' },
-  { id: 'i29', num: '1.1.12.3.13', name: 'Справочно: численность постоянного населения в возрасте 12 лет', directionId: 'd1', cioId: 'c1', unit: 'человек', optimum: 'max', weight: 1, formula: '—', level: 4, parentId: 'i16' , actualFrom: '2024-01-01' },
-  { id: 'i30', num: '1.1.12.3.14', name: 'Справочно: численность постоянного населения в возрасте 13 лет', directionId: 'd1', cioId: 'c1', unit: 'человек', optimum: 'max', weight: 1, formula: '—', level: 4, parentId: 'i16' , actualFrom: '2024-01-01' },
-  { id: 'i31', num: '1.1.12.3.15', name: 'Справочно: численность постоянного населения в возрасте 14 лет', directionId: 'd1', cioId: 'c1', unit: 'человек', optimum: 'max', weight: 1, formula: '—', level: 4, parentId: 'i16' , actualFrom: '2024-01-01' },
-  { id: 'i32', num: '1.1.12.3.16', name: 'Справочно: численность постоянного населения в возрасте 15 лет', directionId: 'd1', cioId: 'c1', unit: 'человек', optimum: 'max', weight: 1, formula: '—', level: 4, parentId: 'i16' , actualFrom: '2024-01-01' },
-  { id: 'i33', num: '1.1.12.3.17', name: 'Справочно: численность постоянного населения в возрасте 16 лет', directionId: 'd1', cioId: 'c1', unit: 'человек', optimum: 'max', weight: 1, formula: '—', level: 4, parentId: 'i16' , actualFrom: '2024-01-01' },
-  { id: 'i34', num: '1.1.12.3.18', name: 'Справочно: численность постоянного населения в возрасте 17 лет', directionId: 'd1', cioId: 'c1', unit: 'человек', optimum: 'max', weight: 1, formula: '—', level: 4, parentId: 'i16' , actualFrom: '2024-01-01' },
+  { id: 'i2', num: '1.1.1', name: 'Справочно: Число родившихся', directionId: 'd1', cioId: 'c1', unit: 'человек', optimum: 'max', weight: 1, formula: '—', level: 2, parentId: 'i1', actualFrom: '2024-01-01' },
+  { id: 'i3', num: '1.1.2', name: 'Справочно: Общий коэффициент рождаемости', directionId: 'd1', cioId: 'c1', unit: 'число родившихся на 1000 человек населения', optimum: 'max', weight: 1, formula: '—', level: 2, parentId: 'i1', actualFrom: '2024-01-01' },
+  { id: 'i4', num: '1.1.3', name: 'Справочно: Число умерших', directionId: 'd1', cioId: 'c1', unit: 'человек', optimum: 'min', weight: 1, formula: '—', level: 2, parentId: 'i1', actualFrom: '2024-01-01' },
+  { id: 'i5', num: '1.1.4', name: 'Справочно: Общий коэффициент смертности', directionId: 'd1', cioId: 'c1', unit: 'число умерших на 1000 человек населения', optimum: 'min', weight: 1, formula: '—', level: 2, parentId: 'i1', actualFrom: '2024-01-01' },
+  { id: 'i6', num: '1.1.5', name: 'Справочно: Естественный прирост (убыль) населения', directionId: 'd1', cioId: 'c1', unit: 'человек', optimum: 'max', weight: 1, formula: '—', level: 2, parentId: 'i1', actualFrom: '2024-01-01' },
+  { id: 'i7', num: '1.1.6', name: 'Справочно: Коэффициент естественного прироста (убыли) населения', directionId: 'd1', cioId: 'c1', unit: 'на 1000 человек населения', optimum: 'max', weight: 1, formula: '—', level: 2, parentId: 'i1', actualFrom: '2024-01-01' },
+  { id: 'i8', num: '1.1.7', name: 'Справочно: Миграционный прирост (убыль) населения', directionId: 'd1', cioId: 'c1', unit: 'человек', optimum: 'max', weight: 1, formula: '—', level: 2, parentId: 'i1', actualFrom: '2024-01-01' },
+  { id: 'i9', num: '1.1.8', name: 'Справочно: Миграционный прирост (убыль) населения с учетом ввода МКД', directionId: 'd1', cioId: 'c1', unit: 'человек', optimum: 'max', weight: 1, formula: '—', level: 2, parentId: 'i1', actualFrom: '2024-01-01' },
+  { id: 'i10', num: '1.1.9', name: 'Справочно: Уровень обеспеченности населения жильем (на конец года) (за 2024 год)', directionId: 'd1', cioId: 'c1', unit: 'кв.метров на человека', optimum: 'max', weight: 1, formula: '—', level: 2, parentId: 'i1', actualFrom: '2024-01-01' },
+  { id: 'i11', num: '1.1.10', name: 'Справочно: Общий прирост населения', directionId: 'd1', cioId: 'c1', unit: 'человек', optimum: 'max', weight: 1, formula: '—', level: 2, parentId: 'i1', actualFrom: '2024-01-01' },
+  { id: 'i12', num: '1.1.11', name: 'Справочно: Численность постоянного населения (среднегодовая)', directionId: 'd1', cioId: 'c1', unit: 'человек', optimum: 'max', weight: 1, formula: '—', level: 2, parentId: 'i1', actualFrom: '2024-01-01' },
+  { id: 'i13', num: '1.1.12', name: 'по численности постоянного населения, в том числе в возрасте:', directionId: 'd1', cioId: 'c1', unit: '—', optimum: 'max', weight: 0, formula: '—', level: 2, parentId: 'i1', isGroup: true, actualFrom: '2024-01-01' },
+  { id: 'i14', num: '1.1.12.1', name: 'до 3 лет', directionId: 'd1', cioId: 'c1', unit: 'человек', optimum: 'max', weight: 1, formula: '—', level: 3, parentId: 'i13', actualFrom: '2024-01-01' },
+  { id: 'i15', num: '1.1.12.2', name: 'от 3 до 7 лет', directionId: 'd1', cioId: 'c1', unit: 'человек', optimum: 'max', weight: 1, formula: '—', level: 3, parentId: 'i13', actualFrom: '2024-01-01' },
+  { id: 'i16', num: '1.1.12.3', name: 'от 7 до 17 лет', directionId: 'd1', cioId: 'c1', unit: 'человек', optimum: 'max', weight: 1, formula: '—', level: 3, parentId: 'i13', actualFrom: '2024-01-01' },
+  { id: 'i17', num: '1.1.12.3.1', name: 'Справочно: численность постоянного населения в возрасте 0 лет', directionId: 'd1', cioId: 'c1', unit: 'человек', optimum: 'max', weight: 1, formula: '—', level: 4, parentId: 'i16', actualFrom: '2024-01-01' },
+  { id: 'i18', num: '1.1.12.3.2', name: 'Справочно: численность постоянного населения в возрасте 1 года', directionId: 'd1', cioId: 'c1', unit: 'человек', optimum: 'max', weight: 1, formula: '—', level: 4, parentId: 'i16', actualFrom: '2024-01-01' },
+  { id: 'i19', num: '1.1.12.3.3', name: 'Справочно: численность постоянного населения в возрасте 2 года', directionId: 'd1', cioId: 'c1', unit: 'человек', optimum: 'max', weight: 1, formula: '—', level: 4, parentId: 'i16', actualFrom: '2024-01-01' },
+  { id: 'i20', num: '1.1.12.3.4', name: 'Справочно: численность постоянного населения в возрасте 3 года', directionId: 'd1', cioId: 'c1', unit: 'человек', optimum: 'max', weight: 1, formula: '—', level: 4, parentId: 'i16', actualFrom: '2024-01-01' },
+  { id: 'i21', num: '1.1.12.3.5', name: 'Справочно: численность постоянного населения в возрасте 4 года', directionId: 'd1', cioId: 'c1', unit: 'человек', optimum: 'max', weight: 1, formula: '—', level: 4, parentId: 'i16', actualFrom: '2024-01-01' },
+  { id: 'i22', num: '1.1.12.3.6', name: 'Справочно: численность постоянного населения в возрасте 5 лет', directionId: 'd1', cioId: 'c1', unit: 'человек', optimum: 'max', weight: 1, formula: '—', level: 4, parentId: 'i16', actualFrom: '2024-01-01' },
+  { id: 'i23', num: '1.1.12.3.7', name: 'Справочно: численность постоянного населения в возрасте 6 лет', directionId: 'd1', cioId: 'c1', unit: 'человек', optimum: 'max', weight: 1, formula: '—', level: 4, parentId: 'i16', actualFrom: '2024-01-01' },
+  { id: 'i24', num: '1.1.12.3.8', name: 'Справочно: численность постоянного населения в возрасте 7 лет', directionId: 'd1', cioId: 'c1', unit: 'человек', optimum: 'max', weight: 1, formula: '—', level: 4, parentId: 'i16', actualFrom: '2024-01-01' },
+  { id: 'i25', num: '1.1.12.3.9', name: 'Справочно: численность постоянного населения в возрасте 8 лет', directionId: 'd1', cioId: 'c1', unit: 'человек', optimum: 'max', weight: 1, formula: '—', level: 4, parentId: 'i16', actualFrom: '2024-01-01' },
+  { id: 'i26', num: '1.1.12.3.10', name: 'Справочно: численность постоянного населения в возрасте 9 лет', directionId: 'd1', cioId: 'c1', unit: 'человек', optimum: 'max', weight: 1, formula: '—', level: 4, parentId: 'i16', actualFrom: '2024-01-01' },
+  { id: 'i27', num: '1.1.12.3.11', name: 'Справочно: численность постоянного населения в возрасте 10 лет', directionId: 'd1', cioId: 'c1', unit: 'человек', optimum: 'max', weight: 1, formula: '—', level: 4, parentId: 'i16', actualFrom: '2024-01-01' },
+  { id: 'i28', num: '1.1.12.3.12', name: 'Справочно: численность постоянного населения в возрасте 11 лет', directionId: 'd1', cioId: 'c1', unit: 'человек', optimum: 'max', weight: 1, formula: '—', level: 4, parentId: 'i16', actualFrom: '2024-01-01' },
+  { id: 'i29', num: '1.1.12.3.13', name: 'Справочно: численность постоянного населения в возрасте 12 лет', directionId: 'd1', cioId: 'c1', unit: 'человек', optimum: 'max', weight: 1, formula: '—', level: 4, parentId: 'i16', actualFrom: '2024-01-01' },
+  { id: 'i30', num: '1.1.12.3.14', name: 'Справочно: численность постоянного населения в возрасте 13 лет', directionId: 'd1', cioId: 'c1', unit: 'человек', optimum: 'max', weight: 1, formula: '—', level: 4, parentId: 'i16', actualFrom: '2024-01-01' },
+  { id: 'i31', num: '1.1.12.3.15', name: 'Справочно: численность постоянного населения в возрасте 14 лет', directionId: 'd1', cioId: 'c1', unit: 'человек', optimum: 'max', weight: 1, formula: '—', level: 4, parentId: 'i16', actualFrom: '2024-01-01' },
+  { id: 'i32', num: '1.1.12.3.16', name: 'Справочно: численность постоянного населения в возрасте 15 лет', directionId: 'd1', cioId: 'c1', unit: 'человек', optimum: 'max', weight: 1, formula: '—', level: 4, parentId: 'i16', actualFrom: '2024-01-01' },
+  { id: 'i33', num: '1.1.12.3.17', name: 'Справочно: численность постоянного населения в возрасте 16 лет', directionId: 'd1', cioId: 'c1', unit: 'человек', optimum: 'max', weight: 1, formula: '—', level: 4, parentId: 'i16', actualFrom: '2024-01-01' },
+  { id: 'i34', num: '1.1.12.3.18', name: 'Справочно: численность постоянного населения в возрасте 17 лет', directionId: 'd1', cioId: 'c1', unit: 'человек', optimum: 'max', weight: 1, formula: '—', level: 4, parentId: 'i16', actualFrom: '2024-01-01' },
   { id: 'i35', num: '3.1', name: 'Объем отгруженных товаров собственного производства, выполненных работ и услуг собственными силами по промышленным видам деятельности по крупным и средним организациям (без организаций с численностью работающих менее 15 человек)', directionId: 'd2', cioId: 'c2', unit: 'млн.руб.в ценах соответствующих лет', optimum: 'max', weight: 1, formula: '—', level: 1, parentId: null, actualFrom: '2024-01-01', zato: true },
-  { id: 'i36', num: '3.2', name: 'Справочно: Темп роста объема отгруженных товаров собственного производства, выполненных работ и услуг собственными силами по промышленным видам деятельности по крупным и средним организациям (без организаций с численностью работающих менее 15 человек)', directionId: 'd2', cioId: 'c2', unit: 'процент к предыдущему году', optimum: 'max', weight: 1, formula: '—', level: 1, parentId: null , actualFrom: '2024-01-01' },
-  { id: 'i37', num: '3.2.1', name: 'Справочно: Индекс промышленного производства по крупным и средним организациям (без организаций с численностью работающих менее 15 человек)', directionId: 'd2', cioId: 'c2', unit: 'процент к предыдущему году', optimum: 'max', weight: 1, formula: '—', level: 2, parentId: 'i36' , actualFrom: '2024-01-01' },
-  { id: 'i38', num: '3.2.2', name: 'Справочно: индекс-дефлятор цен', directionId: 'd2', cioId: 'c2', unit: 'процент к предыдущему году', optimum: 'max', weight: 1, formula: '—', level: 2, parentId: 'i36' , actualFrom: '2024-01-01' },
-  { id: 'i39', num: '3.3', name: 'Справочно: Обрабатывающие производства', directionId: 'd2', cioId: 'c2', unit: '—', optimum: 'max', weight: 0, formula: '—', level: 1, parentId: null, isGroup: true , actualFrom: '2024-01-01' },
-  { id: 'i40', num: '3.3.1', name: 'Справочно: Объем отгруженных товаров собственного производства, выполненных работ и услуг собственными силами о крупным и средним организациям (без организаций с численностью работающих менее 15 человек) - раздел C', directionId: 'd2', cioId: 'c2', unit: 'млн.руб.в ценах соответствующих лет', optimum: 'max', weight: 1, formula: '—', level: 2, parentId: 'i39' , actualFrom: '2024-01-01' },
-  { id: 'i41', num: '3.3.2', name: 'Справочно: Темп роста - раздел C', directionId: 'd2', cioId: 'c2', unit: 'процент к предыдущему году', optimum: 'max', weight: 1, formula: '—', level: 2, parentId: 'i39' , actualFrom: '2024-01-01' },
-  { id: 'i100', num: '3.4', name: 'Причины увеличения/снижения промышленного производства по крупным и средним организациям (без организаций с численностью работающих менее 15 человек)', directionId: 'd2', cioId: 'c2', unit: '—', optimum: 'max', weight: 1, formula: '—', level: 1, parentId: null , actualFrom: '2024-01-01' },
-  { id: 'i101', num: '3.5', name: 'Промышленные предприятия прекратившие/взл/продолжающие свою деятельность (с указанием вида деятельности)', directionId: 'd2', cioId: 'c2', unit: '—', optimum: 'max', weight: 1, formula: '—', level: 1, parentId: null , actualFrom: '2024-01-01' },
-  { id: 'i102', num: '3.6', name: 'Предприятия, оказывающие существенное влияние на динамику промышленного производства', directionId: 'd2', cioId: 'c2', unit: '—', optimum: 'max', weight: 1, formula: '—', level: 1, parentId: null , actualFrom: '2024-01-01' },
+  { id: 'i36', num: '3.2', name: 'Справочно: Темп роста объема отгруженных товаров собственного производства, выполненных работ и услуг собственными силами по промышленным видам деятельности по крупным и средним организациям (без организаций с численностью работающих менее 15 человек)', directionId: 'd2', cioId: 'c2', unit: 'процент к предыдущему году', optimum: 'max', weight: 1, formula: '—', level: 1, parentId: null, actualFrom: '2024-01-01' },
+  { id: 'i37', num: '3.2.1', name: 'Справочно: Индекс промышленного производства по крупным и средним организациям (без организаций с численностью работающих менее 15 человек)', directionId: 'd2', cioId: 'c2', unit: 'процент к предыдущему году', optimum: 'max', weight: 1, formula: '—', level: 2, parentId: 'i36', actualFrom: '2024-01-01' },
+  { id: 'i38', num: '3.2.2', name: 'Справочно: индекс-дефлятор цен', directionId: 'd2', cioId: 'c2', unit: 'процент к предыдущему году', optimum: 'max', weight: 1, formula: '—', level: 2, parentId: 'i36', actualFrom: '2024-01-01' },
+  { id: 'i39', num: '3.3', name: 'Справочно: Обрабатывающие производства', directionId: 'd2', cioId: 'c2', unit: '—', optimum: 'max', weight: 0, formula: '—', level: 1, parentId: null, isGroup: true, actualFrom: '2024-01-01' },
+  { id: 'i40', num: '3.3.1', name: 'Справочно: Объем отгруженных товаров собственного производства, выполненных работ и услуг собственными силами о крупным и средним организациям (без организаций с численностью работающих менее 15 человек) - раздел C', directionId: 'd2', cioId: 'c2', unit: 'млн.руб.в ценах соответствующих лет', optimum: 'max', weight: 1, formula: '—', level: 2, parentId: 'i39', actualFrom: '2024-01-01' },
+  { id: 'i41', num: '3.3.2', name: 'Справочно: Темп роста - раздел C', directionId: 'd2', cioId: 'c2', unit: 'процент к предыдущему году', optimum: 'max', weight: 1, formula: '—', level: 2, parentId: 'i39', actualFrom: '2024-01-01' },
+  { id: 'i100', num: '3.4', name: 'Причины увеличения/снижения промышленного производства по крупным и средним организациям (без организаций с численностью работающих менее 15 человек)', directionId: 'd2', cioId: 'c2', unit: '—', optimum: 'max', weight: 1, formula: '—', level: 1, parentId: null, actualFrom: '2024-01-01' },
+  { id: 'i101', num: '3.5', name: 'Промышленные предприятия прекратившие/взл/продолжающие свою деятельность (с указанием вида деятельности)', directionId: 'd2', cioId: 'c2', unit: '—', optimum: 'max', weight: 1, formula: '—', level: 1, parentId: null, actualFrom: '2024-01-01' },
+  { id: 'i102', num: '3.6', name: 'Предприятия, оказывающие существенное влияние на динамику промышленного производства', directionId: 'd2', cioId: 'c2', unit: '—', optimum: 'max', weight: 1, formula: '—', level: 1, parentId: null, actualFrom: '2024-01-01' },
   { id: 'i42', num: '7.1', name: 'Число малых и средних предприятий, включая микропредприятия (на конец года)', directionId: 'd3', cioId: 'c2', unit: 'единица', optimum: 'max', weight: 1, formula: '—', level: 1, parentId: null, actualFrom: '2024-01-01', zato: true },
-  { id: 'i43', num: '7.2', name: 'Справочно: в том числе, малых предприятий (включая микропредприятия)', directionId: 'd3', cioId: 'c2', unit: 'единица', optimum: 'max', weight: 1, formula: '—', level: 1, parentId: null , actualFrom: '2024-01-01' },
+  { id: 'i43', num: '7.2', name: 'Справочно: в том числе, малых предприятий (включая микропредприятия)', directionId: 'd3', cioId: 'c2', unit: 'единица', optimum: 'max', weight: 1, formula: '—', level: 1, parentId: null, actualFrom: '2024-01-01' },
   { id: 'i44', num: '8.1', name: 'Инвестиции в основной капитал за счет всех источников финансирования (без субъектов малого предпринимательства и объемов инвестиций, не наблюдаемых прямыми статистическими методами) - всего', directionId: 'd4', cioId: 'c2', unit: 'млн.рублей', optimum: 'max', weight: 1, formula: '—', level: 1, parentId: null, actualFrom: '2024-01-01', zato: true },
-  { id: 'i45', num: '8.1.1', name: 'Справочно: индекс физического объема', directionId: 'd4', cioId: 'c2', unit: 'процент к предыдущему году', optimum: 'max', weight: 1, formula: '—', level: 2, parentId: 'i44' , actualFrom: '2024-01-01' },
-  { id: 'i46', num: '8.1.1.1', name: 'Справочно: индекс-дефлятор цен', directionId: 'd4', cioId: 'c2', unit: 'процент к предыдущему году', optimum: 'max', weight: 1, formula: '—', level: 3, parentId: 'i45' , actualFrom: '2024-01-01' },
-  { id: 'i47', num: '8.2', name: 'Справочно: Инвестиции в основной капитал (без субъектов малого предпринимательства и параметров неформальной деятельности) из местных бюджетов', directionId: 'd4', cioId: 'c2', unit: 'млн. рублей', optimum: 'max', weight: 1, formula: '—', level: 1, parentId: null , actualFrom: '2024-01-01' },
+  { id: 'i45', num: '8.1.1', name: 'Справочно: индекс физического объема', directionId: 'd4', cioId: 'c2', unit: 'процент к предыдущему году', optimum: 'max', weight: 1, formula: '—', level: 2, parentId: 'i44', actualFrom: '2024-01-01' },
+  { id: 'i46', num: '8.1.1.1', name: 'Справочно: индекс-дефлятор цен', directionId: 'd4', cioId: 'c2', unit: 'процент к предыдущему году', optimum: 'max', weight: 1, formula: '—', level: 3, parentId: 'i45', actualFrom: '2024-01-01' },
+  { id: 'i47', num: '8.2', name: 'Справочно: Инвестиции в основной капитал (без субъектов малого предпринимательства и параметров неформальной деятельности) из местных бюджетов', directionId: 'd4', cioId: 'c2', unit: 'млн. рублей', optimum: 'max', weight: 1, formula: '—', level: 1, parentId: null, actualFrom: '2024-01-01' },
   { id: 'i48', num: '9.1', name: 'Объем жилищного строительства', directionId: 'd5', cioId: 'c3', unit: 'тыс. кв. м общей площади', optimum: 'max', weight: 1, formula: '—', level: 1, parentId: null, actualFrom: '2024-01-01', zato: true },
-  { id: 'i49', num: '9.2', name: 'Справочно: Темп роста объема жилищного строительства', directionId: 'd5', cioId: 'c3', unit: 'процент к предыдущему году', optimum: 'max', weight: 1, formula: '—', level: 1, parentId: null , actualFrom: '2024-01-01' },
-  { id: 'i50', num: '9.3', name: 'в том числе:', directionId: 'd5', cioId: 'c3', unit: '—', optimum: 'max', weight: 0, formula: '—', level: 1, parentId: null, isGroup: true , actualFrom: '2024-01-01' },
-  { id: 'i51', num: '9.3.1', name: 'Справочно: Ввод общей площади жилых домов, построенных населением', directionId: 'd5', cioId: 'c3', unit: 'тыс. кв. м общей площади', optimum: 'max', weight: 1, formula: '—', level: 2, parentId: 'i50' , actualFrom: '2024-01-01' },
-  { id: 'i52', num: '9.3.2', name: 'Справочно: ввод жилья в многоквартирных жилых домах', directionId: 'd5', cioId: 'c3', unit: 'тыс. кв. м общей площади', optimum: 'max', weight: 1, formula: '—', level: 2, parentId: 'i50' , actualFrom: '2024-01-01' },
-  { id: 'i53', num: '11.1', name: 'Справочно: Количество созданных рабочих мест всего (на крупных и средних предприятиях, на малых предприятиях (включая микропредприятия) и индивидуальные предприниматели)', directionId: 'd6', cioId: 'c2', unit: 'единица', optimum: 'max', weight: 1, formula: '—', level: 1, parentId: null , actualFrom: '2024-01-01' },
-  { id: 'i54', num: '11.2', name: 'Количество созданных рабочих мест', directionId: 'd6', cioId: 'c2', unit: 'единица', optimum: 'max', weight: 1, formula: '—', level: 1, parentId: null , actualFrom: '2024-01-01' },
-  { id: 'i55', num: '11.3', name: 'Справочно: Количество созданных рабочих мест на малых предприятиях (включая микропредприятия) и индивидуальные предприниматели', directionId: 'd6', cioId: 'c2', unit: 'единица', optimum: 'max', weight: 1, formula: '—', level: 1, parentId: null , actualFrom: '2024-01-01' },
-  { id: 'i56', num: '11.4', name: 'Численность официально зарегистрированных безработных, на конец года', directionId: 'd6', cioId: 'c4', unit: 'человек', optimum: 'min', weight: 1, formula: '—', level: 1, parentId: null , actualFrom: '2024-01-01' },
-  { id: 'i57', num: '11.5', name: 'Фонд начисленной заработной платы', directionId: 'd6', cioId: 'c1', unit: 'млн. рублей', optimum: 'max', weight: 1, formula: '—', level: 1, parentId: null , actualFrom: '2024-01-01' },
-  { id: 'i58', num: '11.5.1', name: 'Справочно: темп роста фонда заработной платы', directionId: 'd6', cioId: 'c1', unit: 'процент к предыдущему году', optimum: 'max', weight: 1, formula: '—', level: 2, parentId: 'i57' , actualFrom: '2024-01-01' },
-  { id: 'i59', num: '11.5.2', name: 'Справочно: Фонд заработной платы по крупным и средним организациям (включая организации с численностью до 15 человек)', directionId: 'd6', cioId: 'c1', unit: 'млн. рублей', optimum: 'max', weight: 1, formula: '—', level: 2, parentId: 'i57' , actualFrom: '2024-01-01' },
-  { id: 'i60', num: '11.5.3', name: 'Справочно: Темп роста фонда заработной платы по крупным и средним организациям (включая организации с численностью до 15 человек)', directionId: 'd6', cioId: 'c1', unit: 'процент к предыдущему году', optimum: 'max', weight: 1, formula: '—', level: 2, parentId: 'i57' , actualFrom: '2024-01-01' },
-  { id: 'i61', num: '11.5.4', name: 'Справочно: Фонд заработной платы по малым предприятиям (включая микропредприятия)', directionId: 'd6', cioId: 'c1', unit: 'млн. рублей', optimum: 'max', weight: 1, formula: '—', level: 2, parentId: 'i57' , actualFrom: '2024-01-01' },
-  { id: 'i62', num: '11.5.5', name: 'Справочно: Темп роста фонда заработной платы по малым предприятиям (включая микропредприятия)', directionId: 'd6', cioId: 'c1', unit: 'процент к предыдущему году', optimum: 'max', weight: 1, formula: '—', level: 2, parentId: 'i57' , actualFrom: '2024-01-01' },
-  { id: 'i63', num: '11.6', name: 'Среднемесячная номинальная начисленная заработная плата работников (по полному кругу организаций)', directionId: 'd6', cioId: 'c1', unit: 'рубль', optimum: 'max', weight: 1, formula: '—', level: 1, parentId: null , actualFrom: '2024-01-01' },
-  { id: 'i64', num: '11.6.1', name: 'Справочно: темп роста среднемесячной номинальной начисленной заработной платы работников (по полному кругу организаций)', directionId: 'd6', cioId: 'c1', unit: 'процент к предыдущему году', optimum: 'max', weight: 1, formula: '—', level: 2, parentId: 'i63' , actualFrom: '2024-01-01' },
-  { id: 'i65', num: '11.6.2', name: 'Справочно: Среднемесячная заработная плата работников по крупным и средним организациям (включая организации с численностью до 15 человек)', directionId: 'd6', cioId: 'c1', unit: 'рублей', optimum: 'max', weight: 1, formula: '—', level: 2, parentId: 'i63' , actualFrom: '2024-01-01' },
-  { id: 'i66', num: '11.6.3', name: 'Справочно: Темп роста среднемесячной заработной платы работников по крупным и средним организациям (включая организации с численностью до 15 человек)', directionId: 'd6', cioId: 'c1', unit: 'процент к предыдущему году', optimum: 'max', weight: 1, formula: '—', level: 2, parentId: 'i63' , actualFrom: '2024-01-01' },
-  { id: 'i67', num: '11.6.4', name: 'Справочно: Среднемесячная заработная плата работников малых предприятий (включая микропредприятия)', directionId: 'd6', cioId: 'c1', unit: 'рубль', optimum: 'max', weight: 1, formula: '—', level: 2, parentId: 'i63' , actualFrom: '2024-01-01' },
-  { id: 'i68', num: '11.6.5', name: 'Справочно: Темп роста среднемесячной заработной платы работников малых предприятий (включая микропредприятия)', directionId: 'd6', cioId: 'c1', unit: 'процент к предыдущему году', optimum: 'max', weight: 1, formula: '—', level: 2, parentId: 'i63' , actualFrom: '2024-01-01' },
-  { id: 'i69', num: '11.6.6', name: 'Справочно: Среднесписочная численность работников (без внешних совместителей) по полному кругу организаций', directionId: 'd6', cioId: 'c1', unit: 'человек', optimum: 'max', weight: 1, formula: '—', level: 2, parentId: 'i63' , actualFrom: '2024-01-01' },
-  { id: 'i70', num: '11.6.6.1', name: 'Справочно: Темп роста среднесписочной численности работников (без внешних совместителей) по полному кругу организаций', directionId: 'd6', cioId: 'c1', unit: 'процент к предыдущему году', optimum: 'max', weight: 1, formula: '—', level: 3, parentId: 'i69' , actualFrom: '2024-01-01' },
-  { id: 'i71', num: '11.6.6.2', name: 'Справочно: Среднесписочная численность работников организаций по крупным и средним организациям (включая организации с численностью до 15 человек)', directionId: 'd6', cioId: 'c1', unit: 'человек', optimum: 'max', weight: 1, formula: '—', level: 3, parentId: 'i69' , actualFrom: '2024-01-01' },
-  { id: 'i72', num: '11.6.6.3', name: 'Справочно: Темп роста среднесписочной численности работников организаций по крупным и средним организациям (включая организации с численностью до 15 человек)', directionId: 'd6', cioId: 'c1', unit: 'процент к предыдущему году', optimum: 'max', weight: 1, formula: '—', level: 3, parentId: 'i69' , actualFrom: '2024-01-01' },
-  { id: 'i73', num: '11.6.6.4', name: 'Справочно: Среднесписочная численность работников малых предприятий (включая микропредприятия)', directionId: 'd6', cioId: 'c1', unit: 'человек', optimum: 'max', weight: 1, formula: '—', level: 3, parentId: 'i69' , actualFrom: '2024-01-01' },
-  { id: 'i74', num: '11.6.6.5', name: 'Справочно: Темп роста среднесписочной численности работников малых предприятий (включая микропредприятия)', directionId: 'd6', cioId: 'c1', unit: 'процент к предыдущему году', optimum: 'max', weight: 1, formula: '—', level: 3, parentId: 'i69' , actualFrom: '2024-01-01' },
-  { id: 'i75', num: '13.1', name: 'Справочно: Площадь объектов оптовой торговли (складские помещения, оптово-распределительные центры, оптово-логистические центры, торгово-складские комплексы, логистические комплексы, стационарные оптовые рынки, распределительные холодильники и др.)', directionId: 'd7', cioId: 'c5', unit: 'тыс. кв. м', optimum: 'max', weight: 1, formula: '—', level: 1, parentId: null , actualFrom: '2024-01-01' },
-  { id: 'i76', num: '13.1.1', name: 'Оборот розничной торговли по крупным и средним организациям (без организаций с численностью работающих менее 15 человек):', directionId: 'd7', cioId: 'c5', unit: '—', optimum: 'max', weight: 0, formula: '—', level: 2, parentId: 'i75', isGroup: true , actualFrom: '2024-01-01' },
-  { id: 'i77', num: '13.1.1.1', name: 'в ценах соответствующих лет', directionId: 'd7', cioId: 'c5', unit: 'млн. рублей', optimum: 'max', weight: 1, formula: '—', level: 3, parentId: 'i76' , actualFrom: '2024-01-01' },
-  { id: 'i78', num: '13.1.1.2', name: 'Справочно: индекс физического объема', directionId: 'd7', cioId: 'c5', unit: 'процент к предыдущему году', optimum: 'max', weight: 1, formula: '—', level: 3, parentId: 'i76' , actualFrom: '2024-01-01' },
-  { id: 'i79', num: '13.1.1.3', name: 'Справочно: индекс-дефлятор цен', directionId: 'd7', cioId: 'c5', unit: 'процент к предыдущему году', optimum: 'max', weight: 1, formula: '—', level: 3, parentId: 'i76' , actualFrom: '2024-01-01' },
+  { id: 'i49', num: '9.2', name: 'Справочно: Темп роста объема жилищного строительства', directionId: 'd5', cioId: 'c3', unit: 'процент к предыдущему году', optimum: 'max', weight: 1, formula: '—', level: 1, parentId: null, actualFrom: '2024-01-01' },
+  { id: 'i50', num: '9.3', name: 'в том числе:', directionId: 'd5', cioId: 'c3', unit: '—', optimum: 'max', weight: 0, formula: '—', level: 1, parentId: null, isGroup: true, actualFrom: '2024-01-01' },
+  { id: 'i51', num: '9.3.1', name: 'Справочно: Ввод общей площади жилых домов, построенных населением', directionId: 'd5', cioId: 'c3', unit: 'тыс. кв. м общей площади', optimum: 'max', weight: 1, formula: '—', level: 2, parentId: 'i50', actualFrom: '2024-01-01' },
+  { id: 'i52', num: '9.3.2', name: 'Справочно: ввод жилья в многоквартирных жилых домах', directionId: 'd5', cioId: 'c3', unit: 'тыс. кв. м общей площади', optimum: 'max', weight: 1, formula: '—', level: 2, parentId: 'i50', actualFrom: '2024-01-01' },
+  { id: 'i53', num: '11.1', name: 'Справочно: Количество созданных рабочих мест всего (на крупных и средних предприятиях, на малых предприятиях (включая микропредприятия) и индивидуальные предприниматели)', directionId: 'd6', cioId: 'c2', unit: 'единица', optimum: 'max', weight: 1, formula: '—', level: 1, parentId: null, actualFrom: '2024-01-01' },
+  { id: 'i54', num: '11.2', name: 'Количество созданных рабочих мест', directionId: 'd6', cioId: 'c2', unit: 'единица', optimum: 'max', weight: 1, formula: '—', level: 1, parentId: null, actualFrom: '2024-01-01' },
+  { id: 'i55', num: '11.3', name: 'Справочно: Количество созданных рабочих мест на малых предприятиях (включая микропредприятия) и индивидуальные предприниматели', directionId: 'd6', cioId: 'c2', unit: 'единица', optimum: 'max', weight: 1, formula: '—', level: 1, parentId: null, actualFrom: '2024-01-01' },
+  { id: 'i56', num: '11.4', name: 'Численность официально зарегистрированных безработных, на конец года', directionId: 'd6', cioId: 'c4', unit: 'человек', optimum: 'min', weight: 1, formula: '—', level: 1, parentId: null, actualFrom: '2024-01-01' },
+  { id: 'i57', num: '11.5', name: 'Фонд начисленной заработной платы', directionId: 'd6', cioId: 'c1', unit: 'млн. рублей', optimum: 'max', weight: 1, formula: '—', level: 1, parentId: null, actualFrom: '2024-01-01' },
+  { id: 'i58', num: '11.5.1', name: 'Справочно: темп роста фонда заработной платы', directionId: 'd6', cioId: 'c1', unit: 'процент к предыдущему году', optimum: 'max', weight: 1, formula: '—', level: 2, parentId: 'i57', actualFrom: '2024-01-01' },
+  { id: 'i59', num: '11.5.2', name: 'Справочно: Фонд заработной платы по крупным и средним организациям (включая организации с численностью до 15 человек)', directionId: 'd6', cioId: 'c1', unit: 'млн. рублей', optimum: 'max', weight: 1, formula: '—', level: 2, parentId: 'i57', actualFrom: '2024-01-01' },
+  { id: 'i60', num: '11.5.3', name: 'Справочно: Темп роста фонда заработной платы по крупным и средним организациям (включая организации с численностью до 15 человек)', directionId: 'd6', cioId: 'c1', unit: 'процент к предыдущему году', optimum: 'max', weight: 1, formula: '—', level: 2, parentId: 'i57', actualFrom: '2024-01-01' },
+  { id: 'i61', num: '11.5.4', name: 'Справочно: Фонд заработной платы по малым предприятиям (включая микропредприятия)', directionId: 'd6', cioId: 'c1', unit: 'млн. рублей', optimum: 'max', weight: 1, formula: '—', level: 2, parentId: 'i57', actualFrom: '2024-01-01' },
+  { id: 'i62', num: '11.5.5', name: 'Справочно: Темп роста фонда заработной платы по малым предприятиям (включая микропредприятия)', directionId: 'd6', cioId: 'c1', unit: 'процент к предыдущему году', optimum: 'max', weight: 1, formula: '—', level: 2, parentId: 'i57', actualFrom: '2024-01-01' },
+  { id: 'i63', num: '11.6', name: 'Среднемесячная номинальная начисленная заработная плата работников (по полному кругу организаций)', directionId: 'd6', cioId: 'c1', unit: 'рубль', optimum: 'max', weight: 1, formula: '—', level: 1, parentId: null, actualFrom: '2024-01-01' },
+  { id: 'i64', num: '11.6.1', name: 'Справочно: темп роста среднемесячной номинальной начисленной заработной платы работников (по полному кругу организаций)', directionId: 'd6', cioId: 'c1', unit: 'процент к предыдущему году', optimum: 'max', weight: 1, formula: '—', level: 2, parentId: 'i63', actualFrom: '2024-01-01' },
+  { id: 'i65', num: '11.6.2', name: 'Справочно: Среднемесячная заработная плата работников по крупным и средним организациям (включая организации с численностью до 15 человек)', directionId: 'd6', cioId: 'c1', unit: 'рублей', optimum: 'max', weight: 1, formula: '—', level: 2, parentId: 'i63', actualFrom: '2024-01-01' },
+  { id: 'i66', num: '11.6.3', name: 'Справочно: Темп роста среднемесячной заработной платы работников по крупным и средним организациям (включая организации с численностью до 15 человек)', directionId: 'd6', cioId: 'c1', unit: 'процент к предыдущему году', optimum: 'max', weight: 1, formula: '—', level: 2, parentId: 'i63', actualFrom: '2024-01-01' },
+  { id: 'i67', num: '11.6.4', name: 'Справочно: Среднемесячная заработная плата работников малых предприятий (включая микропредприятия)', directionId: 'd6', cioId: 'c1', unit: 'рубль', optimum: 'max', weight: 1, formula: '—', level: 2, parentId: 'i63', actualFrom: '2024-01-01' },
+  { id: 'i68', num: '11.6.5', name: 'Справочно: Темп роста среднемесячной заработной платы работников малых предприятий (включая микропредприятия)', directionId: 'd6', cioId: 'c1', unit: 'процент к предыдущему году', optimum: 'max', weight: 1, formula: '—', level: 2, parentId: 'i63', actualFrom: '2024-01-01' },
+  { id: 'i69', num: '11.6.6', name: 'Справочно: Среднесписочная численность работников (без внешних совместителей) по полному кругу организаций', directionId: 'd6', cioId: 'c1', unit: 'человек', optimum: 'max', weight: 1, formula: '—', level: 2, parentId: 'i63', actualFrom: '2024-01-01' },
+  { id: 'i70', num: '11.6.6.1', name: 'Справочно: Темп роста среднесписочной численности работников (без внешних совместителей) по полному кругу организаций', directionId: 'd6', cioId: 'c1', unit: 'процент к предыдущему году', optimum: 'max', weight: 1, formula: '—', level: 3, parentId: 'i69', actualFrom: '2024-01-01' },
+  { id: 'i71', num: '11.6.6.2', name: 'Справочно: Среднесписочная численность работников организаций по крупным и средним организациям (включая организации с численностью до 15 человек)', directionId: 'd6', cioId: 'c1', unit: 'человек', optimum: 'max', weight: 1, formula: '—', level: 3, parentId: 'i69', actualFrom: '2024-01-01' },
+  { id: 'i72', num: '11.6.6.3', name: 'Справочно: Темп роста среднесписочной численности работников организаций по крупным и средним организациям (включая организации с численностью до 15 человек)', directionId: 'd6', cioId: 'c1', unit: 'процент к предыдущему году', optimum: 'max', weight: 1, formula: '—', level: 3, parentId: 'i69', actualFrom: '2024-01-01' },
+  { id: 'i73', num: '11.6.6.4', name: 'Справочно: Среднесписочная численность работников малых предприятий (включая микропредприятия)', directionId: 'd6', cioId: 'c1', unit: 'человек', optimum: 'max', weight: 1, formula: '—', level: 3, parentId: 'i69', actualFrom: '2024-01-01' },
+  { id: 'i74', num: '11.6.6.5', name: 'Справочно: Темп роста среднесписочной численности работников малых предприятий (включая микропредприятия)', directionId: 'd6', cioId: 'c1', unit: 'процент к предыдущему году', optimum: 'max', weight: 1, formula: '—', level: 3, parentId: 'i69', actualFrom: '2024-01-01' },
+  { id: 'i75', num: '13.1', name: 'Справочно: Площадь объектов оптовой торговли (складские помещения, оптово-распределительные центры, оптово-логистические центры, торгово-складские комплексы, логистические комплексы, стационарные оптовые рынки, распределительные холодильники и др.)', directionId: 'd7', cioId: 'c5', unit: 'тыс. кв. м', optimum: 'max', weight: 1, formula: '—', level: 1, parentId: null, actualFrom: '2024-01-01' },
+  { id: 'i76', num: '13.1.1', name: 'Оборот розничной торговли по крупным и средним организациям (без организаций с численностью работающих менее 15 человек):', directionId: 'd7', cioId: 'c5', unit: '—', optimum: 'max', weight: 0, formula: '—', level: 2, parentId: 'i75', isGroup: true, actualFrom: '2024-01-01' },
+  { id: 'i77', num: '13.1.1.1', name: 'в ценах соответствующих лет', directionId: 'd7', cioId: 'c5', unit: 'млн. рублей', optimum: 'max', weight: 1, formula: '—', level: 3, parentId: 'i76', actualFrom: '2024-01-01' },
+  { id: 'i78', num: '13.1.1.2', name: 'Справочно: индекс физического объема', directionId: 'd7', cioId: 'c5', unit: 'процент к предыдущему году', optimum: 'max', weight: 1, formula: '—', level: 3, parentId: 'i76', actualFrom: '2024-01-01' },
+  { id: 'i79', num: '13.1.1.3', name: 'Справочно: индекс-дефлятор цен', directionId: 'd7', cioId: 'c5', unit: 'процент к предыдущему году', optimum: 'max', weight: 1, formula: '—', level: 3, parentId: 'i76', actualFrom: '2024-01-01' },
 ];
 
 // ─────────────────────────────────────────────────────────────
@@ -530,11 +530,11 @@ export function buildArchiveOmsuValues(year: number, indicators: Indicator[]): A
       out[m.id][ind.id] = empty
         ? {}
         : {
-            r1: f.v2023, r2: f.v2024, r3: f.v2025, e: f.v2026,
-            c1: f.cons2027, b1: f.base2027,
-            c2: f.cons2028, b2: f.base2028,
-            c3: f.cons2029, b3: f.base2029,
-          };
+          r1: f.v2023, r2: f.v2024, r3: f.v2025, e: f.v2026,
+          c1: f.cons2027, b1: f.base2027,
+          c2: f.cons2028, b2: f.base2028,
+          c3: f.cons2029, b3: f.base2029,
+        };
     });
   });
   return out;
@@ -552,7 +552,7 @@ function buildCioTerritoryValues(indicators: Indicator[], omsus: Municipality[])
       let s: CioValue['status'] = rand() > 0.5 ? 'approved' : 'pending_mef';
       const [lo, hi] = RANGES[ind.id] ?? [100, 1000];
       const v = r2((lo + rand() * (hi - lo)));
-      
+
       const r = rand();
       if (r > 0.8) s = 'not_filled';
       else if (r > 0.7) s = 'draft';
@@ -757,8 +757,8 @@ export function buildNoteOmsuValues(templates: NoteTemplate[], muns: Municipalit
 
   // Демо-распределение статусов: munId -> templateId -> статус
   const DEMO_STATUS: Record<string, Partial<Record<string, NoteOmsuData['status']>>> = {
-    m1: { nt1: 'approved', nt2: 'approved', nt3: 'pending_cio', nt4: 'draft', nt5: 'pending_cio', nt6: 'returned', nt7: 'draft' },
-    m2: { nt1: 'pending_cio', nt2: 'pending_cio', nt3: 'pending_cio', nt4: 'draft', nt5: 'draft', nt6: 'draft', nt7: 'draft' },
+    m1: { nt1: 'approved', nt2: 'omsu_approved', nt3: 'agreed', nt4: 'pending_cio', nt5: 'returned', nt6: 'draft', nt7: 'draft' },
+    m2: { nt1: 'pending_cio', nt2: 'pending_cio', nt3: 'agreed', nt4: 'draft', nt5: 'draft', nt6: 'draft', nt7: 'draft' },
     m3: { nt1: 'draft', nt2: 'draft' },
     m4: { nt1: 'draft' },
   };
@@ -779,18 +779,34 @@ export function buildNoteOmsuValues(templates: NoteTemplate[], muns: Municipalit
         });
       }
 
-      // Поячеечные статусы: все заполненные ячейки (кроме несогласуемых) получают статус шаблона;
-      // для «returned» одна ячейка возвращена ЦИО с комментарием, остальные — черновики
+      // Поячеечные статусы, комментарии и флажки утверждения
       const cellStatus: Record<string, NoteCellStatus> = {};
       const cellComments: Record<string, string> = {};
+      const omsuApproved: Record<string, boolean> = {};
+      const cioApproved: Record<string, boolean> = {};
+
       if (status !== 'not_filled') {
-        const filled = Object.entries(cells).filter(([, v]) => v && v.trim() !== '' && v.trim() !== '—');
+        const filled = Object.entries(cells).filter(([, v]) => isNoteCellFilled(v));
         filled.forEach(([k], i) => {
           if (status === 'returned') {
             cellStatus[k] = i === 0 ? 'returned' : 'draft';
-            if (i === 0) cellComments[k] = 'Уточните данные: причины изменения показателей и перечень предприятий';
+            if (i === 0) cellComments[k] = 'Замечание ЦИО: Уточните причины изменения показателей за отчётный период';
+          } else if (status === 'approved') {
+            cellStatus[k] = 'approved';
+            cellComments[k] = 'Согласовано';
+            omsuApproved[k] = true;
+            cioApproved[k] = true;
+          } else if (status === 'omsu_approved') {
+            cellStatus[k] = 'agreed';
+            cellComments[k] = 'Согласовано';
+            omsuApproved[k] = true;
+          } else if (status === 'agreed') {
+            cellStatus[k] = 'agreed';
+            cellComments[k] = 'Согласовано';
+          } else if (status === 'pending_cio') {
+            cellStatus[k] = 'pending_cio';
           } else {
-            cellStatus[k] = status as NoteCellStatus;
+            cellStatus[k] = 'draft';
           }
         });
       }
@@ -799,9 +815,11 @@ export function buildNoteOmsuValues(templates: NoteTemplate[], muns: Municipalit
         cells,
         cellStatus,
         cellComments,
-        status: deriveNoteStatus(cellStatus),
+        omsuApproved,
+        cioApproved,
+        status: deriveNoteStatus(cellStatus, omsuApproved, cioApproved),
         updatedAt: status === 'not_filled' ? null : `2026-0${(mi % 6) + 1}-${String(10 + ti).padStart(2, '0')} 12:00`,
-        signedBy: status === 'pending_cio' || status === 'approved' ? 'Иванов И.И., главный бухгалтер' : undefined,
+        signedBy: (omsuApproved && Object.values(omsuApproved).some(Boolean)) ? 'Иванов И.И., главный бухгалтер' : undefined,
       };
     });
   });
@@ -830,10 +848,12 @@ export function buildNoteCioValues(
 
 export const NOTE_STATUS_META: Record<NoteOmsuData['status'], { label: string; color: string; bg: string }> = {
   not_filled: { label: 'Не заполнена', color: '#64748b', bg: '#f1f5f9' },
-  draft: { label: 'Черновик', color: '#0369a1', bg: '#e0f2fe' },
+  draft: { label: 'Черновик (открыто для ввода)', color: '#0369a1', bg: '#e0f2fe' },
   pending_cio: { label: 'На согласовании у ЦИО', color: '#b45309', bg: '#fef3c7' },
-  approved: { label: 'Согласовано ЦИО', color: '#047857', bg: '#d1fae5' },
-  returned: { label: 'Возвращена на доработку', color: '#be123c', bg: '#ffe4e6' },
+  agreed: { label: 'Согласовано ЦИО (ожидает утверждения ОМСУ)', color: '#0d9488', bg: '#ccfbf1' },
+  omsu_approved: { label: 'Утверждено ОМСУ (зелёный флажок)', color: '#15803d', bg: '#dcfce7' },
+  approved: { label: 'Утверждено ЦИО/МЭФ (синий флажок)', color: '#1d4ed8', bg: '#dbeafe' },
+  returned: { label: 'Возвращена с замечаниями', color: '#be123c', bg: '#ffe4e6' },
 };
 
 export const NOTE_CAMPAIGN: NoteCampaign = {
@@ -960,6 +980,9 @@ export function buildNoteArchiveOmsuValues(
     templates.forEach((t) => {
       const cells: Record<string, string> = {};
       const cellStatus: Record<string, NoteCellStatus> = {};
+      const cellComments: Record<string, string> = {};
+      const omsuApproved: Record<string, boolean> = {};
+      const cioApproved: Record<string, boolean> = {};
       t.rows.forEach((r) => {
         const n = noteRowCellCount(t, r);
         for (let i = 0; i < n; i++) {
@@ -973,13 +996,18 @@ export function buildNoteArchiveOmsuValues(
           if (text.trim() === '') continue;
           cells[key] = text;
           cellStatus[key] = 'approved';
+          cellComments[key] = 'Согласовано';
+          omsuApproved[key] = true;
+          cioApproved[key] = true;
         }
       });
       out[m.id]![t.id] = {
         cells,
         cellStatus,
-        cellComments: {},
-        status: deriveNoteStatus(cellStatus),
+        cellComments,
+        omsuApproved,
+        cioApproved,
+        status: deriveNoteStatus(cellStatus, omsuApproved, cioApproved),
         updatedAt: `${year}-03-${String(10 + (mi % 18)).padStart(2, '0')} 14:30`,
         signedBy: 'Иванов И.И., главный бухгалтер',
       };
@@ -1025,33 +1053,33 @@ export function buildInitialState(moduleId: string): AppState {
 
   const units = Array.from(new Set(indicators.map(i => i.unit).filter(Boolean)));
 
-    const cioValues = buildCioValues(indicators);
-    const cioTerritoryValues = buildCioTerritoryValues(indicators, MUNICIPALITIES);
-    const omsuValues = buildOmsuValues(indicators);
-    const mefValues = buildMefValues(indicators, cioValues);
-    const mefTerritoryValues = buildMefTerritoryValues(indicators, MUNICIPALITIES, cioTerritoryValues);
+  const cioValues = buildCioValues(indicators);
+  const cioTerritoryValues = buildCioTerritoryValues(indicators, MUNICIPALITIES);
+  const omsuValues = buildOmsuValues(indicators);
+  const mefValues = buildMefValues(indicators, cioValues);
+  const mefTerritoryValues = buildMefTerritoryValues(indicators, MUNICIPALITIES, cioTerritoryValues);
 
-    const state: AppState = {
-      indicators,
-      directions,
-      cios: cios.map(c => ({ ...c, isActive: true })),
-      omsus,
-      units: units.map((u, i) => ({ id: `u${i + 1}`, name: u, isActive: true })),
-      blockSettings: {
-        mun: { approvers: ['omsu', 'cio', 'mef'], reportingPeriods: [], estimatedPeriods: [], forecastPeriods: [], hasNote: false },
-        obl: { approvers: ['cio', 'mef'], reportingPeriods: [], estimatedPeriods: [], forecastPeriods: [], hasNote: false },
-        params: { approvers: ['omsu', 'cio', 'mef'], reportingPeriods: [], estimatedPeriods: [], forecastPeriods: [], hasNote: false },
-        rating_main: { approvers: ['omsu', 'cio', 'mef'], reportingPeriods: [], estimatedPeriods: [], forecastPeriods: [], hasNote: false },
-        ukaz_main: { approvers: ['omsu', 'cio', 'mef'], reportingPeriods: ['y2023', 'y2024', 'y2025'], estimatedPeriods: [], forecastPeriods: ['y2026', 'y2027', 'y2028'], hasNote: true },
-        form2p: { approvers: ['cio', 'mef'], reportingPeriods: [], estimatedPeriods: [], forecastPeriods: [], hasNote: false },
-        long_term: { approvers: ['cio', 'mef'], reportingPeriods: [], estimatedPeriods: [], forecastPeriods: [], hasNote: false },
-        note: { approvers: ['omsu', 'cio', 'mef'], reportingPeriods: [], estimatedPeriods: [], forecastPeriods: [], hasNote: false },
-      },
-      omsuValues,
-      cioValues,
-      mefValues,
-      cioTerritoryValues,
-      mefTerritoryValues,
+  const state: AppState = {
+    indicators,
+    directions,
+    cios: cios.map(c => ({ ...c, isActive: true })),
+    omsus,
+    units: units.map((u, i) => ({ id: `u${i + 1}`, name: u, isActive: true })),
+    blockSettings: {
+      mun: { approvers: ['omsu', 'cio', 'mef'], reportingPeriods: [], estimatedPeriods: [], forecastPeriods: [], hasNote: false },
+      obl: { approvers: ['cio', 'mef'], reportingPeriods: [], estimatedPeriods: [], forecastPeriods: [], hasNote: false },
+      params: { approvers: ['omsu', 'cio', 'mef'], reportingPeriods: [], estimatedPeriods: [], forecastPeriods: [], hasNote: false },
+      rating_main: { approvers: ['omsu', 'cio', 'mef'], reportingPeriods: [], estimatedPeriods: [], forecastPeriods: [], hasNote: false },
+      ukaz_main: { approvers: ['omsu', 'cio', 'mef'], reportingPeriods: ['y2023', 'y2024', 'y2025'], estimatedPeriods: [], forecastPeriods: ['y2026', 'y2027', 'y2028'], hasNote: true },
+      form2p: { approvers: ['cio', 'mef'], reportingPeriods: [], estimatedPeriods: [], forecastPeriods: [], hasNote: false },
+      long_term: { approvers: ['cio', 'mef'], reportingPeriods: [], estimatedPeriods: [], forecastPeriods: [], hasNote: false },
+      note: { approvers: ['omsu', 'cio', 'mef'], reportingPeriods: [], estimatedPeriods: [], forecastPeriods: [], hasNote: false },
+    },
+    omsuValues,
+    cioValues,
+    mefValues,
+    cioTerritoryValues,
+    mefTerritoryValues,
     campaign: {
       module: moduleId,
       name: moduleId === 'ukaz' ? 'Указ Президента РФ №607' : moduleId === 'rating' ? 'Рейтинг ОМСУ' : 'Муниципальный прогноз СЭР МО',
@@ -1258,7 +1286,8 @@ export const UKAZ_INDICATORS: Indicator[] = [
     optimum: 'max',
     weight: 1,
     level: 1,
-    parentId: null, actualFrom: '2024-01-01' },
+    parentId: null, actualFrom: '2024-01-01'
+  },
   {
     id: 'u4',
     num: '4',
@@ -1270,7 +1299,8 @@ export const UKAZ_INDICATORS: Indicator[] = [
     optimum: 'max',
     weight: 1,
     level: 1,
-    parentId: null, actualFrom: '2024-01-01' },
+    parentId: null, actualFrom: '2024-01-01'
+  },
   {
     id: 'u5',
     num: '5',
@@ -1282,7 +1312,8 @@ export const UKAZ_INDICATORS: Indicator[] = [
     optimum: 'max',
     weight: 1,
     level: 1,
-    parentId: null, actualFrom: '2024-01-01' },
+    parentId: null, actualFrom: '2024-01-01'
+  },
   {
     id: 'u6',
     num: '6',
@@ -1294,7 +1325,8 @@ export const UKAZ_INDICATORS: Indicator[] = [
     optimum: 'max',
     weight: 1,
     level: 1,
-    parentId: null, actualFrom: '2024-01-01' },
+    parentId: null, actualFrom: '2024-01-01'
+  },
   {
     id: 'u8',
     num: '8',
@@ -1306,7 +1338,8 @@ export const UKAZ_INDICATORS: Indicator[] = [
     optimum: 'max',
     weight: 1,
     level: 1,
-    parentId: null, actualFrom: '2024-01-01' },
+    parentId: null, actualFrom: '2024-01-01'
+  },
   {
     id: 'u9',
     num: '9',
@@ -1318,7 +1351,8 @@ export const UKAZ_INDICATORS: Indicator[] = [
     optimum: 'max',
     weight: 1,
     level: 1,
-    parentId: null, actualFrom: '2024-01-01' },
+    parentId: null, actualFrom: '2024-01-01'
+  },
   {
     id: 'u10',
     num: '10',
@@ -1330,7 +1364,8 @@ export const UKAZ_INDICATORS: Indicator[] = [
     optimum: 'max',
     weight: 1,
     level: 1,
-    parentId: null, actualFrom: '2024-01-01' },
+    parentId: null, actualFrom: '2024-01-01'
+  },
   {
     id: 'u11',
     num: '11',
@@ -1342,7 +1377,8 @@ export const UKAZ_INDICATORS: Indicator[] = [
     optimum: 'max',
     weight: 1,
     level: 1,
-    parentId: null, actualFrom: '2024-01-01' },
+    parentId: null, actualFrom: '2024-01-01'
+  },
   {
     id: 'u12',
     num: '12',
@@ -1354,7 +1390,8 @@ export const UKAZ_INDICATORS: Indicator[] = [
     optimum: 'max',
     weight: 1,
     level: 1,
-    parentId: null, actualFrom: '2024-01-01' },
+    parentId: null, actualFrom: '2024-01-01'
+  },
   {
     id: 'u13',
     num: '13',
@@ -1366,7 +1403,8 @@ export const UKAZ_INDICATORS: Indicator[] = [
     optimum: 'max',
     weight: 1,
     level: 1,
-    parentId: null, actualFrom: '2024-01-01' },
+    parentId: null, actualFrom: '2024-01-01'
+  },
   {
     id: 'u14',
     num: '14',
@@ -1378,7 +1416,8 @@ export const UKAZ_INDICATORS: Indicator[] = [
     optimum: 'max',
     weight: 1,
     level: 1,
-    parentId: null, actualFrom: '2024-01-01' },
+    parentId: null, actualFrom: '2024-01-01'
+  },
 ];
 
 // Направления рейтинга ОМСУ: «Итоговый рейтинг» раскрывается на три направления

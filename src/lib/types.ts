@@ -337,26 +337,31 @@ export interface NoteTemplate {
   isActive?: boolean;
 }
 
-/** ПЗ: статус данных ОМСУ по шаблону (выводится из статусов ячеек) */
+/** ПЗ: статус данных ОМСУ по шаблону (выводится из статусов ячеек и флажков утверждения) */
 export type NoteStatus =
   | 'not_filled'   // не заполнен
   | 'draft'        // черновик (есть ячейки, не отправленные на согласование)
-  | 'pending_cio'  // есть ячейки, подписанные ЭЦП, на согласовании у ЦИО
-  | 'approved'     // все заполненные ячейки согласованы ЦИО
-  | 'returned';    // есть ячейки, возвращённые ЦИО на доработку
+  | 'pending_cio'  // есть ячейки на согласовании у ЦИО
+  | 'agreed'       // согласовано ЦИО («Согласовано» в комментарии)
+  | 'omsu_approved'// утверждено ОМСУ (зелёные флажки)
+  | 'approved'     // утверждено ЦИО/МЭФ (синие флажки)
+  | 'returned';    // есть ячейки с замечаниями ЦИО
 
 /** ПЗ: статус отдельной ячейки шаблона (поячеечная отправка и согласование) */
 export type NoteCellStatus =
   | 'draft'        // заполнена, не отправлена на согласование
-  | 'pending_cio'  // подписана ЭЦП, на согласовании у ЦИО
-  | 'approved'     // согласована ЦИО (изменение заблокировано)
-  | 'returned';    // возвращена ЦИО на доработку
+  | 'pending_cio'  // на согласовании у ЦИО
+  | 'agreed'       // согласована ЦИО (в комментарии «Согласовано»)
+  | 'approved'     // для совместимости / утверждено
+  | 'returned';    // замечания ЦИО
 
-/** ПЗ: данные ОМСУ по шаблону (значения и статусы всех ячеек) */
+/** ПЗ: данные ОМСУ по шаблону (значения, статусы ячеек, флажки утверждения ОМСУ и ЦИО) */
 export interface NoteOmsuData {
   cells: Record<string, string>;               // key: `${rowId}:${subIdx}:${colIdx}`
   cellStatus: Record<string, NoteCellStatus>;  // key -> статус ячейки (отсутствует = не заполнена)
-  cellComments: Record<string, string>;        // key -> комментарий ЦИО при возврате ячейки
+  cellComments: Record<string, string>;        // key -> комментарий ЦИО («Согласовано» или замечания)
+  omsuApproved?: Record<string, boolean>;      // key -> Зелёный флажок (утверждение ОМСУ)
+  cioApproved?: Record<string, boolean>;       // key -> Синий флажок (утверждение ЦИО/МЭФ)
   status: NoteStatus;
   updatedAt: string | null;
   signedBy?: string;
@@ -391,13 +396,24 @@ export interface CollectionPeriodOption {
 export const noteCellKey = (rowId: string, subIdx: number, colIdx: number) =>
   `${rowId}:${subIdx}:${colIdx}`;
 
-/** ПЗ: вывод статуса шаблона из статусов ячеек */
-export function deriveNoteStatus(cellStatus: Record<string, NoteCellStatus>): NoteStatus {
+/** ПЗ: проверка заполненности ячейки */
+export const isNoteCellFilled = (v: string | undefined): boolean =>
+  !!v && v.trim() !== '' && v.trim() !== '—';
+
+/** ПЗ: вывод статуса шаблона из статусов ячеек и флажков утверждения */
+export function deriveNoteStatus(
+  cellStatus: Record<string, NoteCellStatus>,
+  omsuApproved: Record<string, boolean> = {},
+  cioApproved: Record<string, boolean> = {},
+): NoteStatus {
   const sts = Object.values(cellStatus);
   if (sts.length === 0) return 'not_filled';
   if (sts.includes('returned')) return 'returned';
+  const keys = Object.keys(cellStatus);
+  if (keys.length > 0 && keys.every((k) => cioApproved[k])) return 'approved';
+  if (keys.length > 0 && keys.every((k) => omsuApproved[k])) return 'omsu_approved';
+  if (sts.every((s) => s === 'agreed' || s === 'approved')) return 'agreed';
   if (sts.includes('pending_cio')) return 'pending_cio';
-  if (sts.every((s) => s === 'approved')) return 'approved';
   return 'draft';
 }
 
