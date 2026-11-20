@@ -1,4 +1,4 @@
-import { useState, Fragment } from 'react';
+import { useState, Fragment, useMemo } from 'react';
 import { useStore } from '@/lib/store';
 import { VALUE_FIELDS, VALUE_GROUPS, getFormulaForField } from '@/lib/types';
 import { EMPTY_TREE_FILTER, chevronParents, visibleTree, type TreeFilter } from '@/lib/indTree';
@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Undo2, CheckCircle2, Info, Lock, Send, CheckSquare, ShieldCheck, Calculator } from 'lucide-react';
+import { Undo2, CheckCircle2, Info, Lock, Send, CheckSquare, ShieldCheck, Calculator, RotateCcw } from 'lucide-react';
 import { CloseIndicatorsModal } from '@/components/CloseIndicatorsModal';
 import { fieldTint } from '@/components/ValueColumns';
 import { CioStatusBadge } from '@/components/StatusBadge';
@@ -103,10 +103,65 @@ function MefTerritoryIndicators({ block = 'mun', visible, fillable, collapsed, t
   const [comment, setComment] = useState('');
   
   const [munFilter, setMunFilter] = useState<string>('all');
+  const [selectedMuns, setSelectedMuns] = useState<Record<string, boolean>>({});
+  const [bulkMsg, setBulkMsg] = useState<string | null>(null);
+
   let activeOmsus = state.omsus.filter((m) => m.isActive);
   if (munFilter !== 'all') {
     activeOmsus = activeOmsus.filter(o => o.id === munFilter);
   }
+
+  const selectedMunIds = useMemo(() => {
+    return Object.keys(selectedMuns).filter((id) => selectedMuns[id]);
+  }, [selectedMuns]);
+
+  const isAllSelected = activeOmsus.length > 0 && selectedMunIds.length === activeOmsus.length;
+
+  const toggleSelectAll = (checked: boolean) => {
+    if (!checked) {
+      setSelectedMuns({});
+    } else {
+      const next: Record<string, boolean> = {};
+      activeOmsus.forEach((m) => { next[m.id] = true; });
+      setSelectedMuns(next);
+    }
+  };
+
+  /** Функционал «Отменить утверждение отмеченных данных» — снимает отметки утверждения (флажки) с отмеченных (выбранных ячеек) */
+  const handleRevokeSelected = () => {
+    if (selectedMunIds.length === 0) return;
+    selectedMunIds.forEach((munId) => {
+      visible.forEach((ind: any) => {
+        VALUE_FIELDS.forEach((f) => {
+          dispatch({ type: 'MEF_UNLOCK_OMSU_VALUE', munId, indId: ind.id, field: f.key });
+          dispatch({ type: 'MEF_UNLOCK_CIO_TERR_VALUE', cioId: ind.cioId, indId: ind.id, munId, field: f.key });
+        });
+      });
+    });
+    setBulkMsg(`Отметки утверждения (флажки) успешно сняты с отмеченных данных (${selectedMunIds.length} ОМСУ)`);
+    setTimeout(() => setBulkMsg(null), 3500);
+  };
+
+  /** Функционал «Утвердить отмеченные данные» — проставляет утверждение для отмеченных данных */
+  const handleApproveSelected = () => {
+    if (selectedMunIds.length === 0) return;
+    selectedMunIds.forEach((munId) => {
+      visible.forEach((ind: any) => {
+        VALUE_FIELDS.forEach((f) => {
+          const omsuVal = state.omsuValues[munId]?.[ind.id];
+          if (omsuVal && omsuVal[f.key] != null) {
+            dispatch({ type: 'MEF_SET_OMSU_VALUE', munId, indId: ind.id, field: f.key, value: omsuVal[f.key] });
+          }
+          const safeV = state.cioTerritoryValues[ind.cioId]?.[ind.id]?.[munId];
+          if (safeV && safeV[f.key] != null) {
+            dispatch({ type: 'MEF_SET_CIO_TERR_VALUE', cioId: ind.cioId, indId: ind.id, munId, field: f.key, value: safeV[f.key] });
+          }
+        });
+      });
+    });
+    setBulkMsg(`Утверждение успешно проставлено для отмеченных данных (${selectedMunIds.length} ОМСУ)`);
+    setTimeout(() => setBulkMsg(null), 3500);
+  };
 
   const approvers = state.blockSettings[block]?.approvers || ['omsu', 'cio', 'mef'];
   const hasNote = state.blockSettings[block]?.hasNote || false;
@@ -115,13 +170,75 @@ function MefTerritoryIndicators({ block = 'mun', visible, fillable, collapsed, t
   return (
     <>
       <IndToolbar filter={treeFilter} onChange={setTreeFilter} shown={visible.length} total={fillable.length} hideCioFilter munId={munFilter} onMunChange={setMunFilter} />
-      <div className="flex items-center gap-2 mt-2">
-        <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" checked={showOmsu} onChange={(e) => setShowOmsu(e.target.checked)} />
-          Показать данные ОМСУ
-        </label>
+      
+      {/* Панель групповых действий с отмеченными данными */}
+      <div className="flex flex-wrap items-center justify-between gap-2 mt-2 p-2.5 bg-slate-50 border border-slate-200 rounded-md text-xs">
+        <div className="flex items-center gap-3">
+          <label className="flex items-center gap-2 cursor-pointer select-none font-medium text-slate-700">
+            <input
+              type="checkbox"
+              checked={isAllSelected}
+              onChange={(e) => toggleSelectAll(e.target.checked)}
+              className="rounded border-slate-300 text-blue-600 focus:ring-0 cursor-pointer"
+            />
+            <span>Выбрать все ОМСУ</span>
+          </label>
+          {selectedMunIds.length > 0 && (
+            <Badge variant="outline" className="bg-blue-50 text-blue-800 border-blue-300 font-medium">
+              Отмечено: {selectedMunIds.length} из {activeOmsus.length} ОМСУ
+            </Badge>
+          )}
+          <label className="flex items-center gap-2 cursor-pointer select-none text-slate-600 ml-2">
+            <input type="checkbox" checked={showOmsu} onChange={(e) => setShowOmsu(e.target.checked)} />
+            Показать данные ОМСУ
+          </label>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          {selectedMunIds.length > 0 ? (
+            <>
+              <Button
+                size="sm"
+                className="h-7 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-medium flex items-center gap-1 shadow-xs"
+                onClick={handleApproveSelected}
+                title="Утвердить отмеченные данные"
+              >
+                <CheckSquare className="h-3.5 w-3.5" /> Утвердить отмеченные данные
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 text-xs bg-white text-rose-700 border-rose-300 hover:bg-rose-50 font-medium flex items-center gap-1 shadow-xs"
+                onClick={handleRevokeSelected}
+                title="Снимает отметки утверждения (флажки) с отмеченных (выбранных ячеек)"
+              >
+                <RotateCcw className="h-3.5 w-3.5" /> Отменить утверждение отмеченных данных
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-7 text-xs text-slate-600 hover:text-slate-900"
+                onClick={() => setSelectedMuns({})}
+              >
+                Снять отметки
+              </Button>
+            </>
+          ) : (
+            <span className="text-slate-500 text-[11px] italic">
+              Отметьте ОМСУ для применения групповых операций «Утвердить отмеченные данные» и «Отменить утверждение отмеченных данных»
+            </span>
+          )}
+        </div>
       </div>
-      <div className="rounded-md border border-blue-200 bg-blue-50 p-3 text-sm flex gap-2 mt-4">
+
+      {bulkMsg && (
+        <div className="mt-2 p-2 bg-emerald-50 border border-emerald-300 text-emerald-900 text-xs rounded flex items-center gap-2 animate-in fade-in duration-150">
+          <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+          <span className="font-medium">{bulkMsg}</span>
+        </div>
+      )}
+
+      <div className="rounded-md border border-blue-200 bg-blue-50 p-3 text-sm flex gap-2 mt-3">
         <Info className="h-4 w-4 text-blue-700 mt-0.5 shrink-0" />
         <span>МЭФ проверяет значения территорий, внесённые ЦИО. Вы можете согласовать данные или внести собственные.</span>
       </div>
@@ -195,7 +312,14 @@ function MefTerritoryIndicators({ block = 'mun', visible, fillable, collapsed, t
                     return (
                       <tr key={omsu.id} className={`border-b ${safeV.status === 'pending_mef' ? 'bg-amber-50/60' : 'hover:bg-slate-50'}`}>
                         <td className="p-2 font-medium pl-6">
-                          <div className="flex items-center gap-1.5">
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              checked={!!selectedMuns[omsu.id]}
+                              onChange={(e) => setSelectedMuns((prev) => ({ ...prev, [omsu.id]: e.target.checked }))}
+                              className="rounded border-slate-300 text-blue-600 focus:ring-0 cursor-pointer h-3.5 w-3.5"
+                              title={`Отметить ${omsu.name}`}
+                            />
                             <span>{omsu.name}</span>
                             {isIndClosed && (
                               <span className="text-[10px] px-1 py-0.5 rounded bg-red-50 text-red-700 border border-red-200">Закрыт</span>
