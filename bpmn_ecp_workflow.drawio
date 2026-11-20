@@ -1,0 +1,84 @@
+<mxfile host="app.diagrams.net" agent="Antigravity BPMN Generator">
+  <diagram id="ecp_workflow_bpmn" name="Формирование и подписание прогноза СЭР МО с УКЭП">
+    <mxGraphModel dx="1420" dy="840" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="900" background="#F8FAFC" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="pool_main" parent="1" style="swimlane;html=1;childLayout=stackLayout;resizeParent=1;resizeParentMax=0;startSize=32;horizontal=0;horizontalFlip=0;fillColor=#0F172A;fontColor=#FFFFFF;strokeColor=#1E293B;fontStyle=1;fontSize=14;" value="ГАС «Управление» МО: Процесс формирования, прикрепления и подписания прогноза СЭР МО с УКЭП" vertex="1">
+          <mxGeometry height="820" width="1520" x="40" y="40" as="geometry" />
+        </mxCell>
+        <!-- Lane 1: ОМСУ -->
+        <mxCell id="lane_omsu" parent="pool_main" style="swimlane;html=1;startSize=30;horizontal=0;fillColor=#FFFFFF;strokeColor=#CBD5E1;fontColor=#0F172A;fontStyle=1;fontSize=12;" value="Исполнители ОМСУ&#xa;(Муниципальный уровень)" vertex="1">
+          <mxGeometry height="200" width="1490" x="30" as="geometry" />
+        </mxCell>
+        <mxCell id="omsu_start" parent="lane_omsu" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;fillColor=#22C55E;strokeColor=#15803D;fontColor=#FFFFFF;fontStyle=1;fontSize=10;" value="Старт" vertex="1">
+          <mxGeometry height="40" width="40" x="40" y="80" as="geometry" />
+        </mxCell>
+        <mxCell id="omsu_task1" parent="lane_omsu" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F0FDF4;strokeColor=#10B981;fontColor=#065F46;fontSize=11;fontStyle=1;arcSize=12;shadow=1;" value="1. Ввод значений прогноза&#xa;&lt;font style=&quot;font-weight:normal;color:#334155;font-size:10px;&quot;&gt;• Заполнение форм показателей&#xa;• Проверка контрольных соотношений&#xa;• Массовое/точечное утверждение&lt;/font&gt;" vertex="1">
+          <mxGeometry height="90" width="210" x="120" y="55" as="geometry" />
+        </mxCell>
+        <mxCell id="omsu_task2" parent="lane_omsu" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F0FDF4;strokeColor=#10B981;fontColor=#065F46;fontSize=11;fontStyle=1;arcSize=12;shadow=1;" value="2. Пояснительная записка&#xa;&lt;font style=&quot;font-weight:normal;color:#334155;font-size:10px;&quot;&gt;• Заполнение разделов ПЗ в системе&#xa;• Сохранение и утверждение текста ПЗ&lt;/font&gt;" vertex="1">
+          <mxGeometry height="90" width="200" x="370" y="55" as="geometry" />
+        </mxCell>
+        <mxCell id="omsu_task3" parent="lane_omsu" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DCFCE7;strokeColor=#16A34A;fontColor=#166534;fontSize=11;fontStyle=1;arcSize=12;shadow=1;" value="3. Автосборка пакета ОМСУ&#xa;&lt;font style=&quot;font-weight:normal;color:#334155;font-size:10px;&quot;&gt;Система автоматически генерирует единый PDF:&#xa;выходные таблицы + утвержденная ПЗ&lt;/font&gt;" vertex="1">
+          <mxGeometry height="90" width="230" x="610" y="55" as="geometry" />
+        </mxCell>
+
+        <!-- Lane 2: ЦИО -->
+        <mxCell id="lane_cio" parent="pool_main" style="swimlane;html=1;startSize=30;horizontal=0;fillColor=#F8FAFC;strokeColor=#CBD5E1;fontColor=#0F172A;fontStyle=1;fontSize=12;" value="Исполнители ЦИО&#xa;(Региональный уровень)" vertex="1">
+          <mxGeometry height="200" width="1490" x="30" y="200" as="geometry" />
+        </mxCell>
+        <mxCell id="cio_start" parent="lane_cio" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;fillColor=#3B82F6;strokeColor=#1D4ED8;fontColor=#FFFFFF;fontStyle=1;fontSize=10;" value="Старт" vertex="1">
+          <mxGeometry height="40" width="40" x="40" y="80" as="geometry" />
+        </mxCell>
+        <mxCell id="cio_task1" parent="lane_cio" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EFF6FF;strokeColor=#3B82F6;fontColor=#1E3A8A;fontSize=11;fontStyle=1;arcSize=12;shadow=1;" value="1. Ввод отраслевых значений&#xa;&lt;font style=&quot;font-weight:normal;color:#334155;font-size:10px;&quot;&gt;• Ввод показателей в РМ ЦИО&#xa;• Утверждение всех значений&lt;/font&gt;" vertex="1">
+          <mxGeometry height="90" width="210" x="120" y="55" as="geometry" />
+        </mxCell>
+        <mxCell id="cio_task2" parent="lane_cio" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EFF6FF;strokeColor=#3B82F6;fontColor=#1E3A8A;fontSize=11;fontStyle=1;arcSize=12;shadow=1;" value="2. Внешняя пояснительная записка&#xa;&lt;font style=&quot;font-weight:normal;color:#334155;font-size:10px;&quot;&gt;• Формирование ПЗ вне подсистемы&#xa;(Word / PDF в ведомстве)&lt;/font&gt;" vertex="1">
+          <mxGeometry height="90" width="200" x="370" y="55" as="geometry" />
+        </mxCell>
+        <mxCell id="cio_task3" parent="lane_cio" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DBEAFE;strokeColor=#2563EB;fontColor=#1E40AF;fontSize=11;fontStyle=1;arcSize=12;shadow=1;" value="3. Экран прикрепления и сборка&#xa;&lt;font style=&quot;font-weight:normal;color:#334155;font-size:10px;&quot;&gt;• Загрузка файла внешней ПЗ&#xa;• Экспорт выходных таблиц&#xa;• Формирование единого пакета прогноза&lt;/font&gt;" vertex="1">
+          <mxGeometry height="90" width="230" x="610" y="55" as="geometry" />
+        </mxCell>
+
+        <!-- Lane 3: Глава ГО / Министр ЦИО -->
+        <mxCell id="lane_signer" parent="pool_main" style="swimlane;html=1;startSize=30;horizontal=0;fillColor=#FFFFFF;strokeColor=#CBD5E1;fontColor=#0F172A;fontStyle=1;fontSize=12;" value="Глава ГО / Министр ЦИО&#xa;(Право первой подписи УКЭП)" vertex="1">
+          <mxGeometry height="210" width="1490" x="30" y="400" as="geometry" />
+        </mxCell>
+        <mxCell id="sign_task" parent="lane_signer" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FEF3C7;strokeColor=#F59E0B;fontColor=#78350F;fontSize=11;fontStyle=1;arcSize=12;shadow=1;" value="4. Личный кабинет руководителя / Штамп УКЭП&#xa;&lt;font style=&quot;font-weight:normal;color:#451A03;font-size:10px;&quot;&gt;• Открытие экрана «К подписанию»&#xa;• Встроенный просмотрщик сформированного пакета&#xa;• Выбор личного сертификата УКЭП (КриптоПро CSP)&#xa;• Нажатие кнопки «Подписать УКЭП и отправить в МЭФ»&lt;/font&gt;" vertex="1">
+          <mxGeometry height="100" width="280" x="870" y="50" as="geometry" />
+        </mxCell>
+        <mxCell id="sign_gateway" parent="lane_signer" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FEF08A;strokeColor=#CA8A04;fontColor=#854D0E;fontStyle=1;fontSize=10;" value="УКЭП&#xa;успешна?" vertex="1">
+          <mxGeometry height="70" width="70" x="1190" y="65" as="geometry" />
+        </mxCell>
+
+        <!-- Lane 4: Минэкономики МО (МЭФ) -->
+        <mxCell id="lane_mef" parent="pool_main" style="swimlane;html=1;startSize=30;horizontal=0;fillColor=#F8FAFC;strokeColor=#CBD5E1;fontColor=#0F172A;fontStyle=1;fontSize=12;" value="Минэкономики МО (МЭФ)&#xa;(Приемка и контроль прогноза)" vertex="1">
+          <mxGeometry height="210" width="1490" x="30" y="610" as="geometry" />
+        </mxCell>
+        <mxCell id="mef_accept" parent="lane_mef" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F3E8FF;strokeColor=#A855F7;fontColor=#581C87;fontSize=11;fontStyle=1;arcSize=12;shadow=1;" value="5. Автоматическая приемка и валидация&#xa;&lt;font style=&quot;font-weight:normal;color:#3B0764;font-size:10px;&quot;&gt;• Проверка квалифицированной подписи и сертификата&#xa;• Фиксация даты/времени представления прогноза&#xa;• Установка статуса «Представлен с УКЭП»&#xa;• Полная блокировка исходных данных от правок&lt;/font&gt;" vertex="1">
+          <mxGeometry height="100" width="280" x="1085" y="50" as="geometry" />
+        </mxCell>
+        <mxCell id="mef_end" parent="lane_mef" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;fillColor=#EF4444;strokeColor=#B91C1C;fontColor=#FFFFFF;fontStyle=1;fontSize=10;" value="Конец" vertex="1">
+          <mxGeometry height="40" width="40" x="1400" y="80" as="geometry" />
+        </mxCell>
+
+        <!-- Edges / Transitions -->
+        <mxCell id="edge1" parent="1" source="omsu_start" target="omsu_task1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#64748B;strokeWidth=2;" edge="1" />
+        <mxCell id="edge2" parent="1" source="omsu_task1" target="omsu_task2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#64748B;strokeWidth=2;" edge="1" />
+        <mxCell id="edge3" parent="1" source="omsu_task2" target="omsu_task3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#64748B;strokeWidth=2;" edge="1" />
+        <mxCell id="edge4" parent="1" source="omsu_task3" target="sign_task" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#059669;strokeWidth=2;" edge="1" />
+
+        <mxCell id="edge5" parent="1" source="cio_start" target="cio_task1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#64748B;strokeWidth=2;" edge="1" />
+        <mxCell id="edge6" parent="1" source="cio_task1" target="cio_task2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#64748B;strokeWidth=2;" edge="1" />
+        <mxCell id="edge7" parent="1" source="cio_task2" target="cio_task3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#64748B;strokeWidth=2;" edge="1" />
+        <mxCell id="edge8" parent="1" source="cio_task3" target="sign_task" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#2563EB;strokeWidth=2;" edge="1" />
+
+        <mxCell id="edge9" parent="1" source="sign_task" target="sign_gateway" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#D97706;strokeWidth=2;" edge="1" />
+        <mxCell id="edge10" parent="1" source="sign_gateway" target="mef_accept" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#059669;strokeWidth=2;" edge="1" value="Да" />
+        <mxCell id="edge11" parent="1" source="sign_gateway" target="cio_task3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#DC2626;strokeWidth=2;dashed=1;" edge="1" value="Отклонено на доработку" />
+        <mxCell id="edge12" parent="1" source="mef_accept" target="mef_end" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#64748B;strokeWidth=2;" edge="1" />
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

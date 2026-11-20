@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>BPMN: Процесс подписания и сдачи прогноза с УКЭП</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
+    body { background: #f8fafc; padding: 24px; display: flex; justify-content: center; }
+    .canvas { width: 1420px; background: #ffffff; border-radius: 12px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1); border: 1.5px solid #cbd5e1; overflow: hidden; }
+    .header { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); color: #fff; padding: 22px 30px; border-bottom: 3.5px solid #3b82f6; }
+    .header h1 { font-size: 21px; font-weight: 700; margin-bottom: 6px; letter-spacing: -0.01em; display: flex; align-items: center; gap: 10px; }
+    .header p { font-size: 13px; color: #94a3b8; line-height: 1.4; }
+    
+    .pool { display: flex; flex-direction: column; width: 100%; border-top: 1px solid #e2e8f0; }
+    .lane { display: grid; grid-template-columns: 240px 1fr; border-bottom: 1.5px solid #e2e8f0; min-height: 185px; }
+    .lane:last-child { border-bottom: none; }
+    
+    .lane-title { background: #f8fafc; border-right: 2px solid #cbd5e1; padding: 22px 18px; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; }
+    .lane-role { font-size: 14px; font-weight: 700; color: #1e293b; line-height: 1.3; }
+    .lane-sub { font-size: 11px; color: #64748b; margin-top: 4px; }
+    .lane-badge { display: inline-block; font-size: 10px; font-weight: 600; padding: 3px 8px; border-radius: 12px; margin-top: 10px; text-transform: uppercase; letter-spacing: 0.05em; }
+    .badge-omsu { background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; }
+    .badge-cio { background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; }
+    .badge-chief { background: #fef3c7; color: #d97706; border: 1px solid #fde68a; }
+    .badge-mef { background: #f5f3ff; color: #7c3aed; border: 1px solid #ddd6fe; }
+
+    .lane-content { padding: 24px 28px; display: flex; align-items: center; position: relative; gap: 20px; background: #ffffff; }
+
+    .node { position: relative; border-radius: 8px; padding: 12px 14px; font-size: 12px; font-weight: 500; display: flex; flex-direction: column; justify-content: center; text-align: left; box-shadow: 0 2px 4px rgba(0,0,0,0.04); z-index: 2; }
+    .task { background: #ffffff; border: 1.5px solid #94a3b8; color: #1e293b; min-width: 175px; max-width: 205px; min-height: 80px; }
+    .task.omsu { border-color: #10b981; background: #f0fdf4; }
+    .task.cio { border-color: #3b82f6; background: #f8fafc; }
+    .task.chief { border-color: #f59e0b; background: #fffbeb; font-weight: 600; }
+    .task.mef { border-color: #8b5cf6; background: #faf5ff; font-weight: 600; }
+    .task-title { font-weight: 700; font-size: 12px; margin-bottom: 5px; display: flex; align-items: center; gap: 6px; }
+    .task-desc { font-size: 11px; color: #475569; line-height: 1.35; }
+
+    .gateway { width: 44px; height: 44px; min-width: 44px; min-height: 44px; background: #fef08a; border: 2px solid #ca8a04; transform: rotate(45deg); display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.06); margin: 0 8px; z-index: 2; }
+    .gateway span { transform: rotate(-45deg); font-weight: 800; font-size: 13px; color: #854d0e; }
+
+    .event { width: 38px; height: 38px; min-width: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; z-index: 2; box-shadow: 0 2px 4px rgba(0,0,0,0.06); }
+    .start-event { background: #22c55e; border: 2.5px solid #16a34a; color: white; }
+    .end-event { background: #dc2626; border: 3px double #ffffff; outline: 2.5px solid #991b1b; color: white; font-size: 14px; }
+
+    .arrow { display: flex; align-items: center; color: #64748b; font-size: 18px; margin: 0 -2px; z-index: 1; }
+    .arrow-line { height: 2px; background: #94a3b8; width: 24px; }
+    .arrow-head { width: 0; height: 0; border-top: 5px solid transparent; border-bottom: 5px solid transparent; border-left: 7px solid #94a3b8; }
+
+    .note-badge { font-size: 10px; color: #b45309; background: #fef3c7; border: 1px dashed #f59e0b; padding: 4px 6px; border-radius: 4px; margin-top: 5px; font-weight: 600; }
+    .crypto-badge { font-size: 10px; color: #1e3a8a; background: #dbeafe; border: 1px solid #93c5fd; padding: 3px 6px; border-radius: 4px; margin-top: 5px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; }
+
+    .legend { background: #f8fafc; padding: 16px 30px; border-top: 1.5px solid #e2e8f0; display: flex; align-items: center; justify-content: space-between; font-size: 12px; color: #64748b; }
+    .legend-items { display: flex; gap: 24px; }
+    .legend-item { display: flex; align-items: center; gap: 8px; }
+    .legend-color { width: 14px; height: 14px; border-radius: 3px; border: 1px solid rgba(0,0,0,0.25); }
+  </style>
+</head>
+<body>
+  <div class="canvas">
+    <div class="header">
+      <h1>📋 Процесс формирования, прикрепления и подписания прогноза СЭР МО с УКЭП</h1>
+      <p>BPMN-регламент сквозного взаимодействия ОМСУ, ЦИО и МЭФ: замена ручной пересылки через МСЭД на подписание итогового пакета внутри подсистемы</p>
+    </div>
+
+    <div class="pool">
+      <!-- LANE 1: ОМСУ -->
+      <div class="lane">
+        <div class="lane-title">
+          <span class="lane-role">Исполнители ОМСУ</span>
+          <span class="lane-sub">Специалисты муниципалитета</span>
+          <span class="lane-badge badge-omsu">Муниципальный уровень</span>
+        </div>
+        <div class="lane-content">
+          <div class="event start-event" title="Старт подготовки">▶</div>
+          <div class="arrow"><div class="arrow-line"></div><div class="arrow-head"></div></div>
+
+          <div class="node task omsu">
+            <div class="task-title">1. Ввод значений ОМСУ</div>
+            <div class="task-desc">Ввод показателей прогноза и расчёт в «Рабочем месте ОМСУ»</div>
+          </div>
+          <div class="arrow"><div class="arrow-line"></div><div class="arrow-head"></div></div>
+
+          <div class="node task omsu">
+            <div class="task-title">2. ПЗ внутри системы</div>
+            <div class="task-desc">Заполнение таблиц Пояснительной записки в системе и отправка ЦИО</div>
+          </div>
+          <div class="arrow"><div class="arrow-line"></div><div class="arrow-head"></div></div>
+
+          <div class="node task omsu" style="background: #e6fffa; border-color: #0d9488; min-width: 210px;">
+            <div class="task-title">3. Пакет ОМСУ (Авто-сборка)</div>
+            <div class="task-desc">Система объединяет в единый PDF:<br><b>Таблицы прогноза + ПЗ из системы</b></div>
+          </div>
+          <div class="arrow"><div class="arrow-line" style="width: 32px;"></div><div class="arrow-head"></div></div>
+
+          <div class="node task" style="background: #f1f5f9; border-style: dashed; min-width: 190px;">
+            <div class="task-title">4. Передача на подпись</div>
+            <div class="task-desc">Исполнитель нажимает:<br>«Направить на подписание Главе»</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- LANE 2: ЦИО -->
+      <div class="lane">
+        <div class="lane-title">
+          <span class="lane-role">Исполнители ЦИО</span>
+          <span class="lane-sub">Отраслевые министерства</span>
+          <span class="lane-badge badge-cio">Региональный уровень</span>
+        </div>
+        <div class="lane-content">
+          <div class="event start-event" style="background: #3b82f6; border-color: #1d4ed8;" title="Старт подготовки">▶</div>
+          <div class="arrow"><div class="arrow-line"></div><div class="arrow-head"></div></div>
+
+          <div class="node task cio">
+            <div class="task-title">1. Ввод данных ЦИО</div>
+            <div class="task-desc">Ввод собственных показателей + согласование данных территорий</div>
+          </div>
+          <div class="arrow"><div class="arrow-line"></div><div class="arrow-head"></div></div>
+
+          <div class="node task cio">
+            <div class="task-title">2. Внешняя ПЗ (Word/PDF)</div>
+            <div class="task-desc">Подготовка текста записки <b>ВНЕ подсистемы</b> (в ведомстве)</div>
+            <div class="note-badge">Записка формируется вне системы</div>
+          </div>
+          <div class="arrow"><div class="arrow-line"></div><div class="arrow-head"></div></div>
+
+          <div class="node task cio" style="background: #eff6ff; border-color: #2563eb; min-width: 210px;">
+            <div class="task-title">3. Прикрепление в экран</div>
+            <div class="task-desc">Экспорт утверждённых таблиц + <b>прикрепление файла внешней ПЗ</b></div>
+          </div>
+          <div class="arrow"><div class="arrow-line" style="width: 32px;"></div><div class="arrow-head"></div></div>
+
+          <div class="node task" style="background: #f1f5f9; border-style: dashed; min-width: 190px;">
+            <div class="task-title">4. Передача на подпись</div>
+            <div class="task-desc">Нажатие:<br>«Направить на подписание Министру»</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- LANE 3: РУКОВОДИТЕЛИ (ГЛАВА / МИНИСТР) -->
+      <div class="lane" style="background: #fffdf5;">
+        <div class="lane-title" style="background: #fefce8;">
+          <span class="lane-role">Глава ГО / Министр</span>
+          <span class="lane-sub">Право первой подписи (УКЭП)</span>
+          <span class="lane-badge badge-chief">Право первой подписи</span>
+        </div>
+        <div class="lane-content" style="background: #fffdf5;">
+          <div style="width: 38px;"></div>
+          <div class="arrow"><div class="arrow-line" style="width: 20px;"></div><div class="arrow-head"></div></div>
+
+          <div class="node task chief" style="min-width: 250px;">
+            <div class="task-title">👤 Экран: Сдача прогноза</div>
+            <div class="task-desc">Предпросмотр единого файла (таблицы + ПЗ). Индикатор: «Все показатели согласованы»</div>
+          </div>
+          <div class="arrow"><div class="arrow-line"></div><div class="arrow-head"></div></div>
+
+          <div class="gateway" title="Проверка готовности"><span>⚡</span></div>
+          <div class="arrow"><div class="arrow-line"></div><div class="arrow-head"></div></div>
+
+          <div class="node task chief" style="border-color: #d97706; background: #fef3c7; min-width: 280px;">
+            <div class="task-title">✍️ Подписание УКЭП Руководителя</div>
+            <div class="task-desc">Кнопка: <b>[ Подписать УКЭП и отправить в МЭФ ]</b>.<br>Формирование отсоединённой подписи .sig / штампа ЭП</div>
+            <div class="crypto-badge">🛡️ КриптоПро ЭЦП / Сертификат УКЭП</div>
+          </div>
+          <div class="arrow"><div class="arrow-line"></div><div class="arrow-head"></div></div>
+
+          <div class="node task chief" style="background: #fef9c3; border-color: #ca8a04; min-width: 170px;">
+            <div class="task-title">Авто-отправка в МЭФ</div>
+            <div class="task-desc">Пакет с ЭЦП уходит напрямую в контур МЭФ</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- LANE 4: МЭФ МО -->
+      <div class="lane">
+        <div class="lane-title">
+          <span class="lane-role">Минэкономики МО</span>
+          <span class="lane-sub">Куратор сбора (МЭФ)</span>
+          <span class="lane-badge badge-mef">Приёмка и фиксация</span>
+        </div>
+        <div class="lane-content">
+          <div style="width: 38px;"></div>
+          <div class="arrow"><div class="arrow-line" style="width: 20px;"></div><div class="arrow-head"></div></div>
+
+          <div class="node task mef" style="min-width: 260px; background: #faf5ff; border-color: #9333ea;">
+            <div class="task-title">📥 Авто-приёмка и верификация ЭЦП</div>
+            <div class="task-desc">Проверка валидности сертификата УКЭП Главы/Министра, фиксация даты и времени сдачи</div>
+          </div>
+          <div class="arrow"><div class="arrow-line"></div><div class="arrow-head"></div></div>
+
+          <div class="node task mef" style="background: #f3e8ff; border-color: #7e22ce; min-width: 260px;">
+            <div class="task-title">🔒 Статус: «Представлен с УКЭП»</div>
+            <div class="task-desc"><b>Полная блокировка данных от изменений.</b> Юридически чистый комплект доступен в сводных отчётах</div>
+          </div>
+          <div class="arrow"><div class="arrow-line"></div><div class="arrow-head"></div></div>
+
+          <div class="event end-event" title="Прогноз официально принят">✔</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="legend">
+      <div class="legend-items">
+        <div class="legend-item"><div class="legend-color" style="background: #f0fdf4; border-color: #10b981;"></div><span>ОМСУ (ПЗ формируется в системе)</span></div>
+        <div class="legend-item"><div class="legend-color" style="background: #eff6ff; border-color: #3b82f6;"></div><span>ЦИО (ПЗ прикрепляется извне)</span></div>
+        <div class="legend-item"><div class="legend-color" style="background: #fffbeb; border-color: #f59e0b;"></div><span>Подписание УКЭП Руководителя</span></div>
+        <div class="legend-item"><div class="legend-color" style="background: #faf5ff; border-color: #8b5cf6;"></div><span>Приёмка МЭФ (Юридическая фиксация)</span></div>
+      </div>
+      <div>Сформировано для согласования с МЭФ · Прогноз СЭР МО 2.0</div>
+    </div>
+  </div>
+</body>
+</html>
