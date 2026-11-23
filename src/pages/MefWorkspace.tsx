@@ -92,12 +92,25 @@ function MefWorkspaceNew({ block = 'mun' }: { block?: string }) {
         setTreeFilter={setTreeFilter}
         showOmsu={showOmsu}
         setShowOmsu={setShowOmsu}
+        onOpenCloseModal={() => setCloseModalOpen(true)}
       />
     </div>
   );
 }
 
-function MefTerritoryIndicators({ block = 'mun', visible, fillable, collapsed, toggleNode, parents, treeFilter, setTreeFilter, showOmsu, setShowOmsu }: any) {
+function MefTerritoryIndicators({
+  block = 'mun',
+  visible,
+  fillable,
+  collapsed,
+  toggleNode,
+  parents,
+  treeFilter,
+  setTreeFilter,
+  showOmsu,
+  setShowOmsu,
+  onOpenCloseModal,
+}: any) {
   const { state, dispatch } = useStore();
   const [returnTarget, setReturnTarget] = useState<{ cioId: string; indId: string; munId: string } | null>(null);
   const [comment, setComment] = useState('');
@@ -195,9 +208,22 @@ function MefTerritoryIndicators({ block = 'mun', visible, fillable, collapsed, t
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          {onOpenCloseModal && (
+            <Button
+              type="button"
+              size="sm"
+              className="h-7 text-xs bg-[#1e5c8f] hover:bg-[#1e5c8f]/90 text-white font-medium flex items-center gap-1 shadow-xs"
+              onClick={onOpenCloseModal}
+              title="Массовое закрытие ввода и утверждение показателей по ОМСУ и ЦИО"
+            >
+              <CheckSquare className="h-3.5 w-3.5" /> Массовое утверждение
+            </Button>
+          )}
+
           {selectedMunIds.length > 0 ? (
             <>
               <Button
+                type="button"
                 size="sm"
                 className="h-7 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-medium flex items-center gap-1 shadow-xs"
                 onClick={handleApproveSelected}
@@ -206,6 +232,7 @@ function MefTerritoryIndicators({ block = 'mun', visible, fillable, collapsed, t
                 <CheckSquare className="h-3.5 w-3.5" /> Утвердить отмеченные данные
               </Button>
               <Button
+                type="button"
                 size="sm"
                 variant="outline"
                 className="h-7 text-xs bg-white text-rose-700 border-rose-300 hover:bg-rose-50 font-medium flex items-center gap-1 shadow-xs"
@@ -215,6 +242,7 @@ function MefTerritoryIndicators({ block = 'mun', visible, fillable, collapsed, t
                 <RotateCcw className="h-3.5 w-3.5" /> Отменить утверждение отмеченных данных
               </Button>
               <Button
+                type="button"
                 size="sm"
                 variant="ghost"
                 className="h-7 text-xs text-slate-600 hover:text-slate-900"
