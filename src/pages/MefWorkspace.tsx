@@ -92,7 +92,6 @@ function MefWorkspaceNew({ block = 'mun' }: { block?: string }) {
         setTreeFilter={setTreeFilter}
         showOmsu={showOmsu}
         setShowOmsu={setShowOmsu}
-        onOpenCloseModal={() => setCloseModalOpen(true)}
       />
     </div>
   );
@@ -109,7 +108,6 @@ function MefTerritoryIndicators({
   setTreeFilter,
   showOmsu,
   setShowOmsu,
-  onOpenCloseModal,
 }: any) {
   const { state, dispatch } = useStore();
   const [returnTarget, setReturnTarget] = useState<{ cioId: string; indId: string; munId: string } | null>(null);
@@ -208,18 +206,6 @@ function MefTerritoryIndicators({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          {onOpenCloseModal && (
-            <Button
-              type="button"
-              size="sm"
-              className="h-7 text-xs bg-[#1e5c8f] hover:bg-[#1e5c8f]/90 text-white font-medium flex items-center gap-1 shadow-xs"
-              onClick={onOpenCloseModal}
-              title="Массовое закрытие ввода и утверждение показателей по ОМСУ и ЦИО"
-            >
-              <CheckSquare className="h-3.5 w-3.5" /> Массовое утверждение
-            </Button>
-          )}
-
           {selectedMunIds.length > 0 ? (
             <>
               <Button

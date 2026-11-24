@@ -5,10 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { PlayCircle, StopCircle, CalendarClock, Send, ShieldCheck, CheckSquare } from 'lucide-react';
+import { PlayCircle, StopCircle, CalendarClock, Send, ShieldCheck } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { CollectionFormSettings } from '@/components/CollectionFormSettings';
-import { CloseIndicatorsModal } from '@/components/CloseIndicatorsModal';
 
 /** Вкладка «Управление сбором» МЭФ: управление сбором, сроки, настройки форм */
 export function MefManage({ block }: { block?: string; goRating?: () => void; goReport?: () => void }) {
@@ -17,7 +16,6 @@ export function MefManage({ block }: { block?: string; goRating?: () => void; go
   const [startDate, setStartDate] = useState(state.campaign.startDate ?? '2026-07-20');
   const [dlMef, setDlMef] = useState(state.campaign.deadlineMef);
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
-  const [closeModalOpen, setCloseModalOpen] = useState(false);
 
   useEffect(() => {
     setPeriodName(state.campaign.period ?? '');
@@ -97,25 +95,14 @@ export function MefManage({ block }: { block?: string; goRating?: () => void; go
                 </>
               )}
             </div>
-            <div className="rounded-md border border-blue-200 bg-blue-50/50 p-2.5 text-xs text-blue-950 space-y-2">
+            <div className="rounded-md border border-blue-200 bg-blue-50/50 p-2.5 text-xs text-blue-950 space-y-1">
               <span className="font-semibold text-blue-900 block flex items-center gap-1">
                 <ShieldCheck className="h-3.5 w-3.5 text-blue-700" />
                 Режим Администратора (МЭФ / Администратор):
               </span>
               <p>
-                Кураторы МЭФ и Администраторы обладают постоянным правом ввода и корректировки значений в рабочих местах независимо от статуса и сроков кампании сбора (в том числе в завершённых и архивных периодах). Для массового закрытия ввода и утверждения показателей используйте кнопку «Массовое утверждение».
+                Кураторы МЭФ и Администраторы обладают постоянным правом ввода и корректировки значений в рабочих местах независимо от статуса и сроков кампании сбора (в том числе в завершённых и архивных периодах). Для массового закрытия ввода и утверждения показателей используйте кнопку «Массовое утверждение» во вкладке «Рабочее место МЭФ».
               </p>
-              <div>
-                <Button
-                  type="button"
-                  size="sm"
-                  className="bg-[#1e5c8f] hover:bg-[#1e5c8f]/90 text-white font-medium flex items-center gap-1.5 shadow-xs"
-                  onClick={() => setCloseModalOpen(true)}
-                  title="Массовое закрытие ввода и утверждение показателей по ОМСУ и ЦИО"
-                >
-                  <CheckSquare className="h-4 w-4" /> Массовое утверждение
-                </Button>
-              </div>
             </div>
             <p className="text-xs text-muted-foreground">
               В указанную дату КФ автоматически рассылает уведомления и формы: {state.omsus.length} ОМСУ и {state.cios.length} ЦИО. Предварительный отчёт формируется автоматически по мере занесения данных, а итоговый отчёт — автоматически при завершении кампании.
@@ -125,11 +112,6 @@ export function MefManage({ block }: { block?: string; goRating?: () => void; go
 
         <CollectionFormSettings block={activeBlock} />
       </div>
-
-      <CloseIndicatorsModal
-        open={closeModalOpen}
-        onOpenChange={setCloseModalOpen}
-      />
 
       <Dialog open={historyModalOpen} onOpenChange={setHistoryModalOpen}>
         <DialogContent className="max-w-3xl">
