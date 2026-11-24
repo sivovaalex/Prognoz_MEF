@@ -3,7 +3,6 @@ import { useStore } from '@/lib/store';
 import type { ValueFieldKey } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Search, ChevronDown, CheckCircle2, X } from 'lucide-react';
 
 interface CloseIndicatorsModalProps {
@@ -72,6 +71,18 @@ export function CloseIndicatorsModal({
       }
     }
   }, [open, defaultIndicatorId, defaultMunId, fillableIndicators, indicatorId]);
+
+  // Закрытие по Escape
+  useEffect(() => {
+    if (!open) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onOpenChange(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [open, onOpenChange]);
 
   // Доступные года в зависимости от вида данных
   const availableYears = useMemo(() => {
@@ -172,32 +183,38 @@ export function CloseIndicatorsModal({
     }, 1100);
   };
 
+  if (!open) return null;
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        className="max-w-[500px] p-0 border-2 border-slate-400 bg-[#f0f0f0] text-slate-900 rounded-none shadow-2xl gap-0 overflow-visible z-[9999]"
-        showCloseButton={false}
+    <div
+      className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-150"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) {
+          onOpenChange(false);
+        }
+      }}
+    >
+      <div
+        className="relative w-full max-w-[500px] bg-[#f0f0f0] border-2 border-slate-400 text-slate-900 shadow-2xl p-0 select-none animate-in zoom-in-95 duration-100"
+        onMouseDown={(e) => e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()}
       >
         {/* Заголовок окна в стилистике Windows / 1C */}
-        <div className="flex items-center justify-between px-4 py-2.5 bg-gradient-to-r from-slate-200 to-slate-100 border-b border-slate-300 select-none">
-          <DialogTitle className="text-sm font-semibold text-slate-800 tracking-tight flex items-center gap-1.5 m-0">
+        <div className="flex items-center justify-between px-3.5 py-2 bg-gradient-to-r from-slate-200 to-slate-100 border-b border-slate-300">
+          <span className="text-xs font-bold text-slate-800 tracking-tight flex items-center gap-1.5">
             Закрытие ввода по показателям
-          </DialogTitle>
+          </span>
           <button
             type="button"
             onClick={() => onOpenChange(false)}
-            className="text-slate-500 hover:text-slate-800 p-1 hover:bg-slate-300/70 transition-colors"
+            className="text-slate-500 hover:text-slate-800 p-0.5 hover:bg-slate-300/80 rounded transition-colors cursor-pointer"
             title="Закрыть"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        <DialogDescription className="sr-only">
-          Массовое закрытие ввода и утверждение показателей
-        </DialogDescription>
-
-        <div className="p-5 select-none">
+        <div className="p-4">
           {successMsg ? (
             <div className="py-8 flex flex-col items-center justify-center gap-2 text-center">
               <CheckCircle2 className="w-10 h-10 text-green-600 animate-bounce" />
@@ -254,7 +271,7 @@ export function CloseIndicatorsModal({
                   <button
                     type="button"
                     onClick={() => setIndDropdownOpen(!indDropdownOpen)}
-                    className="w-full h-7 px-2 pr-7 text-xs text-left bg-white border border-slate-400 rounded-none shadow-inner truncate flex items-center justify-between text-slate-900"
+                    className="w-full h-7 px-2 pr-7 text-xs text-left bg-white border border-slate-400 rounded-none shadow-inner truncate flex items-center justify-between text-slate-900 cursor-pointer"
                     title={selectedInd ? `${selectedInd.num}. ${selectedInd.name}` : 'Выберите показатель'}
                   >
                     <span className="truncate">
@@ -438,7 +455,7 @@ export function CloseIndicatorsModal({
             </div>
           )}
         </div>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </div>
   );
 }
