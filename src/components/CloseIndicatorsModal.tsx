@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useStore } from '@/lib/store';
 import type { ValueFieldKey } from '@/lib/types';
 import { Button } from '@/components/ui/button';
@@ -28,8 +29,8 @@ export function CloseIndicatorsModal({
 
   // Показатель
   const fillableIndicators = useMemo(() => {
-    return (state.indicators || []).filter((i) => !i.isGroup);
-  }, [state.indicators]);
+    return (state?.indicators || []).filter((i) => !i?.isGroup);
+  }, [state?.indicators]);
 
   const [indicatorId, setIndicatorId] = useState<string>(
     defaultIndicatorId || fillableIndicators[0]?.id || ''
@@ -44,7 +45,7 @@ export function CloseIndicatorsModal({
   const [munId, setMunId] = useState<string>(defaultMunId || 'all');
 
   // ЦИО (для ЦИО): точечный ID ЦИО
-  const [cioId, setCioId] = useState<string>(state.cios?.[0]?.id || '');
+  const [cioId, setCioId] = useState<string>(state?.cios?.[0]?.id || '');
 
   // Действие:
   // 1. hard_approve: "Утвердить (нельзя отклонить из отчёта)"
@@ -55,7 +56,9 @@ export function CloseIndicatorsModal({
   // Сообщение об успешном выполнении
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  // Сброс и синхронизация при открытии модального окна
+  // Защита от мгновенного закрытия кликом, открывшим окно
+  const [canCloseOnBackdrop, setCanCloseOnBackdrop] = useState(false);
+
   useEffect(() => {
     if (open) {
       setSuccessMsg(null);
@@ -69,6 +72,10 @@ export function CloseIndicatorsModal({
       if (defaultMunId) {
         setMunId(defaultMunId);
       }
+      const t = setTimeout(() => setCanCloseOnBackdrop(true), 150);
+      return () => clearTimeout(t);
+    } else {
+      setCanCloseOnBackdrop(false);
     }
   }, [open, defaultIndicatorId, defaultMunId, fillableIndicators, indicatorId]);
 
@@ -103,17 +110,19 @@ export function CloseIndicatorsModal({
     if (!indSearch.trim()) return fillableIndicators;
     const q = indSearch.toLowerCase();
     return fillableIndicators.filter(
-      (i) => (i.num || '').toLowerCase().includes(q) || (i.name || '').toLowerCase().includes(q)
+      (i) => (i?.num || '').toLowerCase().includes(q) || (i?.name || '').toLowerCase().includes(q)
     );
   }, [fillableIndicators, indSearch]);
 
   const selectedInd = useMemo(() => {
+    if (!state?.indicators || state.indicators.length === 0) return null;
     return (
-      (indicatorId ? (state.indicators || []).find((i) => i.id === indicatorId) : null) ||
+      (indicatorId ? state.indicators.find((i) => i.id === indicatorId) : null) ||
       fillableIndicators[0] ||
-      (state.indicators || [])[0]
+      state.indicators[0] ||
+      null
     );
-  }, [state.indicators, indicatorId, fillableIndicators]);
+  }, [state?.indicators, indicatorId, fillableIndicators]);
 
   // Синхронизация года при смене вида данных
   const handleDataKindChange = (kind: 'report' | 'estimate' | 'forecast') => {
@@ -172,8 +181,8 @@ export function CloseIndicatorsModal({
       source === 'omsu'
         ? munId === 'all'
           ? 'по всем ОМСУ (массивом)'
-          : `по территории ${state.omsus?.find((m) => m.id === munId)?.name || munId}`
-        : `по ЦИО ${state.cios?.find((c) => c.id === cioId)?.short || cioId}`;
+          : `по территории ${state?.omsus?.find((m) => m.id === munId)?.name || munId}`
+        : `по ЦИО ${state?.cios?.find((c) => c.id === cioId)?.short || cioId}`;
 
     setSuccessMsg(`${actionLabel}: показатель «${selectedInd.num}. ${selectedInd.name}» (${targetDesc})`);
 
@@ -185,29 +194,52 @@ export function CloseIndicatorsModal({
 
   if (!open) return null;
 
-  return (
+  const modalNode = (
     <div
-      className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-150"
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 999999,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: 'rgba(0, 0, 0, 0.65)',
+        backdropFilter: 'blur(2px)',
+        padding: '1rem',
+      }}
       onMouseDown={(e) => {
-        if (e.target === e.currentTarget) {
+        if (canCloseOnBackdrop && e.target === e.currentTarget) {
           onOpenChange(false);
         }
       }}
     >
       <div
-        className="relative w-full max-w-[500px] bg-[#f0f0f0] border-2 border-slate-400 text-slate-900 shadow-2xl p-0 select-none animate-in zoom-in-95 duration-100"
+        style={{
+          position: 'relative',
+          width: '100%',
+          maxWidth: '520px',
+          backgroundColor: '#f0f0f0',
+          border: '2px solid #94a3b8',
+          color: '#0f172a',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.4)',
+          padding: 0,
+          userSelect: 'none',
+        }}
         onMouseDown={(e) => e.stopPropagation()}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Заголовок окна в стилистике Windows / 1C */}
-        <div className="flex items-center justify-between px-3.5 py-2 bg-gradient-to-r from-slate-200 to-slate-100 border-b border-slate-300">
+        <div className="flex items-center justify-between px-3.5 py-2.5 bg-gradient-to-r from-slate-200 to-slate-100 border-b border-slate-300">
           <span className="text-xs font-bold text-slate-800 tracking-tight flex items-center gap-1.5">
             Закрытие ввода по показателям
           </span>
           <button
             type="button"
-            onClick={() => onOpenChange(false)}
-            className="text-slate-500 hover:text-slate-800 p-0.5 hover:bg-slate-300/80 rounded transition-colors cursor-pointer"
+            onClick={(e) => {
+              e.stopPropagation();
+              onOpenChange(false);
+            }}
+            className="text-slate-500 hover:text-slate-800 p-1 hover:bg-slate-300/80 rounded transition-colors cursor-pointer"
             title="Закрыть"
           >
             <X className="w-4 h-4" />
@@ -286,10 +318,14 @@ export function CloseIndicatorsModal({
                   {indDropdownOpen && (
                     <>
                       <div
-                        className="fixed inset-0 z-[100]"
+                        className="fixed inset-0"
+                        style={{ zIndex: 1000000 }}
                         onClick={() => setIndDropdownOpen(false)}
                       />
-                      <div className="absolute z-[110] left-0 right-0 top-8 bg-white border border-slate-400 shadow-xl max-h-56 overflow-hidden flex flex-col">
+                      <div
+                        className="absolute left-0 right-0 top-8 bg-white border border-slate-400 shadow-xl max-h-56 overflow-hidden flex flex-col"
+                        style={{ zIndex: 1000001 }}
+                      >
                         <div className="p-1 border-b border-slate-200 bg-slate-50">
                           <input
                             type="text"
@@ -364,7 +400,7 @@ export function CloseIndicatorsModal({
                       className="w-full h-7 px-2 pr-7 text-xs bg-white border border-slate-400 rounded-none shadow-inner focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer text-slate-900"
                     >
                       <option value="all">Все муниципальные образования (массивом)</option>
-                      {(state.omsus || []).map((m) => (
+                      {(state?.omsus || []).map((m) => (
                         <option key={m.id} value={m.id}>
                           {m.name}
                         </option>
@@ -376,7 +412,7 @@ export function CloseIndicatorsModal({
                       onChange={(e) => setCioId(e.target.value)}
                       className="w-full h-7 px-2 pr-7 text-xs bg-white border border-slate-400 rounded-none shadow-inner focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer text-slate-900"
                     >
-                      {(state.cios || []).map((c) => (
+                      {(state?.cios || []).map((c) => (
                         <option key={c.id} value={c.id}>
                           {c.name} {c.short ? `(${c.short})` : ''}
                         </option>
@@ -446,7 +482,10 @@ export function CloseIndicatorsModal({
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => onOpenChange(false)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onOpenChange(false);
+                  }}
                   className="h-7 px-5 text-xs bg-[#e1e1e1] hover:bg-[#d4d4d4] text-slate-900 border border-slate-400 rounded-none shadow-xs font-normal cursor-pointer"
                 >
                   Выход
@@ -458,4 +497,8 @@ export function CloseIndicatorsModal({
       </div>
     </div>
   );
+
+  return typeof document !== 'undefined'
+    ? createPortal(modalNode, document.body)
+    : modalNode;
 }

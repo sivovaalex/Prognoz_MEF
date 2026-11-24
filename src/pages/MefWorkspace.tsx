@@ -66,9 +66,14 @@ function MefWorkspaceNew({ block = 'mun' }: { block?: string }) {
 
         <div className="flex items-center gap-2">
           <Button
+            type="button"
             size="sm"
-            className="bg-[#1e5c8f] hover:bg-[#1e5c8f]/90 text-white font-medium flex items-center gap-1.5 shadow-xs"
-            onClick={() => setCloseModalOpen(true)}
+            className="bg-[#1e5c8f] hover:bg-[#1e5c8f]/90 text-white font-medium flex items-center gap-1.5 shadow-xs cursor-pointer"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setCloseModalOpen(true);
+            }}
             title="Массовое закрытие ввода и утверждение показателей по ОМСУ и ЦИО"
           >
             <CheckSquare className="h-4 w-4" /> Массовое утверждение
@@ -667,9 +672,14 @@ function MefWorkspaceOld({ block = 'mun' }: { block?: string }) {
         </div>
         <div className="flex items-center gap-2">
           <Button
+            type="button"
             size="sm"
-            className="bg-[#1e5c8f] hover:bg-[#1e5c8f]/90 text-white font-medium flex items-center gap-1.5 shadow-xs"
-            onClick={() => setCloseModalOpen(true)}
+            className="bg-[#1e5c8f] hover:bg-[#1e5c8f]/90 text-white font-medium flex items-center gap-1.5 shadow-xs cursor-pointer"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setCloseModalOpen(true);
+            }}
             title="Массовое закрытие ввода и утверждение показателей по ОМСУ и ЦИО"
           >
             <CheckSquare className="h-4 w-4" /> Массовое утверждение
